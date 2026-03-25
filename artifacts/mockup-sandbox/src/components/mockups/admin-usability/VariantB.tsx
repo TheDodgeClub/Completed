@@ -128,7 +128,7 @@ export function VariantB() {
             </div>
 
             {/* XP Leaderboard with explicit link */}
-            <div style={{ background: "#141414", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "16px" }}>
+            <div style={{ background: "#141414", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "16px", marginBottom: 16 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: "#e5e5e5" }}>⚡ XP Leaderboard</div>
                 <div style={{ fontSize: 11, fontWeight: 600, color: "#FFC107", background: "rgba(255,193,7,0.1)", borderRadius: 8, padding: "4px 10px", cursor: "pointer" }}>View members →</div>
@@ -147,6 +147,34 @@ export function VariantB() {
                       </div>
                       <div style={{ height: 2, background: "rgba(255,255,255,0.06)", borderRadius: 2, overflow: "hidden" }}>
                         <div style={{ height: "100%", background: "#FFC107", borderRadius: 2, width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Medals Leaderboard */}
+            <div style={{ background: "#141414", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 14, padding: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#e5e5e5" }}>🏅 Medals Leaderboard</div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#facc15", background: "rgba(250,204,21,0.1)", borderRadius: 8, padding: "4px 10px", cursor: "pointer" }}>View members →</div>
+              </div>
+              {[...members].sort((a, b) => b.medals - a.medals).slice(0, 5).map((m, i) => {
+                const sorted = [...members].sort((a, b) => b.medals - a.medals);
+                const max = sorted[0].medals || 1;
+                const pct = Math.max((m.medals / max) * 100, 3);
+                return (
+                  <div key={m.name} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 8px", borderRadius: 10, marginBottom: 2, cursor: "pointer", border: "1px solid transparent" }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, width: 16, textAlign: "center", color: i === 0 ? "#facc15" : i === 1 ? "#aaa" : i === 2 ? "#92400e" : "#444" }}>{i + 1}</span>
+                    <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#1e1e1e", border: "1px solid rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700, flexShrink: 0 }}>{m.avatar}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: "#ccc" }}>{m.name}</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: "#facc15" }}>{m.medals} 🏅</span>
+                      </div>
+                      <div style={{ height: 2, background: "rgba(255,255,255,0.06)", borderRadius: 2, overflow: "hidden" }}>
+                        <div style={{ height: "100%", background: "#facc15", borderRadius: 2, width: `${pct}%` }} />
                       </div>
                     </div>
                   </div>
