@@ -10,10 +10,11 @@ export interface Event {
   ticketUrl: string | null;
   imageUrl: string | null;
   isUpcoming: boolean;
+  isPublished: boolean;
   attendeeCount: number;
 }
 
-export type EventInput = Omit<Event, "id" | "isUpcoming" | "attendeeCount">;
+export type EventInput = Omit<Event, "id" | "isUpcoming" | "isPublished" | "attendeeCount">;
 
 export function useEvents() {
   return useQuery({
@@ -42,6 +43,7 @@ export function useCreateEvent() {
         ...newData,
         id: -Date.now(),
         isUpcoming: new Date(newData.date) > new Date(),
+        isPublished: false,
         attendeeCount: 0,
         ticketUrl: newData.ticketUrl || null,
         imageUrl: newData.imageUrl || null,
@@ -69,6 +71,29 @@ export function useUpdateEvent() {
       const previous = queryClient.getQueryData<Event[]>(["events"]);
       queryClient.setQueryData<Event[]>(["events"], (old = []) =>
         old.map((e) => e.id === id ? { ...e, ...data, isUpcoming: data.date ? new Date(data.date) > new Date() : e.isUpcoming } : e)
+      );
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(["events"], context.previous);
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["events"] }),
+  });
+}
+
+export function usePublishEvent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, publish }: { id: number; publish: boolean }) =>
+      fetchApi<Event>(`/api/admin/events/${id}/publish`, {
+        method: "POST",
+        body: JSON.stringify({ publish }),
+      }),
+    onMutate: async ({ id, publish }) => {
+      await queryClient.cancelQueries({ queryKey: ["events"] });
+      const previous = queryClient.getQueryData<Event[]>(["events"]);
+      queryClient.setQueryData<Event[]>(["events"], (old = []) =>
+        old.map((e) => e.id === id ? { ...e, isPublished: publish } : e)
       );
       return { previous };
     },

@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, eventsTable, postsTable, merchTable, usersTable, attendanceTable, awardsTable } from "@workspace/db";
+import { db, eventsTable, postsTable, merchTable, usersTable, attendanceTable, awardsTable, videosTable } from "@workspace/db";
 import { eq, desc, and } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/requireAdmin";
 
@@ -9,10 +9,8 @@ router.use(requireAdmin);
 
 /* ========== EVENTS ========== */
 
-/* GET /api/admin/events — list all events (incl past) */
-router.get("/events", async (_req, res) => {
-  const events = await db.select().from(eventsTable).orderBy(desc(eventsTable.date));
-  res.json(events.map(e => ({
+function toAdminEvent(e: typeof eventsTable.$inferSelect) {
+  return {
     id: e.id,
     title: e.title,
     description: e.description,
@@ -21,8 +19,15 @@ router.get("/events", async (_req, res) => {
     ticketUrl: e.ticketUrl ?? null,
     imageUrl: e.imageUrl ?? null,
     isUpcoming: e.date > new Date(),
+    isPublished: e.isPublished,
     attendeeCount: e.attendeeCount,
-  })));
+  };
+}
+
+/* GET /api/admin/events — list all events (incl past, incl unpublished) */
+router.get("/events", async (_req, res) => {
+  const events = await db.select().from(eventsTable).orderBy(desc(eventsTable.date));
+  res.json(events.map(toAdminEvent));
 });
 
 /* POST /api/admin/events — create */
@@ -31,17 +36,7 @@ router.post("/events", async (req, res) => {
   const [event] = await db.insert(eventsTable)
     .values({ title, description, date: new Date(date), location, ticketUrl: ticketUrl || null, imageUrl: imageUrl || null })
     .returning();
-  res.status(201).json({
-    id: event.id,
-    title: event.title,
-    description: event.description,
-    date: event.date.toISOString(),
-    location: event.location,
-    ticketUrl: event.ticketUrl ?? null,
-    imageUrl: event.imageUrl ?? null,
-    isUpcoming: event.date > new Date(),
-    attendeeCount: event.attendeeCount,
-  });
+  res.status(201).json(toAdminEvent(event));
 });
 
 /* PUT /api/admin/events/:id — update */
@@ -52,17 +47,18 @@ router.put("/events/:id", async (req, res) => {
     .where(eq(eventsTable.id, Number(req.params.id)))
     .returning();
   if (!event) { res.status(404).json({ error: "Not found" }); return; }
-  res.json({
-    id: event.id,
-    title: event.title,
-    description: event.description,
-    date: event.date.toISOString(),
-    location: event.location,
-    ticketUrl: event.ticketUrl ?? null,
-    imageUrl: event.imageUrl ?? null,
-    isUpcoming: event.date > new Date(),
-    attendeeCount: event.attendeeCount,
-  });
+  res.json(toAdminEvent(event));
+});
+
+/* POST /api/admin/events/:id/publish — toggle published state */
+router.post("/events/:id/publish", async (req, res) => {
+  const { publish } = req.body;
+  const [event] = await db.update(eventsTable)
+    .set({ isPublished: !!publish })
+    .where(eq(eventsTable.id, Number(req.params.id)))
+    .returning();
+  if (!event) { res.status(404).json({ error: "Not found" }); return; }
+  res.json(toAdminEvent(event));
 });
 
 /* DELETE /api/admin/events/:id */
@@ -254,7 +250,6 @@ router.post("/attendance", async (req, res) => {
     .values({ userId: Number(userId), eventId: Number(eventId), earnedMedal: !!earnedMedal })
     .returning();
 
-  // bump attendeeCount
   const event = await db.query.eventsTable.findFirst({ where: eq(eventsTable.id, Number(eventId)) });
   if (event) {
     await db.update(eventsTable).set({ attendeeCount: event.attendeeCount + 1 }).where(eq(eventsTable.id, Number(eventId)));
@@ -324,6 +319,73 @@ router.delete("/awards/:id", async (req, res) => {
   const award = await db.query.awardsTable.findFirst({ where: eq(awardsTable.id, Number(req.params.id)) });
   if (!award) { res.status(404).json({ error: "Not found" }); return; }
   await db.delete(awardsTable).where(eq(awardsTable.id, Number(req.params.id)));
+  res.json({ ok: true });
+});
+
+/* ========== VIDEOS ========== */
+
+function toAdminVideo(v: typeof videosTable.$inferSelect) {
+  return {
+    id: v.id,
+    title: v.title,
+    description: v.description ?? null,
+    url: v.url,
+    thumbnailUrl: v.thumbnailUrl ?? null,
+    isPublished: v.isPublished,
+    publishedAt: v.publishedAt?.toISOString() ?? null,
+    createdAt: v.createdAt.toISOString(),
+  };
+}
+
+/* GET /api/admin/videos — list all videos */
+router.get("/videos", async (_req, res) => {
+  const videos = await db.select().from(videosTable).orderBy(desc(videosTable.createdAt));
+  res.json(videos.map(toAdminVideo));
+});
+
+/* POST /api/admin/videos — create */
+router.post("/videos", async (req, res) => {
+  const { title, description, url, thumbnailUrl, isPublished } = req.body;
+  const published = !!isPublished;
+  const [video] = await db.insert(videosTable)
+    .values({
+      title,
+      description: description || null,
+      url,
+      thumbnailUrl: thumbnailUrl || null,
+      isPublished: published,
+      publishedAt: published ? new Date() : null,
+    })
+    .returning();
+  res.status(201).json(toAdminVideo(video));
+});
+
+/* PUT /api/admin/videos/:id — update */
+router.put("/videos/:id", async (req, res) => {
+  const { title, description, url, thumbnailUrl } = req.body;
+  const [video] = await db.update(videosTable)
+    .set({ title, description: description || null, url, thumbnailUrl: thumbnailUrl || null })
+    .where(eq(videosTable.id, Number(req.params.id)))
+    .returning();
+  if (!video) { res.status(404).json({ error: "Not found" }); return; }
+  res.json(toAdminVideo(video));
+});
+
+/* POST /api/admin/videos/:id/publish — toggle published state */
+router.post("/videos/:id/publish", async (req, res) => {
+  const { publish } = req.body;
+  const published = !!publish;
+  const [video] = await db.update(videosTable)
+    .set({ isPublished: published, publishedAt: published ? new Date() : null })
+    .where(eq(videosTable.id, Number(req.params.id)))
+    .returning();
+  if (!video) { res.status(404).json({ error: "Not found" }); return; }
+  res.json(toAdminVideo(video));
+});
+
+/* DELETE /api/admin/videos/:id */
+router.delete("/videos/:id", async (req, res) => {
+  await db.delete(videosTable).where(eq(videosTable.id, Number(req.params.id)));
   res.json({ ok: true });
 });
 

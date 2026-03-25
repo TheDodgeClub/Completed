@@ -4,4 +4,5 @@ export * from "./attendance";
 export * from "./awards";
 export * from "./posts";
 export * from "./merch";
+export * from "./videos";
 export * from "./relations";

@@ -11,6 +11,7 @@ export const eventsTable = pgTable("events", {
   ticketUrl: text("ticket_url"),
   imageUrl: text("image_url"),
   attendeeCount: integer("attendee_count").notNull().default(0),
+  isPublished: boolean("is_published").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

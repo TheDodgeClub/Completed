@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, eventsTable, attendanceTable } from "@workspace/db";
-import { eq, gte, desc, count } from "drizzle-orm";
+import { eq, gte, desc, count, and } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -14,20 +14,28 @@ function toEvent(e: typeof eventsTable.$inferSelect) {
     ticketUrl: e.ticketUrl ?? null,
     imageUrl: e.imageUrl ?? null,
     isUpcoming: e.date > new Date(),
+    isPublished: e.isPublished,
     attendeeCount: e.attendeeCount,
   };
 }
 
-/* GET /api/events */
+/* GET /api/events — published events only (mobile) */
 router.get("/", async (_req, res) => {
-  const events = await db.select().from(eventsTable).orderBy(desc(eventsTable.date));
+  const events = await db
+    .select()
+    .from(eventsTable)
+    .where(eq(eventsTable.isPublished, true))
+    .orderBy(desc(eventsTable.date));
   res.json(events.map(toEvent));
 });
 
-/* GET /api/events/upcoming */
+/* GET /api/events/upcoming — published upcoming events (mobile) */
 router.get("/upcoming", async (_req, res) => {
   const now = new Date();
-  const events = await db.select().from(eventsTable).where(gte(eventsTable.date, now));
+  const events = await db
+    .select()
+    .from(eventsTable)
+    .where(and(eq(eventsTable.isPublished, true), gte(eventsTable.date, now)));
   res.json(events.map(toEvent));
 });
 
