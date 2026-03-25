@@ -44,6 +44,8 @@ function toProfile(
     username: user.username ?? null,
     preferredRole: user.preferredRole ?? null,
     bio: user.bio ?? null,
+    isElite: user.isElite,
+    eliteSince: user.eliteSince?.toISOString() ?? null,
   };
 }
 

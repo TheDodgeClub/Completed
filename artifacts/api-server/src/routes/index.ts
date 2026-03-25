@@ -13,6 +13,7 @@ import messagesRouter from "./messages";
 import sessionsRouter from "./sessions";
 import ticketsRouter from "./tickets";
 import { settingsRouter } from "./settings";
+import eliteRouter from "./elite";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use("/messages", messagesRouter);
 router.use("/sessions", sessionsRouter);
 router.use("/tickets", ticketsRouter);
 router.use("/settings", settingsRouter);
+router.use("/elite", eliteRouter);
 
 export default router;

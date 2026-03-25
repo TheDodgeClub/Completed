@@ -9,9 +9,10 @@ export interface Post {
   createdAt: string;
   authorName: string;
   isMembersOnly: boolean;
+  isEliteOnly: boolean;
 }
 
-export type PostInput = Pick<Post, "title" | "content" | "imageUrl" | "isMembersOnly">;
+export type PostInput = Pick<Post, "title" | "content" | "imageUrl" | "isMembersOnly" | "isEliteOnly">;
 
 export function usePosts() {
   return useQuery({

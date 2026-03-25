@@ -100,11 +100,16 @@ export default function Members() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {member.isAdmin ? (
-                        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20"><ShieldCheck className="w-3 h-3 mr-1" /> Admin</Badge>
-                      ) : (
-                        <Badge variant="outline" className="bg-secondary/50 text-muted-foreground border-border/50">Member</Badge>
-                      )}
+                      <div className="flex flex-wrap gap-1.5">
+                        {member.isAdmin ? (
+                          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20"><ShieldCheck className="w-3 h-3 mr-1" /> Admin</Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-secondary/50 text-muted-foreground border-border/50">Member</Badge>
+                        )}
+                        {member.isElite && (
+                          <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20"><Star className="w-3 h-3 mr-1" /> Elite</Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="inline-flex items-center justify-center min-w-[2.5rem] px-2 py-1 rounded-md bg-secondary text-foreground font-semibold">

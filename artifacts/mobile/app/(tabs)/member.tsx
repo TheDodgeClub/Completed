@@ -619,6 +619,12 @@ export default function MemberScreen() {
           <LevelBadge level={level} />
           <Text style={styles.levelNameText}>{levelName}</Text>
           {user.preferredRole && <RoleBadge role={user.preferredRole} />}
+          {user.isElite && (
+            <View style={styles.eliteBadge}>
+              <Feather name="star" size={10} color="#0D0D0D" />
+              <Text style={styles.eliteBadgeText}>ELITE</Text>
+            </View>
+          )}
         </View>
 
         {user.bio && <Text style={styles.memberBio}>{user.bio}</Text>}
@@ -685,6 +691,13 @@ export default function MemberScreen() {
           >
             <Feather name="bell" size={20} color={Colors.accent} />
             <Text style={styles.quickBtnText}>Updates</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.quickBtn, user.isElite ? styles.quickBtnElite : {}, { opacity: pressed ? 0.8 : 1 }]}
+            onPress={() => router.push("/elite")}
+          >
+            <Feather name="star" size={20} color={Colors.accent} />
+            <Text style={styles.quickBtnText}>{user.isElite ? "Elite" : "Go Elite"}</Text>
           </Pressable>
         </View>
 
@@ -889,6 +902,14 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       borderRadius: 8, borderWidth: 1, borderColor: `${Colors.accent}40`,
     },
     roleBadgeText: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: Colors.accent },
+    eliteBadge: {
+      flexDirection: "row", alignItems: "center", gap: 3,
+      backgroundColor: Colors.accent,
+      paddingHorizontal: 8, paddingVertical: 3,
+      borderRadius: 8,
+    },
+    eliteBadgeText: { fontFamily: "Inter_700Bold", fontSize: 10, color: "#0D0D0D", letterSpacing: 0.5 },
+    quickBtnElite: { borderColor: Colors.accent, borderWidth: 1.5 },
 
     memberBio: {
       fontFamily: "Inter_400Regular", fontSize: 13,

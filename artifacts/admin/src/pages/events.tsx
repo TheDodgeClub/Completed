@@ -11,8 +11,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit2, Trash2, MapPin, Users, CalendarDays, ArrowUpDown, ArrowUp, ArrowDown, Globe, EyeOff, CreditCard, CheckCircle, ClipboardList, X, GripVertical, Copy } from "lucide-react";
+import { Plus, Edit2, Trash2, MapPin, Users, CalendarDays, ArrowUpDown, ArrowUp, ArrowDown, Globe, EyeOff, CreditCard, CheckCircle, ClipboardList, X, GripVertical, Copy, Star } from "lucide-react";
 import { ImageUploader } from "@/components/image-uploader";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
 
 type SortKey = "date" | "title" | "attendeeCount";
@@ -527,11 +528,16 @@ function EventFormModal({ event, onClose }: { event?: Event; onClose: () => void
       ticketCapacity: event.ticketCapacity,
       stripeProductId: event.stripeProductId,
       stripePriceId: event.stripePriceId,
+      eliteEarlyAccess: event.eliteEarlyAccess ?? false,
+      eliteDiscountPercent: event.eliteDiscountPercent ?? null,
     } : {
       title: "", description: "", date: "", location: "", ticketUrl: "", imageUrl: "",
       ticketPrice: null, ticketCapacity: null, stripeProductId: null, stripePriceId: null,
+      eliteEarlyAccess: false, eliteDiscountPercent: null,
     }
   });
+
+  const eliteEarlyAccess = watch("eliteEarlyAccess");
 
   const onSubmit = (data: EventInput) => {
     const payload = {
@@ -590,6 +596,34 @@ function EventFormModal({ event, onClose }: { event?: Event; onClose: () => void
             value={watch("imageUrl") ?? ""}
             onChange={(url) => setValue("imageUrl", url || null)}
           />
+          <div className="space-y-3 p-4 bg-yellow-500/5 rounded-xl border border-yellow-500/20">
+            <Label className="text-yellow-500 font-semibold flex items-center gap-1.5 text-sm">
+              <Star className="w-3.5 h-3.5" /> Elite Member Perks
+            </Label>
+            <div className="flex items-center space-x-3">
+              <Checkbox
+                id="eliteEarlyAccess"
+                checked={eliteEarlyAccess}
+                onCheckedChange={(c) => setValue("eliteEarlyAccess", c === true)}
+                className="border-yellow-500/50 data-[state=checked]:bg-yellow-500 data-[state=checked]:border-yellow-500"
+              />
+              <div className="space-y-0.5 leading-none">
+                <Label htmlFor="eliteEarlyAccess" className="font-medium cursor-pointer text-sm">Elite Early Ticket Access</Label>
+                <p className="text-xs text-muted-foreground">Elite members can purchase tickets before general sale.</p>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Elite Discount % (leave blank for none)</Label>
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                {...register("eliteDiscountPercent", { valueAsNumber: true })}
+                className="bg-background border-border rounded-xl h-9"
+                placeholder="e.g. 10 for 10% off"
+              />
+            </div>
+          </div>
           <DialogFooter className="pt-4">
             <Button type="button" variant="outline" onClick={onClose} disabled={pending} className="rounded-xl border-border/50 hover:bg-secondary">Cancel</Button>
             <Button type="submit" disabled={pending} className="rounded-xl bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20">

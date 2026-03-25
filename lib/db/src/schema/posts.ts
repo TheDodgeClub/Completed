@@ -9,6 +9,7 @@ export const postsTable = pgTable("posts", {
   content: text("content").notNull(),
   imageUrl: text("image_url"),
   isMembersOnly: boolean("is_members_only").notNull().default(false),
+  isEliteOnly: boolean("is_elite_only").notNull().default(false),
   authorId: integer("author_id").notNull().references(() => usersTable.id),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

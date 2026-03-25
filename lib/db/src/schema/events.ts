@@ -19,6 +19,8 @@ export const eventsTable = pgTable("events", {
   stripePriceId: text("stripe_price_id"),
   checkoutFields: jsonb("checkout_fields").$type<CheckoutField[]>().notNull().default([]),
   waiverText: text("waiver_text"),
+  eliteEarlyAccess: boolean("elite_early_access").notNull().default(false),
+  eliteDiscountPercent: integer("elite_discount_percent"),
 });
 
 export type CheckoutField = {

@@ -20,6 +20,9 @@ export const usersTable = pgTable("users", {
   notificationsEnabled: boolean("notifications_enabled").notNull().default(false),
   stripeCustomerId: text("stripe_customer_id"),
   lastSeenAt: timestamp("last_seen_at"),
+  isElite: boolean("is_elite").notNull().default(false),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  eliteSince: timestamp("elite_since"),
 });
 
 export const insertUserSchema = createInsertSchema(usersTable).omit({

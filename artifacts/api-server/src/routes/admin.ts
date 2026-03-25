@@ -28,6 +28,8 @@ function toAdminEvent(e: typeof eventsTable.$inferSelect) {
     stripePriceId: e.stripePriceId ?? null,
     checkoutFields: (e.checkoutFields as any[]) ?? [],
     waiverText: e.waiverText ?? null,
+    eliteEarlyAccess: e.eliteEarlyAccess,
+    eliteDiscountPercent: e.eliteDiscountPercent ?? null,
   };
 }
 
@@ -48,9 +50,17 @@ router.post("/events", async (req, res) => {
 
 /* PUT /api/admin/events/:id — update */
 router.put("/events/:id", async (req, res) => {
-  const { title, description, date, location, ticketUrl, imageUrl } = req.body;
+  const { title, description, date, location, ticketUrl, imageUrl, eliteEarlyAccess, eliteDiscountPercent } = req.body;
   const [event] = await db.update(eventsTable)
-    .set({ title, description, date: date ? new Date(date) : undefined, location, ticketUrl: ticketUrl || null, imageUrl: imageUrl || null })
+    .set({
+      title, description,
+      date: date ? new Date(date) : undefined,
+      location,
+      ticketUrl: ticketUrl || null,
+      imageUrl: imageUrl || null,
+      eliteEarlyAccess: eliteEarlyAccess !== undefined ? !!eliteEarlyAccess : undefined,
+      eliteDiscountPercent: eliteDiscountPercent != null ? Number(eliteDiscountPercent) : null,
+    })
     .where(eq(eventsTable.id, Number(req.params.id)))
     .returning();
   if (!event) { res.status(404).json({ error: "Not found" }); return; }
@@ -217,14 +227,15 @@ router.get("/posts", async (_req, res) => {
     createdAt: p.createdAt.toISOString(),
     authorName: p.author.name,
     isMembersOnly: p.isMembersOnly,
+    isEliteOnly: p.isEliteOnly,
   })));
 });
 
 /* POST /api/admin/posts — create */
 router.post("/posts", async (req, res) => {
-  const { title, content, imageUrl, isMembersOnly } = req.body;
+  const { title, content, imageUrl, isMembersOnly, isEliteOnly } = req.body;
   const [post] = await db.insert(postsTable)
-    .values({ title, content, imageUrl: imageUrl || null, isMembersOnly: !!isMembersOnly, authorId: req.session!.userId })
+    .values({ title, content, imageUrl: imageUrl || null, isMembersOnly: !!isMembersOnly, isEliteOnly: !!isEliteOnly, authorId: req.session!.userId })
     .returning();
   const author = await db.query.usersTable.findFirst({ where: eq(usersTable.id, post.authorId) });
   res.status(201).json({
@@ -235,14 +246,15 @@ router.post("/posts", async (req, res) => {
     createdAt: post.createdAt.toISOString(),
     authorName: author?.name ?? "Admin",
     isMembersOnly: post.isMembersOnly,
+    isEliteOnly: post.isEliteOnly,
   });
 });
 
 /* PUT /api/admin/posts/:id — update */
 router.put("/posts/:id", async (req, res) => {
-  const { title, content, imageUrl, isMembersOnly } = req.body;
+  const { title, content, imageUrl, isMembersOnly, isEliteOnly } = req.body;
   const [post] = await db.update(postsTable)
-    .set({ title, content, imageUrl: imageUrl || null, isMembersOnly: !!isMembersOnly })
+    .set({ title, content, imageUrl: imageUrl || null, isMembersOnly: !!isMembersOnly, isEliteOnly: !!isEliteOnly })
     .where(eq(postsTable.id, Number(req.params.id)))
     .returning();
   if (!post) { res.status(404).json({ error: "Not found" }); return; }
@@ -255,6 +267,7 @@ router.put("/posts/:id", async (req, res) => {
     createdAt: post.createdAt.toISOString(),
     authorName: author?.name ?? "Admin",
     isMembersOnly: post.isMembersOnly,
+    isEliteOnly: post.isEliteOnly,
   });
 });
 
@@ -362,6 +375,8 @@ router.get("/members", async (_req, res) => {
       username: u.username ?? null,
       preferredRole: u.preferredRole ?? null,
       bio: u.bio ?? null,
+      isElite: u.isElite,
+      eliteSince: u.eliteSince?.toISOString() ?? null,
     };
   }));
   res.json(result);

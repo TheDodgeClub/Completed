@@ -20,6 +20,8 @@ export type UserProfile = {
   username: string | null;
   preferredRole: string | null;
   bio: string | null;
+  isElite?: boolean;
+  eliteSince?: string | null;
 };
 
 export type TeamHistory = {
@@ -105,6 +107,7 @@ export type Post = {
   createdAt: string;
   authorName: string;
   isMembersOnly: boolean;
+  isEliteOnly: boolean;
 };
 
 export type MerchProduct = {
@@ -556,4 +559,23 @@ export async function recordSession(duration: number, startedAt: string): Promis
     method: "POST",
     body: JSON.stringify({ duration, startedAt }),
   });
+}
+
+/* ─── Elite membership ─── */
+export type EliteStatus = {
+  isElite: boolean;
+  eliteSince: string | null;
+  stripeSubscriptionId: string | null;
+};
+
+export async function getEliteStatus(): Promise<EliteStatus> {
+  return apiFetch<EliteStatus>("/elite/status");
+}
+
+export async function startEliteSubscription(): Promise<{ url: string }> {
+  return apiFetch<{ url: string }>("/elite/subscribe", { method: "POST" });
+}
+
+export async function getEliteManageUrl(): Promise<{ url: string }> {
+  return apiFetch<{ url: string }>("/elite/manage");
 }

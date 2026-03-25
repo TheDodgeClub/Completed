@@ -41,8 +41,9 @@ workspace/
 - **Home** — Hero section, community stats, upcoming events (published only), latest updates, merch CTA
 - **Tickets** — My Tickets (QR codes for purchased tickets) + Buy Tickets (Stripe Checkout or free registration); pre-checkout buyer form with configurable fields + waiver agreement modal shown before purchase
 - **Merch** — Product grid with buy links (external URL, Shopify-ready)
-- **Updates** — Message board; guests see public posts, members see all
-- **Member Zone** — Protected dashboard with stats, achievements, event history
+- **Updates** — Message board; guests see public posts, members see all; elite-only posts locked behind Elite paywall
+- **Member Zone** — Protected dashboard with stats, achievements, event history; elite badge + "Go Elite" quick action
+- **Elite Membership** — £8.99/month Stripe subscription paywall (app/elite.tsx); benefits: early ticket access, tips & tricks, elite-only posts, discounted tickets, elite badge; Stripe Customer Portal for self-service management
 
 ### Ticket Confirmation Emails
 - Sent automatically after free ticket registration and paid Stripe checkout
@@ -59,12 +60,22 @@ workspace/
 - Protected routes in Member Zone
 
 ### Data Models
-- `users` — id, email, passwordHash, name, isAdmin, avatarUrl, stripeCustomerId
-- `events` — id, title, description, date, location, ticketUrl, imageUrl, attendeeCount, ticketPrice, ticketCapacity, stripeProductId, stripePriceId
+- `users` — id, email, passwordHash, name, isAdmin, avatarUrl, stripeCustomerId, **isElite**, **stripeSubscriptionId**, **eliteSince**
+- `events` — id, title, description, date, location, ticketUrl, imageUrl, attendeeCount, ticketPrice, ticketCapacity, stripeProductId, stripePriceId, **eliteEarlyAccess**, **eliteDiscountPercent**
 - `tickets` — id, userId, eventId, stripeCheckoutSessionId, stripePaymentIntentId, status (pending/paid/free/cancelled), ticketCode (16-char hex), checkedIn, amountPaid
 - `attendance` — id, userId, eventId, earnedMedal, attendedAt
-- `posts` — id, title, content, imageUrl, isMembersOnly, authorId
+- `posts` — id, title, content, imageUrl, isMembersOnly, **isEliteOnly**, authorId
 - `merch` — id, name, description, price, imageUrl, buyUrl, category, inStock
+
+### Elite Membership (£8.99/month Stripe subscription)
+- Route: `artifacts/api-server/src/routes/elite.ts` — registered at `/api/elite`
+- `GET /api/elite/status` — current user's elite status
+- `POST /api/elite/subscribe` — creates Stripe Checkout Session (subscription mode, £8.99/month)
+- `GET /api/elite/success` — verifies session after payment, grants elite status, redirects to mobile app
+- `GET /api/elite/manage` — creates Stripe Customer Portal session for self-service subscription management
+- Mobile paywall: `artifacts/mobile/app/elite.tsx` — navigate with `router.push('/elite')`
+- Content gating: `isEliteOnly` on posts, `eliteEarlyAccess`/`eliteDiscountPercent` on events
+- Admin: elite badge on Members table; isEliteOnly checkbox on Posts form; Elite perks section on Events form
 
 ### Stripe Ticket Purchasing
 - Admin configures ticket price/capacity per event via "Configure Tickets" (CreditCard icon) in Events table
