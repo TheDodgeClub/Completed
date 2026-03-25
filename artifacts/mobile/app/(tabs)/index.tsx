@@ -181,6 +181,9 @@ export default function HomeScreen() {
           )}
         </View>
 
+        {/* Go Elite Banner */}
+        <EliteBanner isElite={user?.isElite ?? false} isAuthenticated={isAuthenticated} Colors={Colors} />
+
         {/* Latest Updates */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -217,6 +220,72 @@ export default function HomeScreen() {
       <PostDetailModal post={selectedPost} onClose={() => setSelectedPost(null)} />
     )}
   </>
+  );
+}
+
+function EliteBanner({ isElite, isAuthenticated, Colors }: { isElite: boolean; isAuthenticated: boolean; Colors: ReturnType<typeof useColors> }) {
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
+
+  if (isElite) {
+    return (
+      <Pressable
+        style={({ pressed }) => [styles.eliteBanner, { opacity: pressed ? 0.88 : 1 }]}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          router.push("/elite");
+        }}
+      >
+        <LinearGradient
+          colors={[Colors.accent, "#B8860B"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.eliteBannerGradient}
+        >
+          <View style={styles.eliteBannerLeft}>
+            <View style={styles.eliteBannerIconWrap}>
+              <Feather name="star" size={20} color="#0D0D0D" />
+            </View>
+            <View>
+              <Text style={styles.eliteBannerTitle}>You're Elite</Text>
+              <Text style={styles.eliteBannerSub}>Manage your membership</Text>
+            </View>
+          </View>
+          <Feather name="chevron-right" size={20} color="rgba(0,0,0,0.5)" />
+        </LinearGradient>
+      </Pressable>
+    );
+  }
+
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.eliteBanner, { opacity: pressed ? 0.88 : 1 }]}
+      onPress={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        router.push("/elite");
+      }}
+    >
+      <LinearGradient
+        colors={["#1a1200", "#2a1d00"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.eliteBannerGradient}
+      >
+        <View style={styles.eliteBannerLeft}>
+          <View style={[styles.eliteBannerIconWrap, { backgroundColor: Colors.accent + "25", borderColor: Colors.accent + "50", borderWidth: 1 }]}>
+            <Feather name="star" size={20} color={Colors.accent} />
+          </View>
+          <View>
+            <Text style={[styles.eliteBannerTitle, { color: Colors.accent }]}>Go Elite</Text>
+            <Text style={[styles.eliteBannerSub, { color: "rgba(255,215,0,0.6)" }]}>
+              {isAuthenticated ? "£8.99/month · Cancel anytime" : "Log in to join · £8.99/month"}
+            </Text>
+          </View>
+        </View>
+        <View style={styles.eliteBannerCTA}>
+          <Text style={styles.eliteBannerCTAText}>Join</Text>
+        </View>
+      </LinearGradient>
+    </Pressable>
   );
 }
 
@@ -341,6 +410,55 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       fontFamily: "Inter_400Regular",
       fontSize: 14,
       color: Colors.textMuted,
+    },
+    eliteBanner: {
+      borderRadius: 16,
+      overflow: "hidden",
+      marginBottom: 28,
+    },
+    eliteBannerGradient: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+    },
+    eliteBannerLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      flex: 1,
+    },
+    eliteBannerIconWrap: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      backgroundColor: "rgba(0,0,0,0.15)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    eliteBannerTitle: {
+      fontFamily: "Poppins_800ExtraBold",
+      fontSize: 15,
+      color: "#0D0D0D",
+      lineHeight: 20,
+    },
+    eliteBannerSub: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 12,
+      color: "rgba(0,0,0,0.55)",
+      marginTop: 1,
+    },
+    eliteBannerCTA: {
+      backgroundColor: Colors.accent,
+      paddingHorizontal: 14,
+      paddingVertical: 7,
+      borderRadius: 20,
+    },
+    eliteBannerCTAText: {
+      fontFamily: "Inter_700Bold",
+      fontSize: 13,
+      color: "#0D0D0D",
     },
   });
 }
