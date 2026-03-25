@@ -113,16 +113,22 @@ export default function TicketsScreen() {
     setBuyingEventId(event.id);
     try {
       const { url } = await createCheckoutSession(event.id, checkoutData);
-      const result = await WebBrowser.openAuthSessionAsync(url, "");
-      if (result.type === "success" || result.type === "dismiss") {
-        await refetchTickets();
-        const fresh = await refetchTickets();
-        const newTicket = (fresh.data ?? []).find(t => t.eventId === event.id);
-        if (newTicket) {
-          setSelectedTicket(newTicket);
-          setActiveTab("my");
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        }
+      // openBrowserAsync opens SFSafariViewController on iOS (no OAuth dialog)
+      // It resolves when the user dismisses the browser
+      await WebBrowser.openBrowserAsync(url, {
+        presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
+        dismissButtonStyle: "done",
+        toolbarColor: "#0B5E2F",
+        controlsColor: "#FFD700",
+      });
+      // After browser closes, poll for the ticket (payment may have completed)
+      await refetchTickets();
+      const fresh = await refetchTickets();
+      const newTicket = (fresh.data ?? []).find(t => t.eventId === event.id);
+      if (newTicket) {
+        setSelectedTicket(newTicket);
+        setActiveTab("my");
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
     } catch (err: any) {
       Alert.alert("Error", err.message ?? "Could not start checkout");

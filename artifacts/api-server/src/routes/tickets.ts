@@ -128,6 +128,15 @@ router.post("/checkout", requireAuth, async (req: any, res) => {
       ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
       : `${req.protocol}://${req.get("host")}`;
 
+  // Clean up any old pending tickets for this user/event (abandoned sessions)
+  await db.delete(ticketsTable).where(
+    and(
+      eq(ticketsTable.userId, userId),
+      eq(ticketsTable.eventId, eventId),
+      eq(ticketsTable.status, "pending"),
+    ),
+  );
+
   // Pre-create a pending ticket to store checkout form data
   const pendingCode = generateTicketCode();
   const [pendingTicket] = await db.insert(ticketsTable).values({
