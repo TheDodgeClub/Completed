@@ -18,6 +18,7 @@ export interface AdminMember {
   bio: string | null;
   isElite: boolean;
   eliteSince: string | null;
+  stripeSubscriptionId: string | null;
 }
 
 export interface AdminTeamHistory {

@@ -377,6 +377,7 @@ router.get("/members", async (_req, res) => {
       bio: u.bio ?? null,
       isElite: u.isElite,
       eliteSince: u.eliteSince?.toISOString() ?? null,
+      stripeSubscriptionId: u.stripeSubscriptionId ?? null,
     };
   }));
   res.json(result);

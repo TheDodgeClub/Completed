@@ -11,6 +11,7 @@ import Events from "@/pages/events";
 import Posts from "@/pages/posts";
 import Merch from "@/pages/merch";
 import Members from "@/pages/members";
+import EliteMembers from "@/pages/elite-members";
 import Videos from "@/pages/videos";
 import SettingsPage from "@/pages/settings";
 import NotFound from "@/pages/not-found";
@@ -30,6 +31,7 @@ const ProtectedEvents = makePR(Events);
 const ProtectedPosts = makePR(Posts);
 const ProtectedMerch = makePR(Merch);
 const ProtectedMembers = makePR(Members);
+const ProtectedEliteMembers = makePR(EliteMembers);
 const ProtectedVideos = makePR(Videos);
 const ProtectedSettings = makePR(SettingsPage);
 
@@ -43,6 +45,7 @@ function Router() {
         <Route path="/posts" component={ProtectedPosts} />
         <Route path="/merch" component={ProtectedMerch} />
         <Route path="/members" component={ProtectedMembers} />
+        <Route path="/elite-members" component={ProtectedEliteMembers} />
         <Route path="/videos" component={ProtectedVideos} />
         <Route path="/settings" component={ProtectedSettings} />
         <Route component={NotFound} />
