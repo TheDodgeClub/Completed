@@ -649,6 +649,24 @@ router.post("/notify", async (req, res) => {
   res.json({ sent });
 });
 
+/* ========== LIVE USERS ========== */
+
+/* GET /api/admin/live-users — users active in the last 5 minutes */
+router.get("/live-users", async (_req, res) => {
+  const cutoff = new Date(Date.now() - 5 * 60 * 1000);
+  const rows = await db
+    .select({
+      id: usersTable.id,
+      name: usersTable.name,
+      avatarUrl: usersTable.avatarUrl,
+      lastSeenAt: usersTable.lastSeenAt,
+    })
+    .from(usersTable)
+    .where(gte(usersTable.lastSeenAt, cutoff))
+    .orderBy(desc(usersTable.lastSeenAt));
+  res.json({ count: rows.length, users: rows });
+});
+
 /* ========== SESSION ANALYTICS ========== */
 
 /* GET /api/admin/sessions/stats — engagement analytics */

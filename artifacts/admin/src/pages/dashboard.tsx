@@ -7,13 +7,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { CalendarDays, MessageSquare, Users, Trophy, Zap, CircleDot, Bell, Send, CheckCircle, Clock, Activity, BarChart2, TrendingUp } from "lucide-react";
+import { CalendarDays, MessageSquare, Users, Trophy, Zap, CircleDot, Bell, Send, CheckCircle, Clock, Activity, BarChart2, TrendingUp, Wifi } from "lucide-react";
 import { Link } from "wouter";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
 
 const LEVEL_NAMES = ["Rookie", "Player", "Contender", "Competitor", "Veteran", "Elite", "Pro", "Champion", "Legend", "Icon"];
+
+type LiveUser = {
+  id: number;
+  name: string;
+  avatarUrl: string | null;
+  lastSeenAt: string;
+};
+
+type LiveUsersData = {
+  count: number;
+  users: LiveUser[];
+};
 
 type SessionStats = {
   totalSessions: number;
@@ -73,6 +85,12 @@ export default function Dashboard() {
     queryKey: ["admin-session-stats"],
     queryFn: () => fetchApi<SessionStats>("/api/admin/sessions/stats"),
     refetchInterval: 60000,
+  });
+
+  const { data: liveData } = useQuery<LiveUsersData>({
+    queryKey: ["admin-live-users"],
+    queryFn: () => fetchApi<LiveUsersData>("/api/admin/live-users"),
+    refetchInterval: 30000,
   });
 
   const [notifTitle, setNotifTitle] = useState("");
@@ -154,12 +172,61 @@ export default function Dashboard() {
     <div className="text-sm text-muted-foreground py-4 text-center">Loading...</div>
   );
 
+  const liveCount = liveData?.count ?? 0;
+  const liveUsers = liveData?.users ?? [];
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
         <h1 className="text-3xl font-display font-bold text-foreground">Dashboard</h1>
         <p className="text-muted-foreground mt-2 text-lg">Welcome back, {user?.name}. Here's what's happening at Dodge Club.</p>
       </div>
+
+      {/* Live Now banner */}
+      <Card className={`border ${liveCount > 0 ? "border-green-500/40 bg-green-500/5" : "border-border/50 bg-card"} shadow-lg shadow-black/20 transition-colors duration-500`}>
+        <CardContent className="py-4 px-5">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2 shrink-0">
+              {liveCount > 0 ? (
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500" />
+                </span>
+              ) : (
+                <span className="inline-flex rounded-full h-3 w-3 bg-muted-foreground/30" />
+              )}
+              <Wifi className={`w-4 h-4 ${liveCount > 0 ? "text-green-400" : "text-muted-foreground"}`} />
+              <span className={`font-bold text-lg ${liveCount > 0 ? "text-green-400" : "text-muted-foreground"}`}>
+                {liveCount}
+              </span>
+              <span className="text-sm font-medium text-muted-foreground">
+                {liveCount === 1 ? "member" : "members"} live in the app right now
+              </span>
+              <span className="text-xs text-muted-foreground/60 ml-1">(last 5 min)</span>
+            </div>
+            {liveUsers.length > 0 && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-muted-foreground/40 text-xs">—</span>
+                {liveUsers.slice(0, 8).map((u) => (
+                  <div key={u.id} className="flex items-center gap-1.5 bg-green-500/10 border border-green-500/20 rounded-full px-2 py-0.5">
+                    <div className="w-4 h-4 rounded-full bg-secondary flex items-center justify-center overflow-hidden shrink-0">
+                      {u.avatarUrl ? (
+                        <img src={resolveAvatarUrl(u.avatarUrl)} alt={u.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-[8px] font-bold">{u.name.charAt(0)}</span>
+                      )}
+                    </div>
+                    <span className="text-xs font-medium text-green-300">{u.name.split(" ")[0]}</span>
+                  </div>
+                ))}
+                {liveUsers.length > 8 && (
+                  <span className="text-xs text-muted-foreground">+{liveUsers.length - 8} more</span>
+                )}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Stat cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

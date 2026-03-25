@@ -5,6 +5,8 @@ import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { WebhookHandlers } from "./webhookHandlers";
+import { db, usersTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 
 const app: Express = express();
 
@@ -55,6 +57,17 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
     req.session = { userId: Number(token) };
   } else {
     req.session = null;
+  }
+  next();
+});
+
+// Non-blocking lastSeenAt heartbeat for authenticated mobile requests
+app.use((req: Request, _res: Response, next: NextFunction) => {
+  if (req.session?.userId) {
+    db.update(usersTable)
+      .set({ lastSeenAt: new Date() })
+      .where(eq(usersTable.id, req.session.userId))
+      .catch(() => {});
   }
   next();
 });
