@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
+  Image,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -16,10 +17,9 @@ import { useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
-import { listUpcomingEvents, listPosts, getStats } from "@/lib/api";
+import { listUpcomingEvents, listPosts } from "@/lib/api";
 import { EventCard } from "@/components/EventCard";
 import { PostCard } from "@/components/PostCard";
-import { StatCard } from "@/components/StatCard";
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -35,15 +35,10 @@ export default function HomeScreen() {
     queryFn: listPosts,
   });
 
-  const { data: stats, refetch: refetchStats } = useQuery({
-    queryKey: ["stats"],
-    queryFn: getStats,
-  });
-
   const [refreshing, setRefreshing] = React.useState(false);
   const handleRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([refetchEvents(), refetchPosts(), refetchStats()]);
+    await Promise.all([refetchEvents(), refetchPosts()]);
     setRefreshing(false);
   };
 
@@ -122,17 +117,27 @@ export default function HomeScreen() {
       </LinearGradient>
 
       <View style={styles.body}>
-        {/* Stats */}
-        {stats && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Community Stats</Text>
-            <View style={styles.statsRow}>
-              <StatCard value={stats.totalEvents} label="Events" color={Colors.primary} />
-              <StatCard value={stats.totalMembers} label="Members" color={Colors.secondary} />
-              <StatCard value={stats.totalTicketsSold} label="Tickets" color={Colors.accent} />
-            </View>
-          </View>
-        )}
+        {/* Next Upcoming Event Banner */}
+        {events && events.length > 0 && events[0].imageUrl ? (
+          <Pressable
+            style={styles.eventBanner}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.push("/(tabs)/tickets");
+            }}
+          >
+            <Image source={{ uri: events[0].imageUrl }} style={styles.eventBannerImage} resizeMode="cover" />
+            <LinearGradient
+              colors={["transparent", "rgba(0,0,0,0.72)"]}
+              style={styles.eventBannerOverlay}
+            >
+              <Text style={styles.eventBannerTitle} numberOfLines={2}>{events[0].title}</Text>
+              <Text style={styles.eventBannerDate}>
+                {new Date(events[0].date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+              </Text>
+            </LinearGradient>
+          </Pressable>
+        ) : null}
 
         {/* Upcoming Events */}
         <View style={styles.section}>
@@ -298,7 +303,36 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.primary,
   },
-  statsRow: { flexDirection: "row", gap: 10 },
+  eventBanner: {
+    borderRadius: 16,
+    overflow: "hidden",
+    marginBottom: 20,
+    height: 200,
+  },
+  eventBannerImage: {
+    width: "100%",
+    height: "100%",
+  },
+  eventBannerOverlay: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    padding: 16,
+    paddingTop: 40,
+  },
+  eventBannerTitle: {
+    fontFamily: "Poppins_800ExtraBold",
+    fontSize: 18,
+    color: "#fff",
+    lineHeight: 24,
+  },
+  eventBannerDate: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
+    color: "rgba(255,255,255,0.85)",
+    marginTop: 4,
+  },
   empty: {
     alignItems: "center",
     padding: 32,
