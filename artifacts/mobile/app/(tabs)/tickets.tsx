@@ -485,7 +485,7 @@ function CheckoutFormModal({
   const SCREEN_HEIGHT = Dimensions.get("window").height;
 
   const cfStyles = StyleSheet.create({
-    backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.6)", flexDirection: "column", zIndex: 999 },
+    backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", flexDirection: "column" },
     kav: { justifyContent: "flex-end" },
     sheet: {
       backgroundColor: Colors.surface,
@@ -582,16 +582,17 @@ function CheckoutFormModal({
   const hitSlop = { top: 12, bottom: 12, left: 12, right: 12 };
 
   return (
-    <View style={cfStyles.backdrop}>
-      {/* Tapping the dark area dismisses the sheet */}
-      <Pressable style={{ flex: 1 }} onPress={onClose} />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ width: "100%" }}
-        keyboardVerticalOffset={0}
-      >
-        <View style={cfStyles.sheet}>
-          <View style={cfStyles.sheetInner}>
+    <Modal visible transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
+      <View style={cfStyles.backdrop}>
+        {/* Tapping the dark area dismisses the sheet */}
+        <Pressable style={{ flex: 1 }} onPress={onClose} />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ width: "100%" }}
+          keyboardVerticalOffset={0}
+        >
+          <View style={cfStyles.sheet}>
+            <View style={cfStyles.sheetInner}>
             {/* Handle + header — never scroll */}
             <View style={cfStyles.sheetHandle} />
             <View style={cfStyles.sheetHeader}>
@@ -639,10 +640,11 @@ function CheckoutFormModal({
                 <Text style={cfStyles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
             </View>
+            </View>
           </View>
-        </View>
-      </KeyboardAvoidingView>
-    </View>
+        </KeyboardAvoidingView>
+      </View>
+    </Modal>
   );
 }
 
