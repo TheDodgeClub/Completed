@@ -55,6 +55,23 @@ function toProfile(user: typeof usersTable.$inferSelect, stats: Awaited<ReturnTy
   };
 }
 
+/* GET /api/users — member directory (public) */
+router.get("/", async (_req, res) => {
+  const users = await db.query.usersTable.findMany({
+    orderBy: usersTable.name,
+    columns: { id: true, name: true, avatarUrl: true, username: true, bio: true, preferredRole: true, createdAt: true },
+  });
+  res.json(users.map(u => ({
+    id: u.id,
+    name: u.name,
+    avatarUrl: u.avatarUrl ?? null,
+    username: u.username ?? null,
+    bio: u.bio ?? null,
+    preferredRole: u.preferredRole ?? null,
+    memberSince: u.createdAt.toISOString(),
+  })));
+});
+
 /* GET /api/users/:id/profile */
 router.get("/:id/profile", async (req, res) => {
   const user = await db.query.usersTable.findFirst({ where: eq(usersTable.id, Number(req.params.id)) });

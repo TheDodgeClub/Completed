@@ -29,6 +29,10 @@ function NativeTabLayout({ isAdmin }: { isAdmin: boolean }) {
         <Icon sf={{ default: "megaphone", selected: "megaphone.fill" }} />
         <Label>Updates</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="community">
+        <Icon sf={{ default: "person.2", selected: "person.2.fill" }} />
+        <Label>Club</Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="member">
         <Icon sf={{ default: "person.badge.shield.checkmark", selected: "person.badge.shield.checkmark.fill" }} />
         <Label>Member</Label>
@@ -70,6 +74,7 @@ function ClassicTabLayout({ isAdmin }: { isAdmin: boolean }) {
           ) : isWeb ? (
             <View style={[StyleSheet.absoluteFill, { backgroundColor: Colors.surface }]} />
           ) : null,
+        tabBarLabelStyle: { fontSize: 10 },
       }}
     >
       <Tabs.Screen
@@ -77,11 +82,7 @@ function ClassicTabLayout({ isAdmin }: { isAdmin: boolean }) {
         options={{
           title: "Home",
           tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="house" tintColor={color} size={24} />
-            ) : (
-              <Feather name="home" size={22} color={color} />
-            ),
+            isIOS ? <SymbolView name="house" tintColor={color} size={22} /> : <Feather name="home" size={21} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -89,11 +90,7 @@ function ClassicTabLayout({ isAdmin }: { isAdmin: boolean }) {
         options={{
           title: "Tickets",
           tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="ticket" tintColor={color} size={24} />
-            ) : (
-              <Feather name="tag" size={22} color={color} />
-            ),
+            isIOS ? <SymbolView name="ticket" tintColor={color} size={22} /> : <Feather name="tag" size={21} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -101,11 +98,7 @@ function ClassicTabLayout({ isAdmin }: { isAdmin: boolean }) {
         options={{
           title: "Merch",
           tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="bag" tintColor={color} size={24} />
-            ) : (
-              <Feather name="shopping-bag" size={22} color={color} />
-            ),
+            isIOS ? <SymbolView name="bag" tintColor={color} size={22} /> : <Feather name="shopping-bag" size={21} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -113,11 +106,15 @@ function ClassicTabLayout({ isAdmin }: { isAdmin: boolean }) {
         options={{
           title: "Updates",
           tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="megaphone" tintColor={color} size={24} />
-            ) : (
-              <Feather name="bell" size={22} color={color} />
-            ),
+            isIOS ? <SymbolView name="megaphone" tintColor={color} size={22} /> : <Feather name="bell" size={21} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="community"
+        options={{
+          title: "Club",
+          tabBarIcon: ({ color }) =>
+            isIOS ? <SymbolView name="person.2" tintColor={color} size={22} /> : <Feather name="users" size={21} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -125,11 +122,7 @@ function ClassicTabLayout({ isAdmin }: { isAdmin: boolean }) {
         options={{
           title: "Member",
           tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="person.circle" tintColor={color} size={24} />
-            ) : (
-              <Feather name="user" size={22} color={color} />
-            ),
+            isIOS ? <SymbolView name="person.circle" tintColor={color} size={22} /> : <Feather name="user" size={21} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -139,11 +132,7 @@ function ClassicTabLayout({ isAdmin }: { isAdmin: boolean }) {
             ? {
                 title: "Admin",
                 tabBarIcon: ({ color }) =>
-                  isIOS ? (
-                    <SymbolView name="gearshape" tintColor={color} size={24} />
-                  ) : (
-                    <Feather name="settings" size={22} color={color} />
-                  ),
+                  isIOS ? <SymbolView name="gearshape" tintColor={color} size={22} /> : <Feather name="settings" size={21} color={color} />,
               }
             : { href: null }
         }

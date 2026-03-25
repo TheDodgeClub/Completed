@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { View, Text, StyleSheet, Image } from "react-native";
+import { View, Text, StyleSheet, Image, Pressable } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/context/ThemeContext";
 import { resolveImageUrl } from "@/constants/api";
@@ -8,9 +8,11 @@ import type { Post } from "@/lib/api";
 type Props = {
   post: Post;
   isLocked?: boolean;
+  commentCount?: number;
+  onPress?: () => void;
 };
 
-export function PostCard({ post, isLocked }: Props) {
+export function PostCard({ post, isLocked, commentCount, onPress }: Props) {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const date = new Date(post.createdAt);
@@ -22,7 +24,11 @@ export function PostCard({ post, isLocked }: Props) {
   const imageUri = resolveImageUrl(post.imageUrl);
 
   return (
-    <View style={styles.card}>
+    <Pressable
+      style={({ pressed }) => [styles.card, { opacity: pressed && onPress ? 0.9 : 1 }]}
+      onPress={onPress}
+      disabled={!onPress}
+    >
       {imageUri && (
         <Image source={{ uri: imageUri }} style={styles.postImage} resizeMode="cover" />
       )}
@@ -47,10 +53,18 @@ export function PostCard({ post, isLocked }: Props) {
             <View style={styles.authorDot} />
             <Text style={styles.author}>{post.authorName}</Text>
           </View>
-          <Text style={styles.date}>{formatted}</Text>
+          <View style={styles.footerRight}>
+            {!isLocked && (
+              <View style={styles.commentCount}>
+                <Feather name="message-circle" size={13} color={Colors.textMuted} />
+                <Text style={styles.commentCountText}>{commentCount ?? 0}</Text>
+              </View>
+            )}
+            <Text style={styles.date}>{formatted}</Text>
+          </View>
         </View>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -134,6 +148,21 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       fontFamily: "Inter_600SemiBold",
       fontSize: 13,
       color: Colors.textSecondary,
+    },
+    footerRight: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    commentCount: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
+    commentCountText: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 12,
+      color: Colors.textMuted,
     },
     date: {
       fontFamily: "Inter_400Regular",

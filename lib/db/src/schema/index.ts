@@ -7,4 +7,6 @@ export * from "./merch";
 export * from "./videos";
 export * from "./team_history";
 export * from "./event_registrations";
+export * from "./messages";
+export * from "./post_comments";
 export * from "./relations";

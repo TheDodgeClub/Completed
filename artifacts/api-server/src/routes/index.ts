@@ -9,6 +9,7 @@ import merchRouter from "./merch";
 import statsRouter from "./stats";
 import adminRouter from "./admin";
 import videosRouter from "./videos";
+import messagesRouter from "./messages";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use("/merch", merchRouter);
 router.use("/stats", statsRouter);
 router.use("/admin", adminRouter);
 router.use("/videos", videosRouter);
+router.use("/messages", messagesRouter);
 
 export default router;

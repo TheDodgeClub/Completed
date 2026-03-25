@@ -377,6 +377,85 @@ export async function adminDeleteAttendance(id: number): Promise<void> {
   return apiFetch<void>(`/admin/attendance/${id}`, { method: "DELETE" });
 }
 
+/* ---- member directory ---- */
+
+export type MemberSummary = {
+  id: number;
+  name: string;
+  avatarUrl: string | null;
+  username: string | null;
+  bio: string | null;
+  preferredRole: string | null;
+  memberSince: string;
+};
+
+export async function listMembers(): Promise<MemberSummary[]> {
+  return apiFetch<MemberSummary[]>("/users");
+}
+
+export async function getMemberProfile(id: number): Promise<UserProfile> {
+  return apiFetch<UserProfile>(`/users/${id}/profile`);
+}
+
+/* ---- messages ---- */
+
+export type Conversation = {
+  partnerId: number;
+  partnerName: string;
+  partnerAvatar: string | null;
+  lastMessage: string;
+  lastMessageAt: string;
+  unreadCount: number;
+};
+
+export type MessageItem = {
+  id: number;
+  senderId: number;
+  senderName: string;
+  senderAvatar: string | null;
+  content: string;
+  createdAt: string;
+  readAt: string | null;
+};
+
+export async function listConversations(): Promise<Conversation[]> {
+  return apiFetch<Conversation[]>("/messages");
+}
+
+export async function getThread(partnerId: number): Promise<MessageItem[]> {
+  return apiFetch<MessageItem[]>(`/messages/${partnerId}`);
+}
+
+export async function sendMessage(partnerId: number, content: string): Promise<MessageItem> {
+  return apiFetch<MessageItem>(`/messages/${partnerId}`, {
+    method: "POST",
+    body: JSON.stringify({ content }),
+  });
+}
+
+/* ---- post comments ---- */
+
+export type PostComment = {
+  id: number;
+  postId: number;
+  userId: number;
+  authorName: string;
+  authorAvatar: string | null;
+  content: string;
+  createdAt: string;
+};
+
+export async function getPostComments(postId: number): Promise<PostComment[]> {
+  return apiFetch<PostComment[]>(`/posts/${postId}/comments`);
+}
+
+export async function addPostComment(postId: number, content: string): Promise<PostComment> {
+  return apiFetch<PostComment>(`/posts/${postId}/comments`, {
+    method: "POST",
+    body: JSON.stringify({ content }),
+  });
+}
+
 /* ---- push notifications ---- */
 
 export async function savePushToken(token: string): Promise<void> {

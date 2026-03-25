@@ -6,6 +6,8 @@ import { awardsTable } from "./awards";
 import { postsTable } from "./posts";
 import { teamHistoryTable } from "./team_history";
 import { eventRegistrationsTable } from "./event_registrations";
+import { messagesTable } from "./messages";
+import { postCommentsTable } from "./post_comments";
 
 export const usersRelations = relations(usersTable, ({ many }) => ({
   attendance: many(attendanceTable),
@@ -13,6 +15,23 @@ export const usersRelations = relations(usersTable, ({ many }) => ({
   posts: many(postsTable),
   teamHistory: many(teamHistoryTable),
   eventRegistrations: many(eventRegistrationsTable),
+  sentMessages: many(messagesTable, { relationName: "sender" }),
+  receivedMessages: many(messagesTable, { relationName: "receiver" }),
+  comments: many(postCommentsTable),
+}));
+
+export const messagesRelations = relations(messagesTable, ({ one }) => ({
+  sender: one(usersTable, { fields: [messagesTable.senderId], references: [usersTable.id], relationName: "sender" }),
+  receiver: one(usersTable, { fields: [messagesTable.receiverId], references: [usersTable.id], relationName: "receiver" }),
+}));
+
+export const postCommentsRelations = relations(postCommentsTable, ({ one }) => ({
+  post: one(postsTable, { fields: [postCommentsTable.postId], references: [postsTable.id] }),
+  user: one(usersTable, { fields: [postCommentsTable.userId], references: [usersTable.id] }),
+}));
+
+export const postsWithCommentsRelations = relations(postsTable, ({ many }) => ({
+  comments: many(postCommentsTable),
 }));
 
 export const awardsRelations = relations(awardsTable, ({ one }) => ({
