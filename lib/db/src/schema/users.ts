@@ -1,4 +1,4 @@
-import { pgTable, serial, text, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, boolean, timestamp, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -23,6 +23,7 @@ export const usersTable = pgTable("users", {
   isElite: boolean("is_elite").notNull().default(false),
   stripeSubscriptionId: text("stripe_subscription_id"),
   eliteSince: timestamp("elite_since"),
+  bonusXp: integer("bonus_xp").notNull().default(0),
 });
 
 export const insertUserSchema = createInsertSchema(usersTable).omit({

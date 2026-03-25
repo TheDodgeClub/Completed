@@ -106,8 +106,16 @@ router.get("/success", async (req: any, res) => {
         : (session.subscription as any)?.id;
 
       if (userId) {
+        const [existing] = await db.select({ isElite: usersTable.isElite })
+          .from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+        const grantBonus = !existing?.isElite;
         await db.update(usersTable)
-          .set({ isElite: true, stripeSubscriptionId: subscriptionId, eliteSince: new Date() })
+          .set({
+            isElite: true,
+            stripeSubscriptionId: subscriptionId,
+            eliteSince: new Date(),
+            ...(grantBonus ? { bonusXp: 500 } : {}),
+          })
           .where(eq(usersTable.id, userId));
       }
     }

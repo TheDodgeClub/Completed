@@ -19,12 +19,18 @@ async function handleSubscriptionEvent(event: { type: string; data: { object: an
       .where(eq(usersTable.stripeSubscriptionId, sub.id));
     logger.info({ subscriptionId: sub.id, isActive }, "Elite subscription updated");
   } else if (event.type === "customer.subscription.created") {
-    // Handled by the /api/elite/success redirect, but update as belt-and-braces
+    // Belt-and-braces: also handled by /api/elite/success redirect
     const isActive = sub.status === "active" || sub.status === "trialing";
     if (isActive) {
+      // Only grant bonus XP if user isn't already Elite (first-time signup)
+      const [existing] = await db
+        .select({ isElite: usersTable.isElite })
+        .from(usersTable)
+        .where(eq(usersTable.stripeSubscriptionId, sub.id))
+        .limit(1);
       await db
         .update(usersTable)
-        .set({ isElite: true })
+        .set({ isElite: true, ...(!existing?.isElite ? { bonusXp: 500 } : {}) })
         .where(eq(usersTable.stripeSubscriptionId, sub.id));
     }
   }

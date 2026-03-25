@@ -341,7 +341,7 @@ router.delete("/merch/:id", async (req, res) => {
 /* ========== MEMBERS ========== */
 
 const LEVEL_THRESHOLDS = [0, 300, 700, 1200, 1800, 2500, 3300, 4200, 5200, 6300];
-function computeXP(events: number, medals: number, rings: number) { return events * 100 + medals * 300 + rings * 1000; }
+function computeXP(events: number, medals: number, rings: number, bonus: number = 0) { return events * 100 + medals * 300 + rings * 1000 + bonus; }
 function computeLevel(xp: number) {
   let level = 1;
   for (let i = 1; i < LEVEL_THRESHOLDS.length; i++) {
@@ -359,7 +359,7 @@ router.get("/members", async (_req, res) => {
     const eventsAttended = records.length;
     const medalsEarned = records.filter(r => r.earnedMedal).length + awards.filter(a => a.type === "medal").length;
     const ringsEarned = awards.filter(a => a.type === "ring").length;
-    const xp = computeXP(eventsAttended, medalsEarned, ringsEarned);
+    const xp = computeXP(eventsAttended, medalsEarned, ringsEarned, u.bonusXp ?? 0);
     return {
       id: u.id,
       name: u.name,
@@ -400,7 +400,7 @@ router.put("/members/:id", async (req, res) => {
   const eventsAttended = records.length;
   const medalsEarned = records.filter(r => r.earnedMedal).length + awards.filter(a => a.type === "medal").length;
   const ringsEarned = awards.filter(a => a.type === "ring").length;
-  const xp = computeXP(eventsAttended, medalsEarned, ringsEarned);
+  const xp = computeXP(eventsAttended, medalsEarned, ringsEarned, user.bonusXp ?? 0);
   res.json({
     id: user.id, name: user.name, email: user.email, isAdmin: user.isAdmin,
     memberSince: user.createdAt.toISOString(), eventsAttended, medalsEarned, ringsEarned, xp,
