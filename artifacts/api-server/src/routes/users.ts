@@ -8,8 +8,8 @@ const router: IRouter = Router();
 
 const LEVEL_THRESHOLDS = [0, 300, 700, 1200, 1800, 2500, 3300, 4200, 5200, 6300];
 
-function computeXP(eventsAttended: number, medalsEarned: number, ringsEarned: number, bonusXp: number = 0): number {
-  return eventsAttended * 100 + medalsEarned * 300 + ringsEarned * 1000 + bonusXp;
+function computeXP(eventsAttended: number, medalsEarned: number, ringsEarned: number, bonusXp: number = 0, gameXp: number = 0): number {
+  return eventsAttended * 100 + medalsEarned * 300 + ringsEarned * 1000 + bonusXp + gameXp;
 }
 
 function computeLevel(xp: number): number {
@@ -28,7 +28,7 @@ function xpForNextLevel(xp: number): { current: number; next: number; level: num
   return { current: xp - currentThreshold, next: nextThreshold - currentThreshold, level };
 }
 
-async function getUserStats(userId: number, bonusXp: number = 0) {
+async function getUserStats(userId: number, bonusXp: number = 0, gameXp: number = 0) {
   const [records, awards] = await Promise.all([
     db.query.attendanceTable.findMany({ where: eq(attendanceTable.userId, userId) }),
     db.query.awardsTable.findMany({ where: eq(awardsTable.userId, userId) }),
@@ -36,7 +36,7 @@ async function getUserStats(userId: number, bonusXp: number = 0) {
   const eventsAttended = records.length;
   const medalsEarned = records.filter(r => r.earnedMedal).length + awards.filter(a => a.type === "medal").length;
   const ringsEarned = awards.filter(a => a.type === "ring").length;
-  const xp = computeXP(eventsAttended, medalsEarned, ringsEarned, bonusXp);
+  const xp = computeXP(eventsAttended, medalsEarned, ringsEarned, bonusXp, gameXp);
   const level = computeLevel(xp);
   const xpProgress = xpForNextLevel(xp);
   return { eventsAttended, medalsEarned, ringsEarned, xp, level, xpProgress };
@@ -78,7 +78,7 @@ router.get("/", async (_req, res) => {
 router.get("/:id/profile", async (req, res) => {
   const user = await db.query.usersTable.findFirst({ where: eq(usersTable.id, Number(req.params.id)) });
   if (!user) { res.status(404).json({ error: "Not found" }); return; }
-  const stats = await getUserStats(user.id, user.bonusXp ?? 0);
+  const stats = await getUserStats(user.id, user.bonusXp ?? 0, user.gameXp ?? 0);
   res.json(toProfile(user, stats));
 });
 
@@ -201,8 +201,33 @@ router.put("/me", async (req, res) => {
   const [user] = await db.update(usersTable).set(updates).where(eq(usersTable.id, userId)).returning();
   if (!user) { res.status(404).json({ error: "Not found" }); return; }
 
-  const stats = await getUserStats(user.id);
+  const stats = await getUserStats(user.id, user.bonusXp ?? 0, user.gameXp ?? 0);
   res.json(toProfile(user, stats));
+});
+
+/* POST /api/users/me/game-xp — award XP for completing a mini game */
+router.post("/me/game-xp", async (req, res) => {
+  const userId = req.session?.userId;
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const earned = Number(req.body.earned);
+  if (isNaN(earned) || earned < 0 || earned > 50) {
+    res.status(400).json({ error: "Invalid XP amount" });
+    return;
+  }
+
+  const user = await db.query.usersTable.findFirst({ where: eq(usersTable.id, userId) });
+  if (!user) { res.status(404).json({ error: "Not found" }); return; }
+
+  const MAX_GAME_XP = 500;
+  const current = user.gameXp ?? 0;
+  const toAdd = Math.max(0, Math.min(earned, MAX_GAME_XP - current));
+
+  if (toAdd > 0) {
+    await db.update(usersTable).set({ gameXp: current + toAdd }).where(eq(usersTable.id, userId));
+  }
+
+  res.json({ added: toAdd, totalGameXp: current + toAdd });
 });
 
 /* POST /api/users/me/avatar — update avatar URL */

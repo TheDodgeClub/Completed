@@ -182,6 +182,24 @@ export default function HomeScreen() {
           )}
         </View>
 
+        {/* Mini Game Card */}
+        <Pressable
+          style={styles.gameCard}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            router.push("/games/dodge");
+          }}
+        >
+          <View style={styles.gameCardLeft}>
+            <Text style={styles.gameCardEmoji}>🏐</Text>
+          </View>
+          <View style={styles.gameCardBody}>
+            <Text style={styles.gameCardTitle}>DODGE!</Text>
+            <Text style={styles.gameCardSub}>Earn up to +50 XP per game</Text>
+          </View>
+          <Feather name="chevron-right" size={20} color="#FFD700" />
+        </Pressable>
+
         {/* Go Elite Banner */}
         <EliteBanner isElite={user?.isElite ?? false} isAuthenticated={isAuthenticated} />
 
@@ -345,6 +363,36 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       fontFamily: "Inter_400Regular",
       fontSize: 14,
       color: Colors.textMuted,
+    },
+    gameCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: "#111",
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: "#FFD70033",
+      padding: 16,
+      marginBottom: 20,
+      gap: 12,
+    },
+    gameCardLeft: {
+      width: 44, height: 44,
+      borderRadius: 10,
+      backgroundColor: "#0B5E2F22",
+      alignItems: "center", justifyContent: "center",
+    },
+    gameCardEmoji: { fontSize: 24 },
+    gameCardBody: { flex: 1 },
+    gameCardTitle: {
+      fontFamily: "Poppins_800ExtraBold",
+      fontSize: 16,
+      color: "#FFD700",
+    },
+    gameCardSub: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 12,
+      color: Colors.textMuted,
+      marginTop: 2,
     },
   });
 }

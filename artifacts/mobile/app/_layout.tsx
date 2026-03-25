@@ -61,6 +61,7 @@ export default function RootLayout() {
                   <Stack.Screen name="admin/posts" options={{ headerShown: false }} />
                   <Stack.Screen name="admin/merch" options={{ headerShown: false }} />
                   <Stack.Screen name="admin/members" options={{ headerShown: false }} />
+                  <Stack.Screen name="games/dodge" options={{ headerShown: false }} />
                 </Stack>
               </AuthProvider>
             </GestureHandlerRootView>

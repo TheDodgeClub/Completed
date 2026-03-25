@@ -579,3 +579,10 @@ export async function startEliteSubscription(): Promise<{ url: string }> {
 export async function getEliteManageUrl(): Promise<{ url: string }> {
   return apiFetch<{ url: string }>("/elite/manage");
 }
+
+export async function awardGameXp(earned: number): Promise<{ added: number; totalGameXp: number }> {
+  return apiFetch<{ added: number; totalGameXp: number }>("/users/me/game-xp", {
+    method: "POST",
+    body: JSON.stringify({ earned }),
+  });
+}

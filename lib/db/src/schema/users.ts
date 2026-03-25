@@ -24,6 +24,7 @@ export const usersTable = pgTable("users", {
   stripeSubscriptionId: text("stripe_subscription_id"),
   eliteSince: timestamp("elite_since"),
   bonusXp: integer("bonus_xp").notNull().default(0),
+  gameXp: integer("game_xp").notNull().default(0),
 });
 
 export const insertUserSchema = createInsertSchema(usersTable).omit({
