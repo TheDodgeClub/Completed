@@ -49,7 +49,7 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: Colors.background }}
+      style={{ flex: 1, backgroundColor: "#FFFFFF" }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView
@@ -70,11 +70,11 @@ export default function LoginScreen() {
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Email</Text>
           <View style={styles.inputWrap}>
-            <Feather name="mail" size={18} color={Colors.textMuted} style={styles.inputIcon} />
+            <Feather name="mail" size={18} color="#999999" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
               placeholder="your@email.com"
-              placeholderTextColor={Colors.textMuted}
+              placeholderTextColor="#999999"
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -87,18 +87,18 @@ export default function LoginScreen() {
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Password</Text>
           <View style={styles.inputWrap}>
-            <Feather name="lock" size={18} color={Colors.textMuted} style={styles.inputIcon} />
+            <Feather name="lock" size={18} color="#999999" style={styles.inputIcon} />
             <TextInput
               style={[styles.input, { flex: 1 }]}
               placeholder="••••••••"
-              placeholderTextColor={Colors.textMuted}
+              placeholderTextColor="#999999"
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
               autoComplete="password"
             />
             <Pressable onPress={() => setShowPassword(v => !v)} style={styles.eyeBtn}>
-              <Feather name={showPassword ? "eye-off" : "eye"} size={18} color={Colors.textMuted} />
+              <Feather name={showPassword ? "eye-off" : "eye"} size={18} color="#999999" />
             </Pressable>
           </View>
         </View>
@@ -147,7 +147,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       paddingHorizontal: 24,
       paddingBottom: 24,
       gap: 0,
-      backgroundColor: Colors.background,
+      backgroundColor: "#FFFFFF",
       flexGrow: 1,
     },
     logoRow: {
@@ -160,24 +160,25 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     logoImg: {
       width: 180,
       height: 54,
+      tintColor: "#0B5E2F",
     },
     title: {
       fontFamily: "Poppins_800ExtraBold",
       fontSize: 28,
-      color: Colors.text,
+      color: "#111111",
       marginBottom: 6,
     },
     subtitle: {
       fontFamily: "Inter_400Regular",
       fontSize: 15,
-      color: Colors.textSecondary,
+      color: "#666666",
       marginBottom: 36,
     },
     inputGroup: { marginBottom: 18 },
     label: {
       fontFamily: "Inter_600SemiBold",
       fontSize: 13,
-      color: Colors.textSecondary,
+      color: "#666666",
       marginBottom: 8,
       letterSpacing: 0.5,
       textTransform: "uppercase",
@@ -185,10 +186,10 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     inputWrap: {
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: Colors.surface,
+      backgroundColor: "#F5F5F5",
       borderRadius: 14,
       borderWidth: 1,
-      borderColor: Colors.border,
+      borderColor: "#E8E8E8",
       paddingHorizontal: 14,
     },
     inputIcon: { marginRight: 10 },
@@ -196,7 +197,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       flex: 1,
       fontFamily: "Inter_400Regular",
       fontSize: 16,
-      color: Colors.text,
+      color: "#111111",
       paddingVertical: 16,
     },
     eyeBtn: { padding: 8 },
@@ -242,7 +243,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     forgotLink: {
       fontFamily: "Inter_600SemiBold",
       fontSize: 14,
-      color: Colors.textSecondary,
+      color: "#666666",
       textDecorationLine: "underline",
     },
     footer: {
@@ -253,7 +254,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     footerText: {
       fontFamily: "Inter_400Regular",
       fontSize: 14,
-      color: Colors.textSecondary,
+      color: "#666666",
     },
     link: {
       fontFamily: "Inter_600SemiBold",
