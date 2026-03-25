@@ -60,7 +60,7 @@ export default function HomeScreen() {
     >
       {/* Hero */}
       <LinearGradient
-        colors={[Colors.primary, "#8B0000"]}
+        colors={[Colors.primary, "#052A15"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[styles.hero, { paddingTop: insets.top + 24 }]}
@@ -187,7 +187,7 @@ export default function HomeScreen() {
           }}
         >
           <LinearGradient
-            colors={[Colors.secondary, "#C25E2A"]}
+            colors={[Colors.secondary, "#0E5C30"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.merchCTAGradient}

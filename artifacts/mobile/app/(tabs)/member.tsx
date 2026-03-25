@@ -81,7 +81,7 @@ function GuestView() {
   return (
     <ScrollView style={styles.screen} contentInsetAdjustmentBehavior="automatic">
       <LinearGradient
-        colors={[Colors.primary, "#8B0000"]}
+        colors={[Colors.primary, "#052A15"]}
         style={styles.guestHero}
       >
         <View style={styles.guestIconWrap}>
@@ -192,7 +192,7 @@ export default function MemberScreen() {
     >
       {/* Profile Header */}
       <LinearGradient
-        colors={[Colors.primary, "#8B0000"]}
+        colors={[Colors.primary, "#052A15"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[styles.profileHero, { paddingTop: insets.top + 24 }]}

@@ -76,7 +76,7 @@ export default function AdminDashboard() {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <LinearGradient
-        colors={["#1a0a00", Colors.background]}
+        colors={["#0A1F0E", Colors.background]}
         style={styles.headerGradient}
       />
 

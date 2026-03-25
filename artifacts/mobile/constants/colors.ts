@@ -4,10 +4,10 @@
 // ============================================================
 
 // [INSERT BRAND PRIMARY]   — used for buttons, highlights, active states
-const PRIMARY = "#E63946";
+const PRIMARY = "#0B5E2F";
 
 // [INSERT BRAND SECONDARY] — used for accents, cards, secondary elements
-const SECONDARY = "#F4A261";
+const SECONDARY = "#1A8C4E";
 
 // [INSERT BRAND BACKGROUND] — main background colour
 const BACKGROUND = "#0D0D0D";
@@ -24,7 +24,7 @@ const TEXT_SECONDARY = "#A0A0A0"; // secondary / muted text
 const TEXT_MUTED = "#666666";     // very muted text
 const SUCCESS = "#22C55E";        // success states
 const WARNING = "#F59E0B";        // warning states
-const ERROR = "#EF4444";          // error states
+const ERROR = "#D97706";          // error states
 
 export default {
   // Brand

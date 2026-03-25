@@ -1,0 +1,14 @@
+/* Brand tokens for The Dodge Club */
+:root {
+  --dc-primary: #0B5E2F;
+  --dc-primary-dark: #052A15;
+  --dc-secondary: #1A8C4E;
+  --dc-accent: #FFD700;
+  --dc-bg: #0D0D0D;
+  --dc-surface: #1A1A1A;
+  --dc-surface2: #242424;
+  --dc-border: #2E2E2E;
+  --dc-text: #FFFFFF;
+  --dc-text-secondary: #A0A0A0;
+  --dc-text-muted: #666666;
+}
