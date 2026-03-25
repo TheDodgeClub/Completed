@@ -5,8 +5,16 @@ import { useMembers } from "@/hooks/use-members";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, MessageSquare, ShoppingBag, Users, Trophy } from "lucide-react";
+import { CalendarDays, MessageSquare, ShoppingBag, Users, Trophy, Zap, CircleDot } from "lucide-react";
 import { Link } from "wouter";
+
+const LEVEL_NAMES = ["Rookie", "Player", "Contender", "Competitor", "Veteran", "Elite", "Pro", "Champion", "Legend", "Icon"];
+
+function resolveAvatarUrl(url: string | null | undefined): string | undefined {
+  if (!url) return undefined;
+  if (url.startsWith("/objects/")) return `/api/storage${url}`;
+  return url;
+}
 
 export default function Dashboard() {
   const { data: user } = useAuth();
@@ -18,6 +26,8 @@ export default function Dashboard() {
   const upcomingEvents = events?.filter(e => e.isUpcoming)?.length || 0;
   const outOfStockMerch = merch?.filter(m => !m.inStock)?.length || 0;
   const totalMedals = members?.reduce((sum, m) => sum + m.medalsEarned, 0) || 0;
+  const totalXp = members?.reduce((sum, m) => sum + (m.xp ?? 0), 0) || 0;
+  const topMembers = [...(members ?? [])].sort((a, b) => (b.xp ?? 0) - (a.xp ?? 0)).slice(0, 5);
 
   const stats = [
     {
@@ -30,6 +40,15 @@ export default function Dashboard() {
       href: "/members"
     },
     {
+      title: "Total XP Earned",
+      value: membersLoading ? "..." : totalXp.toLocaleString(),
+      subtext: `Across ${members?.length || 0} members`,
+      icon: Zap,
+      color: "text-accent",
+      bg: "bg-accent/10",
+      href: "/members"
+    },
+    {
       title: "Upcoming Events",
       value: eventsLoading ? "..." : upcomingEvents,
       subtext: `Out of ${events?.length || 0} total events`,
@@ -39,23 +58,14 @@ export default function Dashboard() {
       href: "/events"
     },
     {
-      title: "Products in Store",
-      value: merchLoading ? "..." : merch?.length || 0,
-      subtext: outOfStockMerch > 0 ? `${outOfStockMerch} items out of stock` : "All items in stock",
-      icon: ShoppingBag,
-      color: "text-emerald-500",
-      bg: "bg-emerald-500/10",
-      href: "/merch"
+      title: "Medals Awarded",
+      value: membersLoading ? "..." : totalMedals,
+      subtext: "To members across all events",
+      icon: Trophy,
+      color: "text-yellow-500",
+      bg: "bg-yellow-500/10",
+      href: "/members"
     },
-    {
-      title: "Community Posts",
-      value: postsLoading ? "..." : posts?.length || 0,
-      subtext: "On the message board",
-      icon: MessageSquare,
-      color: "text-purple-500",
-      bg: "bg-purple-500/10",
-      href: "/posts"
-    }
   ];
 
   return (
@@ -86,29 +96,61 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* XP Leaderboard */}
         <Card className="bg-card border-border/50 shadow-lg shadow-black/20">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Trophy className="w-5 h-5 text-accent" />
-              Community Achievements
+              <Zap className="w-5 h-5 text-accent" />
+              XP Leaderboard
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between p-6 rounded-2xl bg-secondary/30 border border-border/50">
-              <div>
-                <p className="text-sm text-muted-foreground font-medium mb-1">Total Medals Awarded</p>
-                <p className="text-4xl font-display font-bold text-accent">{totalMedals}</p>
-              </div>
-              <div className="w-16 h-16 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center">
-                <Trophy className="w-8 h-8 text-accent" />
-              </div>
-            </div>
-            <p className="text-sm text-muted-foreground mt-4">
-              Medals are awarded to members for attending events and demonstrating outstanding sportsmanship. You can award medals from the Members tab.
-            </p>
+          <CardContent className="space-y-2">
+            {membersLoading ? (
+              <div className="text-sm text-muted-foreground py-4 text-center">Loading...</div>
+            ) : topMembers.length === 0 ? (
+              <div className="text-sm text-muted-foreground py-4 text-center">No members yet</div>
+            ) : (
+              topMembers.map((member, idx) => {
+                const levelName = LEVEL_NAMES[(member.level ?? 1) - 1] ?? "Player";
+                const maxXp = topMembers[0]?.xp ?? 1;
+                const pct = maxXp > 0 ? Math.max(((member.xp ?? 0) / maxXp) * 100, 2) : 2;
+                return (
+                  <Link key={member.id} href="/members">
+                    <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-secondary/40 transition-colors group cursor-pointer">
+                      <span className={`w-6 text-center text-sm font-bold shrink-0 ${idx === 0 ? "text-accent" : idx === 1 ? "text-slate-300" : idx === 2 ? "text-amber-600" : "text-muted-foreground"}`}>
+                        {idx + 1}
+                      </span>
+                      <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center overflow-hidden border border-border/50 shrink-0">
+                        {member.avatarUrl ? (
+                          <img src={resolveAvatarUrl(member.avatarUrl)} alt={member.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="font-bold text-sm">{member.name.charAt(0)}</span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-sm text-foreground truncate">{member.name}</span>
+                          <span className="text-[10px] font-bold bg-accent/20 text-accent border border-accent/30 rounded px-1.5 py-0.5 shrink-0">
+                            LV {member.level ?? 1}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
+                            <div className="h-full bg-accent rounded-full transition-all" style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className="text-xs text-accent font-semibold shrink-0">{(member.xp ?? 0).toLocaleString()} XP</span>
+                        </div>
+                        <span className="text-[10px] text-muted-foreground">{levelName}</span>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })
+            )}
           </CardContent>
         </Card>
 
+        {/* Quick Actions */}
         <Card className="bg-card border-border/50 shadow-lg shadow-black/20">
           <CardHeader>
             <CardTitle>Quick Actions</CardTitle>
@@ -127,6 +169,11 @@ export default function Dashboard() {
             <Link href="/members">
               <Button variant="outline" className="w-full justify-start h-12 bg-secondary/20 hover:bg-primary/10 hover:text-primary hover:border-primary/30 border-border/50 rounded-xl">
                 <Users className="w-4 h-4 mr-3" /> Record attendance
+              </Button>
+            </Link>
+            <Link href="/members">
+              <Button variant="outline" className="w-full justify-start h-12 bg-secondary/20 hover:bg-accent/10 hover:text-accent hover:border-accent/30 border-border/50 rounded-xl">
+                <Trophy className="w-4 h-4 mr-3" /> Award a medal
               </Button>
             </Link>
           </CardContent>
