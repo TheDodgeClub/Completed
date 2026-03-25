@@ -77,7 +77,12 @@ export default function HomeScreen() {
         style={[styles.hero, { paddingTop: insets.top + 24 }]}
       >
         <View style={styles.heroTopRow}>
-          <View />
+          <View style={styles.notifBtn} />
+          <Image
+            source={require("@/assets/images/tdc-logo.png")}
+            style={styles.heroLogo}
+            resizeMode="contain"
+          />
           <Pressable
             style={styles.notifBtn}
             onPress={() => {
@@ -239,6 +244,10 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       justifyContent: "space-between",
       alignItems: "center",
       marginBottom: 20,
+    },
+    heroLogo: {
+      width: 160,
+      height: 48,
     },
     notifBtn: {
       width: 40,
