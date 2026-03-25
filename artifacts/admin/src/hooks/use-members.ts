@@ -10,7 +10,21 @@ export interface AdminMember {
   eventsAttended: number;
   medalsEarned: number;
   ringsEarned: number;
+  xp: number;
+  level: number;
   avatarUrl: string | null;
+  username: string | null;
+  preferredRole: string | null;
+  bio: string | null;
+}
+
+export interface AdminTeamHistory {
+  id: number;
+  teamName: string;
+  season: string;
+  roleInTeam: string | null;
+  notes: string | null;
+  createdAt: string;
 }
 
 export interface AdminAttendanceRecord {
@@ -110,6 +124,53 @@ export function useRevokeAward() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["awards", variables.userId] });
       queryClient.invalidateQueries({ queryKey: ["members"] });
+    },
+  });
+}
+
+export function useUpdateMember() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: { name?: string; username?: string; bio?: string; preferredRole?: string } }) =>
+      fetchApi<AdminMember>(`/api/admin/members/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["members"] });
+    },
+  });
+}
+
+export function useMemberTeamHistory(userId: number | null) {
+  return useQuery({
+    queryKey: ["team-history", userId],
+    queryFn: () => fetchApi<AdminTeamHistory[]>(`/api/admin/members/${userId}/team-history`),
+    enabled: !!userId,
+  });
+}
+
+export function useAddTeamHistory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, data }: { userId: number; data: { teamName: string; season: string; roleInTeam?: string; notes?: string } }) =>
+      fetchApi<AdminTeamHistory>(`/api/admin/members/${userId}/team-history`, {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["team-history", variables.userId] });
+    },
+  });
+}
+
+export function useDeleteTeamHistory() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, userId }: { id: number; userId: number }) =>
+      fetchApi(`/api/admin/team-history/${id}`, { method: "DELETE" }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["team-history", variables.userId] });
     },
   });
 }

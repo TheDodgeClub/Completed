@@ -13,7 +13,30 @@ export type UserProfile = {
   eventsAttended: number;
   medalsEarned: number;
   ringsEarned: number;
+  xp: number;
+  level: number;
+  xpProgress?: { current: number; next: number; level: number };
   avatarUrl: string | null;
+  username: string | null;
+  preferredRole: string | null;
+  bio: string | null;
+};
+
+export type TeamHistory = {
+  id: number;
+  teamName: string;
+  season: string;
+  roleInTeam: string | null;
+  notes: string | null;
+  createdAt: string;
+};
+
+export type UpcomingEvent = {
+  id: number;
+  title: string;
+  date: string;
+  location: string;
+  imageUrl: string | null;
 };
 
 export type Event = {
@@ -153,6 +176,35 @@ export async function getUserAttendance(userId: number): Promise<AttendanceRecor
 
 export async function getUserAchievements(userId: number): Promise<Achievement[]> {
   return apiFetch<Achievement[]>(`/users/${userId}/achievements`);
+}
+
+export async function getUserTeamHistory(userId: number): Promise<TeamHistory[]> {
+  return apiFetch<TeamHistory[]>(`/users/${userId}/team-history`);
+}
+
+export async function getUserUpcomingEvents(userId: number): Promise<UpcomingEvent[]> {
+  return apiFetch<UpcomingEvent[]>(`/users/${userId}/upcoming-events`);
+}
+
+export async function updateProfile(data: {
+  name?: string;
+  username?: string;
+  bio?: string;
+  preferredRole?: string;
+}): Promise<UserProfile> {
+  return apiFetch<UserProfile>("/users/me", { method: "PUT", body: JSON.stringify(data) });
+}
+
+export async function updateAvatar(avatarUrl: string): Promise<{ avatarUrl: string }> {
+  return apiFetch<{ avatarUrl: string }>("/users/me/avatar", { method: "POST", body: JSON.stringify({ avatarUrl }) });
+}
+
+export async function requestUploadUrl(data: { name: string; size: number; contentType: string }): Promise<{ uploadURL: string; objectPath: string }> {
+  return apiFetch<{ uploadURL: string; objectPath: string }>("/storage/uploads/request-url", { method: "POST", body: JSON.stringify(data) });
+}
+
+export async function registerForEvent(eventId: number): Promise<{ id: number; eventId: number; registeredAt: string }> {
+  return apiFetch(`/users/me/register`, { method: "POST", body: JSON.stringify({ eventId }) });
 }
 
 /* ---- posts ---- */

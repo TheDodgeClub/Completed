@@ -1,6 +1,9 @@
-import { pgTable, serial, text, boolean, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, boolean, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+
+export const PLAYER_ROLES = ["Thrower", "Catcher", "Dodger", "All-Rounder"] as const;
+export type PlayerRole = typeof PLAYER_ROLES[number];
 
 export const usersTable = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -9,6 +12,9 @@ export const usersTable = pgTable("users", {
   name: text("name").notNull(),
   isAdmin: boolean("is_admin").notNull().default(false),
   avatarUrl: text("avatar_url"),
+  username: text("username").unique(),
+  preferredRole: text("preferred_role"),
+  bio: text("bio"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

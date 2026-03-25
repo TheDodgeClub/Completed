@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, eventsTable, postsTable, merchTable, usersTable, attendanceTable, awardsTable, videosTable } from "@workspace/db";
+import { db, eventsTable, postsTable, merchTable, usersTable, attendanceTable, awardsTable, videosTable, teamHistoryTable, eventRegistrationsTable } from "@workspace/db";
 import { eq, desc, and } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/requireAdmin";
 
@@ -194,25 +194,112 @@ router.delete("/merch/:id", async (req, res) => {
 
 /* ========== MEMBERS ========== */
 
+const LEVEL_THRESHOLDS = [0, 300, 700, 1200, 1800, 2500, 3300, 4200, 5200, 6300];
+function computeXP(events: number, medals: number, rings: number) { return events * 100 + medals * 150 + rings * 50; }
+function computeLevel(xp: number) {
+  let level = 1;
+  for (let i = 1; i < LEVEL_THRESHOLDS.length; i++) {
+    if (xp >= LEVEL_THRESHOLDS[i]) level = i + 1; else break;
+  }
+  return level;
+}
+
 /* GET /api/admin/members — list all users */
 router.get("/members", async (_req, res) => {
   const users = await db.select().from(usersTable).orderBy(usersTable.name);
   const result = await Promise.all(users.map(async (u) => {
     const records = await db.select().from(attendanceTable).where(eq(attendanceTable.userId, u.id));
     const awards = await db.select().from(awardsTable).where(eq(awardsTable.userId, u.id));
+    const eventsAttended = records.length;
+    const medalsEarned = records.filter(r => r.earnedMedal).length + awards.filter(a => a.type === "medal").length;
+    const ringsEarned = awards.filter(a => a.type === "ring").length;
+    const xp = computeXP(eventsAttended, medalsEarned, ringsEarned);
     return {
       id: u.id,
       name: u.name,
       email: u.email,
       isAdmin: u.isAdmin,
       memberSince: u.createdAt.toISOString(),
-      eventsAttended: records.length,
-      medalsEarned: records.filter(r => r.earnedMedal).length + awards.filter(a => a.type === "medal").length,
-      ringsEarned: awards.filter(a => a.type === "ring").length,
+      eventsAttended,
+      medalsEarned,
+      ringsEarned,
+      xp,
+      level: computeLevel(xp),
       avatarUrl: u.avatarUrl ?? null,
+      username: u.username ?? null,
+      preferredRole: u.preferredRole ?? null,
+      bio: u.bio ?? null,
     };
   }));
   res.json(result);
+});
+
+/* PUT /api/admin/members/:id — edit member profile */
+router.put("/members/:id", async (req, res) => {
+  const { name, username, bio, preferredRole } = req.body;
+  const updates: Record<string, unknown> = {};
+  if (name !== undefined) updates.name = name;
+  if (username !== undefined) updates.username = username || null;
+  if (bio !== undefined) updates.bio = bio || null;
+  if (preferredRole !== undefined) updates.preferredRole = preferredRole || null;
+
+  const [user] = await db.update(usersTable).set(updates).where(eq(usersTable.id, Number(req.params.id))).returning();
+  if (!user) { res.status(404).json({ error: "Not found" }); return; }
+
+  const records = await db.select().from(attendanceTable).where(eq(attendanceTable.userId, user.id));
+  const awards = await db.select().from(awardsTable).where(eq(awardsTable.userId, user.id));
+  const eventsAttended = records.length;
+  const medalsEarned = records.filter(r => r.earnedMedal).length + awards.filter(a => a.type === "medal").length;
+  const ringsEarned = awards.filter(a => a.type === "ring").length;
+  const xp = computeXP(eventsAttended, medalsEarned, ringsEarned);
+  res.json({
+    id: user.id, name: user.name, email: user.email, isAdmin: user.isAdmin,
+    memberSince: user.createdAt.toISOString(), eventsAttended, medalsEarned, ringsEarned, xp,
+    level: computeLevel(xp), avatarUrl: user.avatarUrl ?? null,
+    username: user.username ?? null, preferredRole: user.preferredRole ?? null, bio: user.bio ?? null,
+  });
+});
+
+/* GET /api/admin/members/:id/team-history */
+router.get("/members/:id/team-history", async (req, res) => {
+  const history = await db.query.teamHistoryTable.findMany({
+    where: eq(teamHistoryTable.userId, Number(req.params.id)),
+  });
+  res.json(history.map(h => ({
+    id: h.id, teamName: h.teamName, season: h.season,
+    roleInTeam: h.roleInTeam ?? null, notes: h.notes ?? null,
+    createdAt: h.createdAt.toISOString(),
+  })));
+});
+
+/* POST /api/admin/members/:id/team-history */
+router.post("/members/:id/team-history", async (req, res) => {
+  const { teamName, season, roleInTeam, notes } = req.body;
+  if (!teamName || !season) { res.status(400).json({ error: "teamName and season required" }); return; }
+  const [entry] = await db.insert(teamHistoryTable)
+    .values({ userId: Number(req.params.id), teamName, season, roleInTeam: roleInTeam || null, notes: notes || null })
+    .returning();
+  res.status(201).json({ id: entry.id, teamName: entry.teamName, season: entry.season, roleInTeam: entry.roleInTeam ?? null, notes: entry.notes ?? null, createdAt: entry.createdAt.toISOString() });
+});
+
+/* DELETE /api/admin/team-history/:id */
+router.delete("/team-history/:id", async (req, res) => {
+  await db.delete(teamHistoryTable).where(eq(teamHistoryTable.id, Number(req.params.id)));
+  res.json({ ok: true });
+});
+
+/* POST /api/admin/members/:id/register — register a member for an upcoming event */
+router.post("/members/:id/register", async (req, res) => {
+  const { eventId } = req.body;
+  if (!eventId) { res.status(400).json({ error: "eventId required" }); return; }
+  try {
+    const [reg] = await db.insert(eventRegistrationsTable)
+      .values({ userId: Number(req.params.id), eventId: Number(eventId) })
+      .returning();
+    res.status(201).json({ id: reg.id, userId: reg.userId, eventId: reg.eventId, registeredAt: reg.registeredAt.toISOString() });
+  } catch {
+    res.status(409).json({ error: "Already registered" });
+  }
 });
 
 /* GET /api/admin/members/:id/attendance — full attendance list for one member */

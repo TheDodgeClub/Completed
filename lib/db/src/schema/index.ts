@@ -5,4 +5,6 @@ export * from "./awards";
 export * from "./posts";
 export * from "./merch";
 export * from "./videos";
+export * from "./team_history";
+export * from "./event_registrations";
 export * from "./relations";

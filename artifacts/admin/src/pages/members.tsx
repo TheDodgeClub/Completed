@@ -1,16 +1,21 @@
 import { useState } from "react";
-import { useMembers, useMemberAttendance, useMemberAwards, useMarkAttendance, useDeleteAttendance, useGrantAward, useRevokeAward, AdminMember } from "@/hooks/use-members";
+import { useMembers, useMemberAttendance, useMemberAwards, useMemberTeamHistory, useMarkAttendance, useDeleteAttendance, useGrantAward, useRevokeAward, useUpdateMember, useAddTeamHistory, useDeleteTeamHistory, AdminMember } from "@/hooks/use-members";
 import { useEvents } from "@/hooks/use-events";
 import { formatDateTime } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Search, Trophy, CalendarCheck, Trash2, ShieldCheck, Loader2, CircleDot } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Search, Trophy, CalendarCheck, Trash2, ShieldCheck, Loader2, CircleDot, Star, Users, Pencil } from "lucide-react";
+
+const PLAYER_ROLES = ["Thrower", "Catcher", "Dodger", "All-Rounder"] as const;
+const LEVEL_NAMES = ["Rookie", "Player", "Contender", "Competitor", "Veteran", "Elite", "Pro", "Champion", "Legend", "Icon"];
 
 export default function Members() {
   const { data: members, isLoading } = useMembers();
@@ -110,8 +115,11 @@ export default function Members() {
                         <CircleDot className="w-3.5 h-3.5" /> {member.ringsEarned ?? 0}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right px-6 text-sm text-muted-foreground">
-                      {formatDateTime(member.memberSince).split(" at ")[0]}
+                    <TableCell className="px-6 text-sm text-muted-foreground text-right">
+                      <div>{formatDateTime(member.memberSince).split(" at ")[0]}</div>
+                      {member.preferredRole && (
+                        <div className="text-xs text-primary/70 font-medium mt-0.5">{member.preferredRole}</div>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
@@ -129,26 +137,39 @@ export default function Members() {
 function MemberDetailSheet({ member, onClose }: { member: AdminMember | null; onClose: () => void }) {
   const { data: attendance, isLoading: loadingAttendance } = useMemberAttendance(member?.id ?? null);
   const { data: awards, isLoading: loadingAwards } = useMemberAwards(member?.id ?? null);
+  const { data: teamHistory, isLoading: loadingTeamHistory } = useMemberTeamHistory(member?.id ?? null);
   const { data: events } = useEvents();
   const { mutate: markAttendance, isPending: marking } = useMarkAttendance();
   const { mutate: deleteAttendance, isPending: deleting } = useDeleteAttendance();
   const { mutate: grantAward, isPending: granting } = useGrantAward();
   const { mutate: revokeAward, isPending: revoking } = useRevokeAward();
+  const { mutate: updateMember, isPending: updatingProfile } = useUpdateMember();
+  const { mutate: addTeamHistory, isPending: addingTeamHistory } = useAddTeamHistory();
+  const { mutate: deleteTeamHistory, isPending: deletingTeamHistory } = useDeleteTeamHistory();
   const { toast } = useToast();
 
   const [selectedEvent, setSelectedEvent] = useState("");
   const [earnedMedal, setEarnedMedal] = useState(false);
   const [awardNote, setAwardNote] = useState("");
 
+  // Profile edit state
+  const [editName, setEditName] = useState("");
+  const [editUsername, setEditUsername] = useState("");
+  const [editBio, setEditBio] = useState("");
+  const [editRole, setEditRole] = useState("");
+  const [profileExpanded, setProfileExpanded] = useState(false);
+
+  // Team history form
+  const [thTeamName, setThTeamName] = useState("");
+  const [thSeason, setThSeason] = useState("");
+  const [thRole, setThRole] = useState("");
+  const [thNotes, setThNotes] = useState("");
+
   const handleAddAttendance = (e: React.FormEvent) => {
     e.preventDefault();
     if (!member || !selectedEvent) return;
     markAttendance({ userId: member.id, eventId: Number(selectedEvent), earnedMedal }, {
-      onSuccess: () => {
-        toast({ title: "Attendance recorded" });
-        setSelectedEvent("");
-        setEarnedMedal(false);
-      },
+      onSuccess: () => { toast({ title: "Attendance recorded" }); setSelectedEvent(""); setEarnedMedal(false); },
       onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
     });
   };
@@ -163,10 +184,7 @@ function MemberDetailSheet({ member, onClose }: { member: AdminMember | null; on
   const handleGrant = (type: "medal" | "ring") => {
     if (!member) return;
     grantAward({ userId: member.id, type, note: awardNote || undefined }, {
-      onSuccess: () => {
-        toast({ title: `${type === "medal" ? "Medal" : "Ring"} awarded to ${member.name}` });
-        setAwardNote("");
-      },
+      onSuccess: () => { toast({ title: `${type === "medal" ? "Medal" : "Ring"} awarded to ${member.name}` }); setAwardNote(""); },
       onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
     });
   };
@@ -179,48 +197,197 @@ function MemberDetailSheet({ member, onClose }: { member: AdminMember | null; on
     });
   };
 
+  const handleSaveProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!member) return;
+    updateMember({ id: member.id, data: { name: editName, username: editUsername || undefined, bio: editBio || undefined, preferredRole: editRole || undefined } }, {
+      onSuccess: () => { toast({ title: "Profile updated" }); setProfileExpanded(false); },
+      onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+    });
+  };
+
+  const handleAddTeamHistory = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!member || !thTeamName || !thSeason) return;
+    addTeamHistory({ userId: member.id, data: { teamName: thTeamName, season: thSeason, roleInTeam: thRole || undefined, notes: thNotes || undefined } }, {
+      onSuccess: () => { toast({ title: "Team history added" }); setThTeamName(""); setThSeason(""); setThRole(""); setThNotes(""); },
+      onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+    });
+  };
+
+  const handleDeleteTeamHistory = (id: number) => {
+    if (!member) return;
+    deleteTeamHistory({ id, userId: member.id }, {
+      onSuccess: () => toast({ title: "Entry removed" }),
+      onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+    });
+  };
+
+  const levelName = LEVEL_NAMES[(member?.level ?? 1) - 1] ?? "Player";
+
   return (
     <Sheet open={!!member} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="w-full sm:max-w-md border-l border-border bg-card/95 backdrop-blur-xl p-0 flex flex-col">
+      <SheetContent className="w-full sm:max-w-lg border-l border-border bg-card/95 backdrop-blur-xl p-0 flex flex-col">
         {member && (
           <>
             <div className="p-6 border-b border-border/50 bg-background/50">
               <SheetHeader className="text-left space-y-0">
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center overflow-hidden border-2 border-border">
+                  <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center overflow-hidden border-2 border-border flex-shrink-0">
                     {member.avatarUrl ? (
                       <img src={member.avatarUrl} alt={member.name} className="w-full h-full object-cover" />
                     ) : (
                       <span className="font-display font-bold text-2xl text-muted-foreground">{member.name.charAt(0)}</span>
                     )}
                   </div>
-                  <div>
-                    <SheetTitle className="font-display text-2xl text-foreground">{member.name}</SheetTitle>
-                    <SheetDescription className="text-muted-foreground">{member.email}</SheetDescription>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <SheetTitle className="font-display text-xl text-foreground">{member.name}</SheetTitle>
+                      <span className="px-2 py-0.5 text-[10px] font-bold bg-accent/20 text-accent border border-accent/30 rounded">LV {member.level ?? 1}</span>
+                      <span className="text-xs text-muted-foreground">{levelName}</span>
+                    </div>
+                    {member.username && <p className="text-xs text-primary/70 font-medium">@{member.username}</p>}
+                    <SheetDescription className="text-muted-foreground text-xs truncate">{member.email}</SheetDescription>
+                    {member.preferredRole && (
+                      <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                        <Star className="w-2.5 h-2.5" /> {member.preferredRole}
+                      </span>
+                    )}
                   </div>
                 </div>
-                <div className="flex gap-3 pt-2">
-                  <div className="flex-1 bg-secondary/50 rounded-xl p-3 border border-border/50 text-center">
-                    <p className="text-xs text-muted-foreground font-medium mb-1">Events</p>
-                    <p className="text-xl font-display font-bold text-foreground">{member.eventsAttended}</p>
+                {member.bio && (
+                  <p className="text-xs text-muted-foreground bg-secondary/30 rounded-lg px-3 py-2 mb-3 border border-border/30">{member.bio}</p>
+                )}
+                <div className="grid grid-cols-4 gap-2">
+                  <div className="bg-secondary/50 rounded-xl p-2.5 border border-border/50 text-center">
+                    <p className="text-[10px] text-muted-foreground font-medium mb-0.5">Events</p>
+                    <p className="text-lg font-display font-bold text-foreground">{member.eventsAttended}</p>
                   </div>
-                  <div className="flex-1 bg-accent/5 rounded-xl p-3 border border-accent/20 text-center">
-                    <p className="text-xs text-accent/80 font-medium mb-1">Medals</p>
-                    <p className="text-xl font-display font-bold text-accent flex items-center justify-center gap-1">
-                      <Trophy className="w-4 h-4" /> {member.medalsEarned}
-                    </p>
+                  <div className="bg-accent/5 rounded-xl p-2.5 border border-accent/20 text-center">
+                    <p className="text-[10px] text-accent/80 font-medium mb-0.5">Medals</p>
+                    <p className="text-lg font-display font-bold text-accent">{member.medalsEarned}</p>
                   </div>
-                  <div className="flex-1 bg-violet-500/5 rounded-xl p-3 border border-violet-500/20 text-center">
-                    <p className="text-xs text-violet-400/80 font-medium mb-1">Rings</p>
-                    <p className="text-xl font-display font-bold text-violet-400 flex items-center justify-center gap-1">
-                      <CircleDot className="w-4 h-4" /> {member.ringsEarned ?? 0}
-                    </p>
+                  <div className="bg-violet-500/5 rounded-xl p-2.5 border border-violet-500/20 text-center">
+                    <p className="text-[10px] text-violet-400/80 font-medium mb-0.5">Rings</p>
+                    <p className="text-lg font-display font-bold text-violet-400">{member.ringsEarned ?? 0}</p>
+                  </div>
+                  <div className="bg-blue-500/5 rounded-xl p-2.5 border border-blue-500/20 text-center">
+                    <p className="text-[10px] text-blue-400/80 font-medium mb-0.5">XP</p>
+                    <p className="text-lg font-display font-bold text-blue-400">{(member.xp ?? 0).toLocaleString()}</p>
                   </div>
                 </div>
               </SheetHeader>
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-8">
+
+              {/* ---- EDIT PROFILE ---- */}
+              <div className="space-y-3">
+                <button
+                  onClick={() => {
+                    setProfileExpanded(!profileExpanded);
+                    if (!profileExpanded) {
+                      setEditName(member.name);
+                      setEditUsername(member.username ?? "");
+                      setEditBio(member.bio ?? "");
+                      setEditRole(member.preferredRole ?? "");
+                    }
+                  }}
+                  className="w-full flex items-center justify-between text-left"
+                >
+                  <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2">
+                    <Pencil className="w-5 h-5 text-muted-foreground" /> Edit Profile
+                  </h3>
+                  <span className="text-xs text-muted-foreground">{profileExpanded ? "▲ Close" : "▼ Expand"}</span>
+                </button>
+                {profileExpanded && (
+                  <form onSubmit={handleSaveProfile} className="bg-secondary/20 border border-border/50 p-4 rounded-2xl space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Display Name</Label>
+                        <Input value={editName} onChange={e => setEditName(e.target.value)} placeholder="Name" className="bg-background border-border rounded-xl text-sm" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Username</Label>
+                        <Input value={editUsername} onChange={e => setEditUsername(e.target.value)} placeholder="@username" className="bg-background border-border rounded-xl text-sm" />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Bio</Label>
+                      <Textarea value={editBio} onChange={e => setEditBio(e.target.value)} placeholder="Member bio..." rows={2} className="bg-background border-border rounded-xl text-sm resize-none" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Preferred Role</Label>
+                      <Select value={editRole || "_none"} onValueChange={v => setEditRole(v === "_none" ? "" : v)}>
+                        <SelectTrigger className="bg-background border-border rounded-xl text-sm">
+                          <SelectValue placeholder="Select role..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="_none">No preference</SelectItem>
+                          {PLAYER_ROLES.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button type="submit" disabled={updatingProfile} className="w-full rounded-xl bg-primary hover:bg-primary/90 text-white">
+                      {updatingProfile ? "Saving..." : "Save Profile"}
+                    </Button>
+                  </form>
+                )}
+              </div>
+
+              {/* ---- TEAM HISTORY ---- */}
+              <div className="space-y-4">
+                <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2">
+                  <Users className="w-5 h-5 text-primary" /> Team History
+                </h3>
+                <form onSubmit={handleAddTeamHistory} className="bg-secondary/20 border border-border/50 p-4 rounded-2xl space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Team Name *</Label>
+                      <Input required value={thTeamName} onChange={e => setThTeamName(e.target.value)} placeholder="e.g. Fire Dodgers" className="bg-background border-border rounded-xl text-sm" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Season *</Label>
+                      <Input required value={thSeason} onChange={e => setThSeason(e.target.value)} placeholder="e.g. Summer 2024" className="bg-background border-border rounded-xl text-sm" />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Role in Team</Label>
+                    <Input value={thRole} onChange={e => setThRole(e.target.value)} placeholder="e.g. Captain, Thrower..." className="bg-background border-border rounded-xl text-sm" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Notes</Label>
+                    <Input value={thNotes} onChange={e => setThNotes(e.target.value)} placeholder="Optional notes..." className="bg-background border-border rounded-xl text-sm" />
+                  </div>
+                  <Button type="submit" disabled={addingTeamHistory || !thTeamName || !thSeason} className="w-full rounded-xl bg-primary/90 hover:bg-primary text-white shadow-sm">
+                    {addingTeamHistory ? "Adding..." : "Add Entry"}
+                  </Button>
+                </form>
+
+                {loadingTeamHistory ? (
+                  <div className="text-center py-4"><Loader2 className="w-4 h-4 animate-spin mx-auto text-muted-foreground" /></div>
+                ) : teamHistory && teamHistory.length > 0 ? (
+                  <div className="space-y-2">
+                    {teamHistory.map(entry => (
+                      <div key={entry.id} className="flex items-start justify-between p-3 bg-background border border-border/50 rounded-xl group hover:border-primary/30 transition-colors">
+                        <div>
+                          <div className="font-semibold text-sm text-foreground">{entry.teamName}</div>
+                          <div className="text-xs text-muted-foreground">{entry.season}{entry.roleInTeam ? ` · ${entry.roleInTeam}` : ""}</div>
+                          {entry.notes && <div className="text-xs text-muted-foreground mt-1 italic">{entry.notes}</div>}
+                        </div>
+                        <Button
+                          variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all"
+                          onClick={() => handleDeleteTeamHistory(entry.id)} disabled={deletingTeamHistory}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-2">No team history recorded yet.</p>
+                )}
+              </div>
 
               {/* ---- AWARD MEDALS & RINGS ---- */}
               <div className="space-y-4">

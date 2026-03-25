@@ -6,7 +6,29 @@ import { eq, count } from "drizzle-orm";
 const router: IRouter = Router();
 
 /* ---------- helpers ---------- */
-function toProfile(user: typeof usersTable.$inferSelect, eventsAttended: number, medalsEarned: number, ringsEarned: number) {
+const LEVEL_THRESHOLDS = [0, 300, 700, 1200, 1800, 2500, 3300, 4200, 5200, 6300];
+
+function computeXP(eventsAttended: number, medalsEarned: number, ringsEarned: number): number {
+  return eventsAttended * 100 + medalsEarned * 150 + ringsEarned * 50;
+}
+
+function computeLevel(xp: number): number {
+  let level = 1;
+  for (let i = 1; i < LEVEL_THRESHOLDS.length; i++) {
+    if (xp >= LEVEL_THRESHOLDS[i]) level = i + 1;
+    else break;
+  }
+  return level;
+}
+
+function toProfile(
+  user: typeof usersTable.$inferSelect,
+  eventsAttended: number,
+  medalsEarned: number,
+  ringsEarned: number,
+) {
+  const xp = computeXP(eventsAttended, medalsEarned, ringsEarned);
+  const level = computeLevel(xp);
   return {
     id: user.id,
     email: user.email,
@@ -16,16 +38,17 @@ function toProfile(user: typeof usersTable.$inferSelect, eventsAttended: number,
     eventsAttended,
     medalsEarned,
     ringsEarned,
+    xp,
+    level,
     avatarUrl: user.avatarUrl ?? null,
+    username: user.username ?? null,
+    preferredRole: user.preferredRole ?? null,
+    bio: user.bio ?? null,
   };
 }
 
 async function getUserStats(userId: number) {
-  const attended = await db
-    .select({ cnt: count() })
-    .from(attendanceTable)
-    .where(eq(attendanceTable.userId, userId));
-
+  const attended = await db.select({ cnt: count() }).from(attendanceTable).where(eq(attendanceTable.userId, userId));
   const eventsAttended = Number(attended[0]?.cnt ?? 0);
 
   const medalRows = await db.query.attendanceTable.findMany({
