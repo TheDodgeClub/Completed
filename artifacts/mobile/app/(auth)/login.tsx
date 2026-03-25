@@ -143,7 +143,7 @@ export default function LoginScreen() {
 function makeStyles(Colors: ReturnType<typeof useColors>) {
   return StyleSheet.create({
     container: {
-      paddingTop: 160,
+      paddingTop: 128,
       paddingHorizontal: 24,
       paddingBottom: 24,
       gap: 0,
