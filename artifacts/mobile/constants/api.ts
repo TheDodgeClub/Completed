@@ -3,13 +3,16 @@ export const API_BASE = `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`;
 
 /**
  * Resolve an image URL for use on mobile.
- * Images uploaded via the admin are stored as relative paths like /api/storage/objects/...
- * React Native needs an absolute URL, so we prepend the domain when the path starts with /.
+ * Admin-uploaded images are stored as /api/storage/objects/...
+ * Mobile-uploaded images come back from the presigned URL route as /objects/...
+ * React Native needs an absolute URL, so we prepend the domain (and fix the path prefix).
  */
 export function resolveImageUrl(url: string | null | undefined): string | null {
   if (!url) return null;
   if (url.startsWith("/")) {
-    return `https://${process.env.EXPO_PUBLIC_DOMAIN}${url}`;
+    // /objects/... paths need the /api/storage prefix to reach the serving endpoint
+    const path = url.startsWith("/objects/") ? `/api/storage${url}` : url;
+    return `https://${process.env.EXPO_PUBLIC_DOMAIN}${path}`;
   }
   return url;
 }

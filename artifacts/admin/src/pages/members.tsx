@@ -17,6 +17,12 @@ import { Search, Trophy, CalendarCheck, Trash2, ShieldCheck, Loader2, CircleDot,
 const PLAYER_ROLES = ["Thrower", "Catcher", "Dodger", "All-Rounder"] as const;
 const LEVEL_NAMES = ["Rookie", "Player", "Contender", "Competitor", "Veteran", "Elite", "Pro", "Champion", "Legend", "Icon"];
 
+function resolveAvatarUrl(url: string | null | undefined): string | undefined {
+  if (!url) return undefined;
+  if (url.startsWith("/objects/")) return `/api/storage${url}`;
+  return url;
+}
+
 export default function Members() {
   const { data: members, isLoading } = useMembers();
   const [search, setSearch] = useState("");
@@ -82,7 +88,7 @@ export default function Members() {
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center overflow-hidden border border-border/50 group-hover:border-primary/50 transition-colors">
                           {member.avatarUrl ? (
-                            <img src={member.avatarUrl} alt={member.name} className="w-full h-full object-cover" />
+                            <img src={resolveAvatarUrl(member.avatarUrl)} alt={member.name} className="w-full h-full object-cover" />
                           ) : (
                             <span className="font-bold text-sm">{member.name.charAt(0)}</span>
                           )}
@@ -235,7 +241,7 @@ function MemberDetailSheet({ member, onClose }: { member: AdminMember | null; on
                 <div className="flex items-center gap-4 mb-4">
                   <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center overflow-hidden border-2 border-border flex-shrink-0">
                     {member.avatarUrl ? (
-                      <img src={member.avatarUrl} alt={member.name} className="w-full h-full object-cover" />
+                      <img src={resolveAvatarUrl(member.avatarUrl)} alt={member.name} className="w-full h-full object-cover" />
                     ) : (
                       <span className="font-display font-bold text-2xl text-muted-foreground">{member.name.charAt(0)}</span>
                     )}
