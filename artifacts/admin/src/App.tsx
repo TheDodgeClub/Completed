@@ -11,6 +11,7 @@ import Events from "@/pages/events";
 import Posts from "@/pages/posts";
 import Merch from "@/pages/merch";
 import Members from "@/pages/members";
+import Videos from "@/pages/videos";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,7 @@ function Router() {
         <Route path="/posts" render={() => <ProtectedRoute component={Posts} />} />
         <Route path="/merch" render={() => <ProtectedRoute component={Merch} />} />
         <Route path="/members" render={() => <ProtectedRoute component={Members} />} />
+        <Route path="/videos" render={() => <ProtectedRoute component={Videos} />} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

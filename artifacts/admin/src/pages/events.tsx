@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useEvents, useCreateEvent, useUpdateEvent, useDeleteEvent, Event, EventInput } from "@/hooks/use-events";
+import { useEvents, useCreateEvent, useUpdateEvent, useDeleteEvent, usePublishEvent, Event, EventInput } from "@/hooks/use-events";
 import { formatDateTime, toDateTimeInput } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit2, Trash2, MapPin, Users, Ticket, CalendarDays, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Edit2, Trash2, MapPin, Users, Ticket, CalendarDays, ArrowUpDown, ArrowUp, ArrowDown, Globe, EyeOff } from "lucide-react";
 import { useForm } from "react-hook-form";
 
 type SortKey = "date" | "title" | "attendeeCount";
@@ -23,6 +23,9 @@ export default function Events() {
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  const { mutate: publish } = usePublishEvent();
+  const { toast } = useToast();
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -49,6 +52,14 @@ export default function Events() {
       : <ArrowDown className="w-3.5 h-3.5 ml-1 text-primary" />;
   };
 
+  const handlePublish = (event: Event) => {
+    const next = !event.isPublished;
+    publish({ id: event.id, publish: next }, {
+      onSuccess: () => toast({ title: next ? "Event published to mobile" : "Event unpublished" }),
+      onError: () => toast({ title: "Error", variant: "destructive" }),
+    });
+  };
+
   if (isLoading) return <div className="p-8 text-muted-foreground animate-pulse">Loading events...</div>;
 
   return (
@@ -56,7 +67,7 @@ export default function Events() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-display font-bold text-foreground">Events</h1>
-          <p className="text-muted-foreground mt-1">Manage dodgeball sessions, tournaments, and socials. Upcoming events shown first.</p>
+          <p className="text-muted-foreground mt-1">Manage dodgeball sessions, tournaments, and socials. Publish events to make them visible in the mobile app.</p>
         </div>
         <Button onClick={() => setIsCreateOpen(true)} className="bg-primary hover:bg-primary/90 text-white rounded-xl shadow-lg shadow-primary/20">
           <Plus className="w-4 h-4 mr-2" /> New Event
@@ -69,6 +80,7 @@ export default function Events() {
             <TableHeader className="bg-secondary/50 border-b border-border/50">
               <TableRow className="hover:bg-transparent">
                 <TableHead className="text-muted-foreground py-4 px-6">Status</TableHead>
+                <TableHead className="text-muted-foreground py-4 px-4">Published</TableHead>
                 <TableHead
                   className="text-muted-foreground py-4 cursor-pointer select-none hover:text-foreground transition-colors"
                   onClick={() => handleSort("title")}
@@ -94,7 +106,7 @@ export default function Events() {
             <TableBody>
               {sorted.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-40 text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="h-40 text-center text-muted-foreground">
                     <CalendarDays className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
                     <p className="font-medium">No events yet</p>
                     <p className="text-sm">Create your first event to get started.</p>
@@ -110,6 +122,21 @@ export default function Events() {
                       }>
                         {event.isUpcoming ? "Upcoming" : "Past"}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="px-4 py-4">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handlePublish(event)}
+                        className={`h-7 px-2.5 rounded-lg text-xs font-semibold gap-1.5 ${event.isPublished
+                          ? "text-emerald-400 bg-emerald-400/10 hover:bg-emerald-400/20"
+                          : "text-muted-foreground bg-secondary hover:bg-secondary/80"
+                        }`}
+                        title={event.isPublished ? "Click to unpublish" : "Click to publish to mobile"}
+                      >
+                        {event.isPublished ? <Globe className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                        {event.isPublished ? "Live" : "Draft"}
+                      </Button>
                     </TableCell>
                     <TableCell className="py-4">
                       <div>

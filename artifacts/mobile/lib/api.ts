@@ -160,6 +160,20 @@ export async function listPosts(): Promise<Post[]> {
   return apiFetch<Post[]>("/posts");
 }
 
+/* ---- videos ---- */
+export type VideoClip = {
+  id: number;
+  title: string;
+  description: string | null;
+  url: string;
+  thumbnailUrl: string | null;
+  publishedAt: string | null;
+};
+
+export async function listVideos(): Promise<VideoClip[]> {
+  return apiFetch<VideoClip[]>("/videos");
+}
+
 /* ---- merch ---- */
 export async function listMerch(): Promise<MerchProduct[]> {
   return apiFetch<MerchProduct[]>("/merch");

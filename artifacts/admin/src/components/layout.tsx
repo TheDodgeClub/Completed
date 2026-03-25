@@ -4,9 +4,10 @@ import { useEvents } from "@/hooks/use-events";
 import { usePosts } from "@/hooks/use-posts";
 import { useMerch } from "@/hooks/use-merch";
 import { useMembers } from "@/hooks/use-members";
+import { useVideos } from "@/hooks/use-videos";
 import {
   LayoutDashboard, CalendarDays, MessageSquare,
-  ShoppingBag, Users, LogOut, Loader2
+  ShoppingBag, Users, LogOut, Loader2, Video
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -41,12 +42,14 @@ function SidebarNav() {
   const { data: posts } = usePosts();
   const { data: merch } = useMerch();
   const { data: members } = useMembers();
+  const { data: videos } = useVideos();
 
   return (
     <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
       <NavItem href="/" icon={LayoutDashboard} label="Dashboard" />
       <NavItem href="/events" icon={CalendarDays} label="Events" count={events?.length} />
       <NavItem href="/posts" icon={MessageSquare} label="Posts" count={posts?.length} />
+      <NavItem href="/videos" icon={Video} label="Videos" count={videos?.length} />
       <NavItem href="/merch" icon={ShoppingBag} label="Merch" count={merch?.length} />
       <NavItem href="/members" icon={Users} label="Members" count={members?.length} />
     </nav>
