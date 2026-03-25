@@ -10,6 +10,7 @@ import {
   Linking,
   RefreshControl,
   Image,
+  Dimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -18,6 +19,11 @@ import * as Haptics from "expo-haptics";
 import { useColors } from "@/context/ThemeContext";
 import { resolveImageUrl } from "@/constants/api";
 import { listMerch, MerchProduct } from "@/lib/api";
+
+const COLUMN_COUNT = 2;
+const GUTTER = 12;
+const EDGE = 16;
+const CARD_WIDTH = (Dimensions.get("window").width - EDGE * 2 - GUTTER) / COLUMN_COUNT;
 
 function MerchCard({ item }: { item: MerchProduct }) {
   const Colors = useColors();
@@ -31,40 +37,41 @@ function MerchCard({ item }: { item: MerchProduct }) {
   };
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { width: CARD_WIDTH }]}>
       <View style={styles.imageContainer}>
         {imageUri ? (
           <Image source={{ uri: imageUri }} style={styles.productImage} resizeMode="cover" />
         ) : (
           <View style={styles.imagePlaceholder}>
-            <Feather name="shopping-bag" size={36} color={Colors.textMuted} />
+            <Feather name="shopping-bag" size={26} color={Colors.textMuted} />
+          </View>
+        )}
+        <View style={styles.categoryBadge}>
+          <Text style={styles.categoryText}>{item.category.toUpperCase()}</Text>
+        </View>
+        {!item.inStock && (
+          <View style={styles.soldOutOverlay}>
+            <Text style={styles.soldOutText}>SOLD OUT</Text>
           </View>
         )}
       </View>
 
-      <View style={styles.categoryBadge}>
-        <Text style={styles.categoryText}>{item.category.toUpperCase()}</Text>
-      </View>
-
       <View style={styles.cardBody}>
         <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
-        <Text style={styles.productDesc} numberOfLines={2}>{item.description}</Text>
-
         <View style={styles.cardFooter}>
           <Text style={styles.price}>£{item.price.toFixed(2)}</Text>
           <Pressable
             style={({ pressed }) => [
               styles.buyBtn,
               !item.inStock && styles.buyBtnDisabled,
-              { opacity: pressed ? 0.85 : 1 },
+              { opacity: pressed ? 0.8 : 1 },
             ]}
             onPress={handleBuy}
             disabled={!item.inStock}
           >
-            <Text style={styles.buyBtnText}>
-              {item.inStock ? "Buy Now" : "Sold Out"}
-            </Text>
-            {item.inStock && <Feather name="arrow-right" size={13} color="#fff" />}
+            {item.inStock
+              ? <Feather name="arrow-right" size={14} color="#fff" />
+              : <Feather name="x" size={12} color={Colors.textMuted} />}
           </Pressable>
         </View>
       </View>
@@ -91,7 +98,7 @@ export default function MerchScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: Colors.background }]}>
-      <View style={[styles.header, { paddingTop: insets.top + 24 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
         <Text style={styles.headerTitle}>Merch</Text>
         <Text style={styles.headerSubtitle}>Rep the Dodge Club</Text>
       </View>
@@ -102,10 +109,9 @@ export default function MerchScreen() {
         <FlatList
           data={products}
           keyExtractor={item => String(item.id)}
-          numColumns={2}
+          numColumns={COLUMN_COUNT}
           columnWrapperStyle={styles.row}
-          contentContainerStyle={styles.listContent}
-          contentInsetAdjustmentBehavior="automatic"
+          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 24 }]}
           renderItem={({ item }) => <MerchCard item={item} />}
           showsVerticalScrollIndicator={false}
           refreshControl={
@@ -127,103 +133,108 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
   return StyleSheet.create({
     screen: { flex: 1 },
     header: {
-      paddingHorizontal: 24,
-      paddingBottom: 24,
+      paddingHorizontal: 20,
+      paddingBottom: 16,
       backgroundColor: Colors.surface,
       borderBottomWidth: 1,
       borderBottomColor: Colors.border,
     },
     headerTitle: {
       fontFamily: "Poppins_800ExtraBold",
-      fontSize: 36,
+      fontSize: 32,
       color: Colors.text,
     },
     headerSubtitle: {
       fontFamily: "Inter_400Regular",
-      fontSize: 14,
+      fontSize: 13,
       color: Colors.textSecondary,
-      marginTop: 2,
+      marginTop: 1,
     },
-    listContent: { padding: 16, paddingBottom: 32 },
-    row: { gap: 12, marginBottom: 12 },
+
+    listContent: { padding: EDGE, gap: GUTTER },
+    row: { gap: GUTTER },
+
     card: {
-      flex: 1,
       backgroundColor: Colors.surface,
-      borderRadius: 18,
+      borderRadius: 16,
       overflow: "hidden",
       borderWidth: 1,
       borderColor: Colors.border,
     },
     imageContainer: {
-      height: 140,
+      height: 110,
       backgroundColor: Colors.surface2,
       overflow: "hidden",
     },
     productImage: {
       width: "100%",
-      height: 140,
+      height: 110,
     },
     imagePlaceholder: {
-      height: 140,
-      backgroundColor: Colors.surface2,
+      height: 110,
       alignItems: "center",
       justifyContent: "center",
     },
     categoryBadge: {
       position: "absolute",
-      top: 10,
-      left: 10,
+      top: 8,
+      left: 8,
       backgroundColor: `${Colors.primary}CC`,
-      borderRadius: 8,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
+      borderRadius: 6,
+      paddingHorizontal: 6,
+      paddingVertical: 3,
     },
     categoryText: {
       fontFamily: "Inter_600SemiBold",
-      fontSize: 9,
+      fontSize: 8,
       color: "#fff",
       letterSpacing: 0.5,
     },
-    cardBody: { padding: 12, gap: 6 },
-    productName: {
-      fontFamily: "Inter_700Bold",
-      fontSize: 14,
-      color: Colors.text,
+    soldOutOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "rgba(0,0,0,0.55)",
+      alignItems: "center",
+      justifyContent: "center",
     },
-    productDesc: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 12,
-      color: Colors.textMuted,
+    soldOutText: {
+      fontFamily: "Inter_700Bold",
+      fontSize: 11,
+      color: "rgba(255,255,255,0.9)",
+      letterSpacing: 1,
+    },
+
+    cardBody: {
+      padding: 10,
+      gap: 6,
+    },
+    productName: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 13,
+      color: Colors.text,
       lineHeight: 17,
     },
     cardFooter: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      marginTop: 8,
     },
     price: {
       fontFamily: "Poppins_800ExtraBold",
-      fontSize: 16,
-      color: Colors.text,
+      fontSize: 15,
+      color: Colors.accent,
     },
     buyBtn: {
       backgroundColor: Colors.primary,
-      borderRadius: 10,
-      paddingHorizontal: 12,
-      paddingVertical: 7,
-      flexDirection: "row",
+      borderRadius: 8,
+      width: 28,
+      height: 28,
       alignItems: "center",
-      gap: 4,
+      justifyContent: "center",
     },
     buyBtnDisabled: {
-      backgroundColor: Colors.border,
+      backgroundColor: Colors.surface2,
     },
-    buyBtnText: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 12,
-      color: "#fff",
-    },
+
     empty: {
       flex: 1,
       alignItems: "center",
