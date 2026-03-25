@@ -14,6 +14,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
+  Dimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -476,17 +477,28 @@ function CheckoutFormModal({
   const fields: CheckoutField[] = event.checkoutFields ?? [];
   const hasWaiver = !!event.waiverText;
 
+  const SCREEN_HEIGHT = Dimensions.get("window").height;
+
   const cfStyles = StyleSheet.create({
-    overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" },
-    sheet: { backgroundColor: Colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: insets.bottom + 20, maxHeight: "90%" as any },
+    backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" },
+    kav: { justifyContent: "flex-end" },
+    sheet: {
+      backgroundColor: Colors.surface,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      maxHeight: SCREEN_HEIGHT * 0.88,
+    },
+    sheetInner: { flex: 1 },
     sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.border, alignSelf: "center" as const, marginTop: 12, marginBottom: 8 },
     sheetHeader: { flexDirection: "row" as const, alignItems: "center" as const, justifyContent: "space-between" as const, paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border },
     sheetTitle: { fontSize: 18, fontWeight: "700" as const, color: Colors.text },
     sheetSubtitle: { fontSize: 13, color: Colors.textMuted, marginTop: 2 },
-    body: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
+    scrollContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
     fieldGroup: { marginBottom: 16 },
     fieldLabel: { fontSize: 13, fontWeight: "600" as const, color: Colors.textMuted, marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: 0.5 },
     input: { backgroundColor: Colors.background, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, color: Colors.text, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15 },
+    inputMulti: { backgroundColor: Colors.background, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, color: Colors.text, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 12, fontSize: 15, minHeight: 80, textAlignVertical: "top" as const },
+    chipRow: { flexDirection: "row" as const, flexWrap: "wrap" as const, marginTop: 6, gap: 8 },
     optionChip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.background },
     optionChipActive: { borderColor: Colors.primary, backgroundColor: Colors.primary + "20" },
     optionChipText: { fontSize: 14, color: Colors.textMuted },
@@ -494,11 +506,12 @@ function CheckoutFormModal({
     waiverBox: { backgroundColor: Colors.background, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, padding: 14, marginBottom: 16 },
     waiverTitle: { fontSize: 13, fontWeight: "700" as const, color: Colors.textMuted, marginBottom: 8, textTransform: "uppercase" as const, letterSpacing: 0.5 },
     waiverText: { fontSize: 13, color: Colors.textMuted, lineHeight: 19 },
-    waiverCheck: { flexDirection: "row" as const, alignItems: "center" as const, gap: 12, marginTop: 12 },
-    waiverCheckBox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: Colors.primary, alignItems: "center" as const, justifyContent: "center" as const, backgroundColor: "transparent" },
+    waiverCheck: { flexDirection: "row" as const, alignItems: "flex-start" as const, marginTop: 14 },
+    waiverCheckBox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: Colors.primary, alignItems: "center" as const, justifyContent: "center" as const, backgroundColor: "transparent", marginRight: 12, marginTop: 1 },
     waiverCheckBoxChecked: { backgroundColor: Colors.primary },
-    waiverCheckLabel: { flex: 1, fontSize: 13, color: Colors.text, fontWeight: "500" as const },
-    proceedBtn: { marginHorizontal: 20, backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 15, alignItems: "center" as const, marginBottom: 8 },
+    waiverCheckLabel: { flex: 1, fontSize: 13, color: Colors.text, fontWeight: "500" as const, lineHeight: 18 },
+    footer: { paddingBottom: insets.bottom + 8 },
+    proceedBtn: { marginHorizontal: 20, marginTop: 12, backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 15, alignItems: "center" as const },
     proceedBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" as const },
     cancelBtn: { marginHorizontal: 20, paddingVertical: 12, alignItems: "center" as const },
     cancelBtnText: { color: Colors.textMuted, fontSize: 15 },
@@ -523,94 +536,107 @@ function CheckoutFormModal({
     if (field.type === "select" && field.options?.length) {
       return (
         <View key={field.id} style={cfStyles.fieldGroup}>
-          <Text style={cfStyles.fieldLabel}>
-            {field.label}{field.required ? " *" : ""}
-          </Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 6 }}>
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              {field.options.map((opt) => (
-                <TouchableOpacity
-                  key={opt}
-                  style={[cfStyles.optionChip, formData[field.id] === opt && cfStyles.optionChipActive]}
-                  onPress={() => setFormData((d) => ({ ...d, [field.id]: opt }))}
-                >
-                  <Text style={[cfStyles.optionChipText, formData[field.id] === opt && cfStyles.optionChipTextActive]}>
-                    {opt}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </ScrollView>
+          <Text style={cfStyles.fieldLabel}>{field.label}{field.required ? " *" : ""}</Text>
+          <View style={cfStyles.chipRow}>
+            {field.options.map((opt) => (
+              <TouchableOpacity
+                key={opt}
+                style={[cfStyles.optionChip, formData[field.id] === opt && cfStyles.optionChipActive]}
+                onPress={() => setFormData((d) => ({ ...d, [field.id]: opt }))}
+              >
+                <Text style={[cfStyles.optionChipText, formData[field.id] === opt && cfStyles.optionChipTextActive]}>
+                  {opt}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
       );
     }
 
+    const isMultiline = field.type === "textarea";
     return (
       <View key={field.id} style={cfStyles.fieldGroup}>
-        <Text style={cfStyles.fieldLabel}>
-          {field.label}{field.required ? " *" : ""}
-        </Text>
+        <Text style={cfStyles.fieldLabel}>{field.label}{field.required ? " *" : ""}</Text>
         <TextInput
-          style={cfStyles.input}
+          style={isMultiline ? cfStyles.inputMulti : cfStyles.input}
           value={formData[field.id] ?? ""}
           onChangeText={(val) => setFormData((d) => ({ ...d, [field.id]: val }))}
           placeholder={field.type === "date" ? "DD/MM/YYYY" : field.type === "email" ? "you@example.com" : field.type === "phone" ? "+44 7000 000000" : ""}
           placeholderTextColor={Colors.textMuted}
           keyboardType={field.type === "email" ? "email-address" : field.type === "phone" ? "phone-pad" : "default"}
-          multiline={field.type === "textarea"}
-          numberOfLines={field.type === "textarea" ? 3 : 1}
-          returnKeyType="next"
+          multiline={isMultiline}
+          numberOfLines={isMultiline ? 3 : 1}
+          returnKeyType={isMultiline ? "default" : "next"}
+          blurOnSubmit={!isMultiline}
         />
       </View>
     );
   };
 
+  const hitSlop = { top: 12, bottom: 12, left: 12, right: 12 };
+
   return (
-    <Modal visible animationType="slide" transparent onRequestClose={onClose}>
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={cfStyles.overlay}>
-        <View style={cfStyles.sheet}>
-          <View style={cfStyles.sheetHandle} />
-          <View style={cfStyles.sheetHeader}>
-            <View style={{ flex: 1 }}>
-              <Text style={cfStyles.sheetTitle}>Buyer Details</Text>
-              <Text style={cfStyles.sheetSubtitle}>{event.title}</Text>
-            </View>
-            <TouchableOpacity onPress={onClose} hitSlop={12}>
-              <Feather name="x" size={22} color={Colors.textMuted} />
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={cfStyles.body} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-            {fields.map(renderField)}
-
-            {hasWaiver && (
-              <View style={cfStyles.waiverBox}>
-                <Text style={cfStyles.waiverTitle}>Waiver & Agreement</Text>
-                <Text style={cfStyles.waiverText}>{event.waiverText}</Text>
-                <TouchableOpacity
-                  style={cfStyles.waiverCheck}
-                  onPress={() => setWaiverAgreed((v) => !v)}
-                  activeOpacity={0.7}
-                >
-                  <View style={[cfStyles.waiverCheckBox, waiverAgreed && cfStyles.waiverCheckBoxChecked]}>
-                    {waiverAgreed && <Feather name="check" size={14} color="#fff" />}
-                  </View>
-                  <Text style={cfStyles.waiverCheckLabel}>I have read and agree to the waiver above</Text>
+    <Modal visible animationType="slide" transparent onRequestClose={onClose} statusBarTranslucent>
+      <View style={cfStyles.backdrop}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={cfStyles.kav}
+          keyboardVerticalOffset={0}
+        >
+          <View style={cfStyles.sheet}>
+            <View style={cfStyles.sheetInner}>
+              {/* Handle + header — never scroll */}
+              <View style={cfStyles.sheetHandle} />
+              <View style={cfStyles.sheetHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text style={cfStyles.sheetTitle}>Buyer Details</Text>
+                  <Text style={cfStyles.sheetSubtitle}>{event.title}</Text>
+                </View>
+                <TouchableOpacity onPress={onClose} hitSlop={hitSlop}>
+                  <Feather name="x" size={22} color={Colors.textMuted} />
                 </TouchableOpacity>
               </View>
-            )}
 
-            <View style={{ height: 16 }} />
-          </ScrollView>
+              {/* Scrollable form */}
+              <ScrollView
+                contentContainerStyle={cfStyles.scrollContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
+                {fields.map(renderField)}
 
-          <TouchableOpacity style={cfStyles.proceedBtn} onPress={handleSubmit} activeOpacity={0.85}>
-            <Text style={cfStyles.proceedBtnText}>Proceed to Checkout</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={cfStyles.cancelBtn} onPress={onClose}>
-            <Text style={cfStyles.cancelBtnText}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
+                {hasWaiver && (
+                  <View style={cfStyles.waiverBox}>
+                    <Text style={cfStyles.waiverTitle}>Waiver & Agreement</Text>
+                    <Text style={cfStyles.waiverText}>{event.waiverText}</Text>
+                    <TouchableOpacity
+                      style={cfStyles.waiverCheck}
+                      onPress={() => setWaiverAgreed((v) => !v)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[cfStyles.waiverCheckBox, waiverAgreed && cfStyles.waiverCheckBoxChecked]}>
+                        {waiverAgreed && <Feather name="check" size={14} color="#fff" />}
+                      </View>
+                      <Text style={cfStyles.waiverCheckLabel}>I have read and agree to the waiver above</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </ScrollView>
+
+              {/* Sticky footer buttons */}
+              <View style={cfStyles.footer}>
+                <TouchableOpacity style={cfStyles.proceedBtn} onPress={handleSubmit} activeOpacity={0.85}>
+                  <Text style={cfStyles.proceedBtnText}>Proceed to Checkout</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={cfStyles.cancelBtn} onPress={onClose}>
+                  <Text style={cfStyles.cancelBtnText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
