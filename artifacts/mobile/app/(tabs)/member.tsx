@@ -150,6 +150,148 @@ function TeamHistoryRow({ entry }: { entry: TeamHistory }) {
   );
 }
 
+function ProgressSection({ attendance }: { attendance: AttendanceRecord[] | undefined }) {
+  if (!attendance) return null;
+
+  const now = new Date();
+  const months = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+    return {
+      key: `${d.getFullYear()}-${d.getMonth()}`,
+      label: d.toLocaleDateString("en-GB", { month: "short" }),
+      year: d.getFullYear(),
+      month: d.getMonth(),
+      events: 0,
+      medals: 0,
+      xp: 0,
+    };
+  });
+
+  for (const rec of attendance) {
+    const d = new Date(rec.event.date);
+    const key = `${d.getFullYear()}-${d.getMonth()}`;
+    const bucket = months.find(m => m.key === key);
+    if (bucket) {
+      bucket.events += 1;
+      if (rec.earnedMedal) bucket.medals += 1;
+      bucket.xp += 100 + (rec.earnedMedal ? 150 : 0);
+    }
+  }
+
+  const maxXp = Math.max(...months.map(m => m.xp), 1);
+  const totalEvents = attendance.length;
+  const totalMedals = attendance.filter(r => r.earnedMedal).length;
+  const totalXp = months.reduce((s, m) => s + m.xp, 0);
+  const hasActivity = months.some(m => m.events > 0);
+  const BAR_MAX_H = 80;
+
+  return (
+    <View style={progressStyles.wrap}>
+      <View style={styles.sectionHeader}>
+        <Feather name="trending-up" size={16} color="#60A5FA" />
+        <Text style={styles.sectionTitle}>Progress</Text>
+      </View>
+
+      {/* Summary row */}
+      <View style={progressStyles.summaryRow}>
+        <View style={progressStyles.summaryCard}>
+          <Text style={[progressStyles.summaryVal, { color: Colors.primary }]}>{totalEvents}</Text>
+          <Text style={progressStyles.summaryLab}>Events (6mo)</Text>
+        </View>
+        <View style={progressStyles.summaryCard}>
+          <Text style={[progressStyles.summaryVal, { color: Colors.accent }]}>{totalMedals}</Text>
+          <Text style={progressStyles.summaryLab}>Medals (6mo)</Text>
+        </View>
+        <View style={progressStyles.summaryCard}>
+          <Text style={[progressStyles.summaryVal, { color: "#60A5FA" }]}>{totalXp.toLocaleString()}</Text>
+          <Text style={progressStyles.summaryLab}>XP (6mo)</Text>
+        </View>
+      </View>
+
+      {/* Bar chart */}
+      {hasActivity ? (
+        <View style={progressStyles.chartWrap}>
+          <View style={progressStyles.chart}>
+            {months.map(m => {
+              const barH = Math.max(Math.round((m.xp / maxXp) * BAR_MAX_H), m.events > 0 ? 4 : 0);
+              return (
+                <View key={m.key} style={progressStyles.barCol}>
+                  <View style={[progressStyles.barTrack, { height: BAR_MAX_H }]}>
+                    <View style={[progressStyles.barFill, { height: barH }]}>
+                      {m.medals > 0 && (
+                        <View style={progressStyles.medalStripe} />
+                      )}
+                    </View>
+                  </View>
+                  <Text style={progressStyles.barLabel}>{m.label}</Text>
+                  {m.events > 0 && (
+                    <Text style={progressStyles.barCount}>{m.events}</Text>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+          <View style={progressStyles.legend}>
+            <View style={progressStyles.legendItem}>
+              <View style={[progressStyles.legendDot, { backgroundColor: Colors.primary }]} />
+              <Text style={progressStyles.legendText}>Events attended</Text>
+            </View>
+            <View style={progressStyles.legendItem}>
+              <View style={[progressStyles.legendDot, { backgroundColor: Colors.accent }]} />
+              <Text style={progressStyles.legendText}>Medal earned</Text>
+            </View>
+          </View>
+        </View>
+      ) : (
+        <View style={progressStyles.noActivity}>
+          <Feather name="bar-chart-2" size={28} color={Colors.textMuted} />
+          <Text style={progressStyles.noActivityText}>Attend events to see your activity chart</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+const progressStyles = StyleSheet.create({
+  wrap: { marginBottom: 28 },
+  summaryRow: { flexDirection: "row", gap: 8, marginBottom: 14 },
+  summaryCard: {
+    flex: 1, backgroundColor: Colors.surface, borderRadius: 12,
+    padding: 12, alignItems: "center", borderWidth: 1, borderColor: Colors.border,
+  },
+  summaryVal: { fontFamily: "Poppins_800ExtraBold", fontSize: 18, lineHeight: 22 },
+  summaryLab: { fontFamily: "Inter_400Regular", fontSize: 10, color: Colors.textMuted, marginTop: 2, textAlign: "center" },
+
+  chartWrap: {
+    backgroundColor: Colors.surface, borderRadius: 16,
+    borderWidth: 1, borderColor: Colors.border, padding: 16,
+  },
+  chart: { flexDirection: "row", alignItems: "flex-end", gap: 6, marginBottom: 6 },
+  barCol: { flex: 1, alignItems: "center", gap: 4 },
+  barTrack: {
+    width: "80%", backgroundColor: Colors.surface2,
+    borderRadius: 6, overflow: "hidden", justifyContent: "flex-end",
+  },
+  barFill: {
+    width: "100%", backgroundColor: Colors.primary,
+    borderRadius: 6, position: "relative", overflow: "hidden",
+  },
+  medalStripe: {
+    position: "absolute", top: 0, left: 0, right: 0, height: 4,
+    backgroundColor: Colors.accent,
+  },
+  barLabel: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: Colors.textMuted },
+  barCount: { fontFamily: "Inter_700Bold", fontSize: 10, color: Colors.primary },
+
+  legend: { flexDirection: "row", gap: 16, marginTop: 10, justifyContent: "center" },
+  legendItem: { flexDirection: "row", alignItems: "center", gap: 5 },
+  legendDot: { width: 8, height: 8, borderRadius: 4 },
+  legendText: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.textMuted },
+
+  noActivity: { alignItems: "center", paddingVertical: 24, gap: 8 },
+  noActivityText: { fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.textMuted, textAlign: "center" },
+});
+
 function GuestView() {
   return (
     <ScrollView style={styles.screen} contentInsetAdjustmentBehavior="automatic">
@@ -446,7 +588,7 @@ export default function MemberScreen() {
       >
         <View style={styles.heroTopRow}>
           {/* Avatar */}
-          <Pressable onPress={handlePickAvatar} style={styles.avatarWrap}>
+          <Pressable onPress={handlePickAvatar} disabled={uploadingAvatar} style={styles.avatarWrap}>
             {uploadingAvatar ? (
               <View style={styles.avatarCircle}>
                 <ActivityIndicator color="#fff" />
@@ -461,6 +603,7 @@ export default function MemberScreen() {
             <View style={styles.avatarEditBadge}>
               <Feather name="camera" size={10} color="#fff" />
             </View>
+            <Text style={styles.avatarChangeLabel}>{uploadingAvatar ? "Uploading..." : "Change"}</Text>
           </Pressable>
 
           <View style={styles.heroActions}>
@@ -529,6 +672,9 @@ export default function MemberScreen() {
       </View>
 
       <View style={styles.body}>
+        {/* ── Progress ── */}
+        <ProgressSection attendance={attendance} />
+
         {/* ── Quick Actions ── */}
         <View style={styles.quickActions}>
           <Pressable
@@ -655,6 +801,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     alignItems: "center", justifyContent: "center",
     borderWidth: 2, borderColor: "#0D0D0D",
+  },
+  avatarChangeLabel: {
+    fontFamily: "Inter_600SemiBold", fontSize: 10,
+    color: "rgba(255,255,255,0.7)", textAlign: "center", marginTop: 4,
   },
   heroActions: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 4 },
   editBtn: {
