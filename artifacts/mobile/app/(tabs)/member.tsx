@@ -40,6 +40,7 @@ import {
 } from "@/lib/api";
 import { getToken } from "@/lib/api";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { EliteBanner } from "@/components/EliteBanner";
 
 const PLAYER_ROLES = ["Thrower", "Catcher", "Dodger", "All-Rounder"] as const;
 const LEVEL_THRESHOLDS = [0, 300, 700, 1200, 1800, 2500, 3300, 4200, 5200, 6300];
@@ -745,6 +746,9 @@ export default function MemberScreen() {
 
         {/* ── Progress ── */}
         <ProgressSection attendance={attendance} />
+
+        {/* ── Go Elite Banner ── */}
+        <EliteBanner isElite={user.isElite ?? false} isAuthenticated={true} />
 
         {/* ── Event History ── */}
         <View style={styles.section}>
