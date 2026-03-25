@@ -231,8 +231,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   heroTagline: {
-    fontFamily: "Impact",
-    fontWeight: "700",
+    fontFamily: "Inter_400Regular",
     fontSize: 15,
     color: "rgba(255,255,255,0.85)",
     marginBottom: 24,
