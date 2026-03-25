@@ -15,23 +15,32 @@ import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
 
-function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
-  const token = localStorage.getItem("dc_admin_token");
-  if (!token) return null;
-  return <Component />;
+function makePR(Component: React.ComponentType) {
+  return function ProtectedPage() {
+    const token = localStorage.getItem("dc_admin_token");
+    if (!token) return null;
+    return <Component />;
+  };
 }
+
+const ProtectedDashboard = makePR(Dashboard);
+const ProtectedEvents = makePR(Events);
+const ProtectedPosts = makePR(Posts);
+const ProtectedMerch = makePR(Merch);
+const ProtectedMembers = makePR(Members);
+const ProtectedVideos = makePR(Videos);
 
 function Router() {
   return (
     <Layout>
       <Switch>
         <Route path="/login" component={Login} />
-        <Route path="/" render={() => <ProtectedRoute component={Dashboard} />} />
-        <Route path="/events" render={() => <ProtectedRoute component={Events} />} />
-        <Route path="/posts" render={() => <ProtectedRoute component={Posts} />} />
-        <Route path="/merch" render={() => <ProtectedRoute component={Merch} />} />
-        <Route path="/members" render={() => <ProtectedRoute component={Members} />} />
-        <Route path="/videos" render={() => <ProtectedRoute component={Videos} />} />
+        <Route path="/" component={ProtectedDashboard} />
+        <Route path="/events" component={ProtectedEvents} />
+        <Route path="/posts" component={ProtectedPosts} />
+        <Route path="/merch" component={ProtectedMerch} />
+        <Route path="/members" component={ProtectedMembers} />
+        <Route path="/videos" component={ProtectedVideos} />
         <Route component={NotFound} />
       </Switch>
     </Layout>
