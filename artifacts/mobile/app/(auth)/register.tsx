@@ -180,7 +180,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     },
     title: {
       fontFamily: "Poppins_800ExtraBold",
-      fontSize: 32,
+      fontSize: 28,
       color: Colors.text,
       marginBottom: 6,
     },
