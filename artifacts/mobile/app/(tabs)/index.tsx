@@ -32,7 +32,7 @@ export default function HomeScreen() {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const { user, isAuthenticated } = useAuth();
-  const logoHeight = screenWidth * 0.20;
+  const logoHeight = screenWidth * 0.06;
 
   const { data: events, isLoading: eventsLoading, refetch: refetchEvents } = useQuery({
     queryKey: ["upcoming-events"],
