@@ -73,8 +73,11 @@ export default function Login() {
             </Button>
           </form>
           
-          <div className="pt-8 border-t border-border/50 text-center text-sm text-muted-foreground">
+          <div className="pt-8 border-t border-border/50 text-center text-sm text-muted-foreground space-y-1">
             <p>Protected area. Authorized personnel only.</p>
+            <p className="text-xs text-muted-foreground/60">
+              Default admin: <span className="font-mono text-muted-foreground">admin@dodgeclub.com</span>
+            </p>
           </div>
         </div>
       </div>

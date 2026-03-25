@@ -61,6 +61,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { mutate: logout, isPending: isLoggingOut } = useLogout();
   const [location] = useLocation();
 
+  const hasToken = !!localStorage.getItem("dc_admin_token");
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -69,13 +71,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (location === "/login") {
+  if (!hasToken || !user) {
     return <>{children}</>;
   }
 
   return (
     <div className="flex h-screen bg-background overflow-hidden selection:bg-primary/30">
-      {/* Sidebar */}
       <aside className="w-64 border-r border-border bg-card flex flex-col hidden md:flex shrink-0 z-20 shadow-2xl relative">
         <div className="p-6">
           <Link href="/" className="flex items-center gap-3 transition-opacity hover:opacity-80">
@@ -93,7 +94,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           Management
         </div>
 
-        {user && <SidebarNav />}
+        <SidebarNav />
 
         <div className="p-4 mt-auto border-t border-border bg-white/5">
           <div className="flex items-center gap-3 mb-4 px-2">
@@ -121,7 +122,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 flex flex-col h-full overflow-hidden relative">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/5 via-background to-background pointer-events-none" />
         <div className="flex-1 overflow-y-auto z-10 p-4 md:p-8">

@@ -1,8 +1,7 @@
-import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
+import { Switch, Route, Redirect, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useEffect } from "react";
 
 import { Layout } from "@/components/layout";
 import Login from "@/pages/login";
@@ -17,16 +16,8 @@ import NotFound from "@/pages/not-found";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
-  const [location, setLocation] = useLocation();
   const token = localStorage.getItem("dc_admin_token");
-
-  useEffect(() => {
-    if (!token && location !== "/login") {
-      setLocation("/login");
-    }
-  }, [token, location, setLocation]);
-
-  if (!token) return null;
+  if (!token) return <Redirect to="/login" />;
   return <Component />;
 }
 
