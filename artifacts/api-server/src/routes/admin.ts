@@ -68,6 +68,24 @@ router.post("/events/:id/publish", async (req, res) => {
   res.json(toAdminEvent(event));
 });
 
+/* POST /api/admin/events/:id/duplicate — clone an event as an unpublished draft */
+router.post("/events/:id/duplicate", async (req, res) => {
+  const [source] = await db.select().from(eventsTable).where(eq(eventsTable.id, Number(req.params.id))).limit(1);
+  if (!source) { res.status(404).json({ error: "Not found" }); return; }
+  const [copy] = await db.insert(eventsTable).values({
+    title: `Copy of ${source.title}`,
+    description: source.description,
+    date: source.date,
+    location: source.location,
+    ticketUrl: source.ticketUrl,
+    imageUrl: source.imageUrl,
+    checkoutFields: source.checkoutFields,
+    waiverText: source.waiverText,
+    isPublished: false,
+  }).returning();
+  res.status(201).json(toAdminEvent(copy));
+});
+
 /* DELETE /api/admin/events/:id */
 router.delete("/events/:id", async (req, res) => {
   await db.delete(attendanceTable).where(eq(attendanceTable.eventId, Number(req.params.id)));

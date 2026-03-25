@@ -148,6 +148,15 @@ export function useSetTicketPricing() {
   });
 }
 
+export function useDuplicateEvent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) =>
+      fetchApi<Event>(`/api/admin/events/${id}/duplicate`, { method: "POST" }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["events"] }),
+  });
+}
+
 export function useDeleteEvent() {
   const queryClient = useQueryClient();
   return useMutation({

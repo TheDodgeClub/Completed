@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useEvents, useCreateEvent, useUpdateEvent, useDeleteEvent, usePublishEvent, useSetTicketPricing, useUpdateCheckoutForm, Event, EventInput, CheckoutField } from "@/hooks/use-events";
+import { useEvents, useCreateEvent, useUpdateEvent, useDeleteEvent, usePublishEvent, useSetTicketPricing, useUpdateCheckoutForm, useDuplicateEvent, Event, EventInput, CheckoutField } from "@/hooks/use-events";
 import { formatDateTime, toDateTimeInput } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit2, Trash2, MapPin, Users, CalendarDays, ArrowUpDown, ArrowUp, ArrowDown, Globe, EyeOff, CreditCard, CheckCircle, ClipboardList, X, GripVertical } from "lucide-react";
+import { Plus, Edit2, Trash2, MapPin, Users, CalendarDays, ArrowUpDown, ArrowUp, ArrowDown, Globe, EyeOff, CreditCard, CheckCircle, ClipboardList, X, GripVertical, Copy } from "lucide-react";
 import { ImageUploader } from "@/components/image-uploader";
 import { useForm } from "react-hook-form";
 
@@ -29,7 +29,15 @@ export default function Events() {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   const { mutate: publish } = usePublishEvent();
+  const { mutate: duplicate, isPending: isDuplicating } = useDuplicateEvent();
   const { toast } = useToast();
+
+  const handleDuplicate = (event: Event) => {
+    duplicate(event.id, {
+      onSuccess: (copy) => toast({ title: `"${copy.title}" created as a draft` }),
+      onError: () => toast({ title: "Failed to duplicate event", variant: "destructive" }),
+    });
+  };
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -199,6 +207,16 @@ export default function Events() {
                           title="Edit checkout form & waiver"
                         >
                           <ClipboardList className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 rounded-lg hover:bg-violet-400/10 hover:text-violet-400"
+                          onClick={() => handleDuplicate(event)}
+                          disabled={isDuplicating}
+                          title="Duplicate event"
+                        >
+                          <Copy className="w-4 h-4" />
                         </Button>
                         <Button
                           variant="ghost"
