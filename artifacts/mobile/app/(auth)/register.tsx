@@ -161,7 +161,9 @@ export default function RegisterScreen() {
 function makeStyles(Colors: ReturnType<typeof useColors>) {
   return StyleSheet.create({
     container: {
-      padding: 24,
+      paddingTop: 80,
+      paddingHorizontal: 24,
+      paddingBottom: 24,
       backgroundColor: Colors.background,
       flexGrow: 1,
     },
