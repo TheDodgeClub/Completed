@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Trophy, CalendarCheck, Trash2, ShieldCheck, Loader2, CircleDot, Star, Pencil } from "lucide-react";
+import { Search, Trophy, CalendarCheck, Trash2, ShieldCheck, Loader2, CircleDot, Star, Pencil, Check } from "lucide-react";
 
 const PLAYER_ROLES = ["Thrower", "Catcher", "Dodger", "All-Rounder"] as const;
 const LEVEL_NAMES = ["Rookie", "Player", "Contender", "Competitor", "Veteran", "Elite", "Pro", "Champion", "Legend", "Icon"];
@@ -86,11 +86,18 @@ export default function Members() {
                   >
                     <TableCell className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center overflow-hidden border border-border/50 group-hover:border-primary/50 transition-colors">
-                          {member.avatarUrl ? (
-                            <img src={resolveAvatarUrl(member.avatarUrl)} alt={member.name} className="w-full h-full object-cover" />
-                          ) : (
-                            <span className="font-bold text-sm">{member.name.charAt(0)}</span>
+                        <div className="relative shrink-0">
+                          <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center overflow-hidden border border-border/50 group-hover:border-primary/50 transition-colors">
+                            {member.avatarUrl ? (
+                              <img src={resolveAvatarUrl(member.avatarUrl)} alt={member.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="font-bold text-sm">{member.name.charAt(0)}</span>
+                            )}
+                          </div>
+                          {member.isElite && (
+                            <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-yellow-400 border-2 border-card flex items-center justify-center shadow-sm">
+                              <Check className="w-2.5 h-2.5 text-yellow-900 stroke-[3]" />
+                            </span>
                           )}
                         </div>
                         <div>
@@ -234,11 +241,18 @@ function MemberDetailSheet({ member, onClose }: { member: AdminMember | null; on
             <div className="p-6 border-b border-border/50 bg-background/50">
               <SheetHeader className="text-left space-y-0">
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center overflow-hidden border-2 border-border flex-shrink-0">
-                    {member.avatarUrl ? (
-                      <img src={resolveAvatarUrl(member.avatarUrl)} alt={member.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="font-display font-bold text-2xl text-muted-foreground">{member.name.charAt(0)}</span>
+                  <div className="relative flex-shrink-0">
+                    <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center overflow-hidden border-2 border-border">
+                      {member.avatarUrl ? (
+                        <img src={resolveAvatarUrl(member.avatarUrl)} alt={member.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="font-display font-bold text-2xl text-muted-foreground">{member.name.charAt(0)}</span>
+                      )}
+                    </div>
+                    {member.isElite && (
+                      <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-yellow-400 border-2 border-card flex items-center justify-center shadow-md">
+                        <Check className="w-3 h-3 text-yellow-900 stroke-[3]" />
+                      </span>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">

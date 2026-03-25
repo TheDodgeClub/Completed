@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Search, Star, Loader2, ExternalLink, Users, TrendingUp, Crown } from "lucide-react";
+import { Search, Star, Loader2, ExternalLink, Users, TrendingUp, Crown, Check } from "lucide-react";
 
 const ELITE_PRICE_GBP = 8.99;
 const STRIPE_DASHBOARD_BASE = "https://dashboard.stripe.com/subscriptions";
@@ -141,12 +141,17 @@ export default function EliteMembers() {
                     <TableRow key={member.id} className="border-border/50 hover:bg-white/[0.02]">
                       <TableCell className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center overflow-hidden border border-yellow-500/30 shrink-0">
-                            {member.avatarUrl ? (
-                              <img src={resolveAvatarUrl(member.avatarUrl)} alt={member.name} className="w-full h-full object-cover" />
-                            ) : (
-                              <span className="font-bold text-sm">{member.name.charAt(0)}</span>
-                            )}
+                          <div className="relative shrink-0">
+                            <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center overflow-hidden border border-yellow-500/30">
+                              {member.avatarUrl ? (
+                                <img src={resolveAvatarUrl(member.avatarUrl)} alt={member.name} className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="font-bold text-sm">{member.name.charAt(0)}</span>
+                              )}
+                            </div>
+                            <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-yellow-400 border-2 border-card flex items-center justify-center shadow-sm">
+                              <Check className="w-2.5 h-2.5 text-yellow-900 stroke-[3]" />
+                            </span>
                           </div>
                           <div>
                             <div className="font-semibold text-foreground flex items-center gap-1.5">
