@@ -278,8 +278,20 @@ function GuestView() {
         </View>
         <Text style={styles.guestTitle}>Member Zone</Text>
         <Text style={styles.guestSubtitle}>
-          Sign in or create a free account to access your exclusive member dashboard.
+          Your exclusive dashboard for XP, achievements, and event history.
         </Text>
+        <Pressable
+          style={({ pressed }) => [styles.signInBtn, { opacity: pressed ? 0.85 : 1 }]}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            router.push("/(auth)/register");
+          }}
+        >
+          <Text style={styles.signInBtnText}>Join the Club — It's Free</Text>
+        </Pressable>
+        <Pressable style={styles.loginLink} onPress={() => router.push("/(auth)/login")}>
+          <Text style={styles.loginLinkText}>Already a member? Sign in</Text>
+        </Pressable>
       </LinearGradient>
       <View style={styles.guestBody}>
         {[
@@ -294,18 +306,6 @@ function GuestView() {
             <Text style={styles.guestFeatureText}>{item.label}</Text>
           </View>
         ))}
-        <Pressable
-          style={({ pressed }) => [styles.signInBtn, { opacity: pressed ? 0.85 : 1 }]}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            router.push("/(auth)/register");
-          }}
-        >
-          <Text style={styles.signInBtnText}>Join the Club — It's Free</Text>
-        </Pressable>
-        <Pressable style={styles.loginLink} onPress={() => router.push("/(auth)/login")}>
-          <Text style={styles.loginLinkText}>Already a member? Sign in</Text>
-        </Pressable>
       </View>
     </ScrollView>
   );
@@ -1058,12 +1058,13 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     },
     guestFeatureText: { fontFamily: "Inter_500Medium", fontSize: 14, color: Colors.text, flex: 1 },
     signInBtn: {
-      backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 17, alignItems: "center",
-      shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 6, marginTop: 8,
+      backgroundColor: "#fff", borderRadius: 14, paddingVertical: 17, alignItems: "center",
+      alignSelf: "stretch",
+      shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 10, elevation: 6, marginTop: 20,
     },
-    signInBtnText: { fontFamily: "Inter_700Bold", fontSize: 16, color: "#fff" },
-    loginLink: { alignItems: "center", paddingVertical: 8 },
-    loginLinkText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.primary },
+    signInBtnText: { fontFamily: "Inter_700Bold", fontSize: 16, color: Colors.primary },
+    loginLink: { alignItems: "center", paddingVertical: 10 },
+    loginLinkText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "rgba(255,255,255,0.8)" },
 
     /* Edit Modal */
     modalContainer: { flex: 1, backgroundColor: Colors.background },
