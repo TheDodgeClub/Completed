@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, integer, boolean, numeric } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, timestamp, integer, boolean, numeric, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -17,7 +17,17 @@ export const eventsTable = pgTable("events", {
   ticketCapacity: integer("ticket_capacity"),
   stripeProductId: text("stripe_product_id"),
   stripePriceId: text("stripe_price_id"),
+  checkoutFields: jsonb("checkout_fields").$type<CheckoutField[]>().notNull().default([]),
+  waiverText: text("waiver_text"),
 });
+
+export type CheckoutField = {
+  id: string;
+  label: string;
+  type: "text" | "email" | "phone" | "date" | "textarea" | "select";
+  required: boolean;
+  options?: string[];
+};
 
 export const insertEventSchema = createInsertSchema(eventsTable).omit({
   id: true,

@@ -26,6 +26,8 @@ function toAdminEvent(e: typeof eventsTable.$inferSelect) {
     ticketCapacity: e.ticketCapacity ?? null,
     stripeProductId: e.stripeProductId ?? null,
     stripePriceId: e.stripePriceId ?? null,
+    checkoutFields: (e.checkoutFields as any[]) ?? [],
+    waiverText: e.waiverText ?? null,
   };
 }
 
@@ -136,6 +138,26 @@ router.post("/events/:id/tickets", async (req, res) => {
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Stripe error" });
   }
+});
+
+/* PUT /api/admin/events/:id/checkout — update checkout form fields and waiver */
+router.put("/events/:id/checkout", async (req, res) => {
+  const eventId = Number(req.params.id);
+  const { checkoutFields, waiverText } = req.body as {
+    checkoutFields?: any[];
+    waiverText?: string;
+  };
+
+  const [event] = await db.update(eventsTable)
+    .set({
+      checkoutFields: checkoutFields ?? [],
+      waiverText: waiverText ?? null,
+    })
+    .where(eq(eventsTable.id, eventId))
+    .returning();
+
+  if (!event) { res.status(404).json({ error: "Not found" }); return; }
+  res.json(toAdminEvent(event));
 });
 
 /* GET /api/admin/events/:id/tickets — ticket sales for an event */

@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, text, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, timestamp, boolean, jsonb } from "drizzle-orm/pg-core";
 import { usersTable } from "./users";
 import { eventsTable } from "./events";
 
@@ -13,6 +13,7 @@ export const ticketsTable = pgTable("tickets", {
   checkedIn: boolean("checked_in").notNull().default(false),
   checkedInAt: timestamp("checked_in_at"),
   amountPaid: integer("amount_paid").notNull().default(0), // in cents
+  checkoutData: jsonb("checkout_data").$type<Record<string, string>>(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

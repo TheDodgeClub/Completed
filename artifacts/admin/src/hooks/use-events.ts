@@ -1,6 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
 
+export type CheckoutField = {
+  id: string;
+  label: string;
+  type: "text" | "email" | "phone" | "date" | "textarea" | "select";
+  required: boolean;
+  options?: string[];
+};
+
 export interface Event {
   id: number;
   title: string;
@@ -16,6 +24,8 @@ export interface Event {
   ticketCapacity: number | null;
   stripeProductId: string | null;
   stripePriceId: string | null;
+  checkoutFields: CheckoutField[];
+  waiverText: string | null;
 }
 
 export type EventInput = Omit<Event, "id" | "isUpcoming" | "isPublished" | "attendeeCount">;
@@ -55,6 +65,8 @@ export function useCreateEvent() {
         ticketCapacity: null,
         stripeProductId: null,
         stripePriceId: null,
+        checkoutFields: [],
+        waiverText: null,
       };
       queryClient.setQueryData<Event[]>(["events"], (old = []) => [optimistic, ...old]);
       return { previous };
@@ -108,6 +120,18 @@ export function usePublishEvent() {
     onError: (_err, _vars, context) => {
       if (context?.previous) queryClient.setQueryData(["events"], context.previous);
     },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["events"] }),
+  });
+}
+
+export function useUpdateCheckoutForm() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, checkoutFields, waiverText }: { id: number; checkoutFields: CheckoutField[]; waiverText: string }) =>
+      fetchApi<Event>(`/api/admin/events/${id}/checkout`, {
+        method: "PUT",
+        body: JSON.stringify({ checkoutFields, waiverText }),
+      }),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["events"] }),
   });
 }

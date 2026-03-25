@@ -74,7 +74,7 @@ router.get("/event/:eventId", requireAuth, async (req: any, res) => {
 /* POST /api/tickets/checkout — create Stripe Checkout Session */
 router.post("/checkout", requireAuth, async (req: any, res) => {
   const userId = req.session.userId;
-  const { eventId } = req.body as { eventId?: number };
+  const { eventId, checkoutData } = req.body as { eventId?: number; checkoutData?: Record<string, string> };
   if (!eventId) {
     res.status(400).json({ error: "eventId required" });
     return;
@@ -128,6 +128,17 @@ router.post("/checkout", requireAuth, async (req: any, res) => {
       ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
       : `${req.protocol}://${req.get("host")}`;
 
+  // Pre-create a pending ticket to store checkout form data
+  const pendingCode = generateTicketCode();
+  const [pendingTicket] = await db.insert(ticketsTable).values({
+    userId,
+    eventId,
+    status: "pending",
+    ticketCode: pendingCode,
+    amountPaid: 0,
+    checkoutData: checkoutData ?? null,
+  }).returning();
+
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
     payment_method_types: ["card"],
@@ -135,8 +146,13 @@ router.post("/checkout", requireAuth, async (req: any, res) => {
     mode: "payment",
     success_url: `${baseUrl}/api/tickets/success?session_id={CHECKOUT_SESSION_ID}&eventId=${eventId}`,
     cancel_url: `${baseUrl}/api/tickets/cancel`,
-    metadata: { userId: String(userId), eventId: String(eventId) },
+    metadata: { userId: String(userId), eventId: String(eventId), ticketId: String(pendingTicket.id) },
   });
+
+  // Link the session to the pending ticket
+  await db.update(ticketsTable)
+    .set({ stripeCheckoutSessionId: session.id })
+    .where(eq(ticketsTable.id, pendingTicket.id));
 
   res.json({ url: session.url, sessionId: session.id });
 });
@@ -157,14 +173,26 @@ router.get("/success", async (req, res) => {
       const userId = Number(session.metadata?.userId);
       const evId = Number(eventId);
 
-      // Idempotent — only create if not already issued
-      const [existing] = await db
+      // Find the pending ticket linked to this session
+      const [existingBySession] = await db
         .select()
         .from(ticketsTable)
         .where(eq(ticketsTable.stripeCheckoutSessionId, session_id))
         .limit(1);
 
-      if (!existing) {
+      if (existingBySession) {
+        // Update pending → paid if not already done
+        if (existingBySession.status !== "paid") {
+          await db.update(ticketsTable)
+            .set({
+              status: "paid",
+              stripePaymentIntentId: typeof session.payment_intent === "string" ? session.payment_intent : null,
+              amountPaid: session.amount_total ?? 0,
+            })
+            .where(eq(ticketsTable.id, existingBySession.id));
+        }
+      } else {
+        // Fallback: create fresh if no pending ticket was found
         await db.insert(ticketsTable).values({
           userId,
           eventId: evId,
@@ -192,7 +220,7 @@ router.get("/cancel", (_req, res) => {
 /* POST /api/tickets/free — issue a free ticket immediately */
 router.post("/free", requireAuth, async (req: any, res) => {
   const userId = req.session.userId;
-  const { eventId } = req.body as { eventId?: number };
+  const { eventId, checkoutData } = req.body as { eventId?: number; checkoutData?: Record<string, string> };
   if (!eventId) {
     res.status(400).json({ error: "eventId required" });
     return;
@@ -218,7 +246,7 @@ router.post("/free", requireAuth, async (req: any, res) => {
   }
   const [ticket] = await db
     .insert(ticketsTable)
-    .values({ userId, eventId, status: "paid", ticketCode: generateTicketCode(), amountPaid: 0 })
+    .values({ userId, eventId, status: "paid", ticketCode: generateTicketCode(), amountPaid: 0, checkoutData: checkoutData ?? null })
     .returning();
   res.status(201).json({ ticket });
 });

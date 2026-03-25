@@ -39,7 +39,7 @@ workspace/
 ### Mobile App (Expo)
 - **Updates tab** — Published videos (horizontal scroll carousel with thumbnails, tap to open URL) + posts/announcements
 - **Home** — Hero section, community stats, upcoming events (published only), latest updates, merch CTA
-- **Tickets** — My Tickets (QR codes for purchased tickets) + Buy Tickets (Stripe Checkout or free registration)
+- **Tickets** — My Tickets (QR codes for purchased tickets) + Buy Tickets (Stripe Checkout or free registration); pre-checkout buyer form with configurable fields + waiver agreement modal shown before purchase
 - **Merch** — Product grid with buy links (external URL, Shopify-ready)
 - **Updates** — Message board; guests see public posts, members see all
 - **Member Zone** — Protected dashboard with stats, achievements, event history

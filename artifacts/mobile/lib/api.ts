@@ -39,6 +39,14 @@ export type UpcomingEvent = {
   imageUrl: string | null;
 };
 
+export type CheckoutField = {
+  id: string;
+  label: string;
+  type: "text" | "email" | "phone" | "date" | "textarea" | "select";
+  required: boolean;
+  options?: string[];
+};
+
 export type Event = {
   id: number;
   title: string;
@@ -52,6 +60,8 @@ export type Event = {
   ticketPrice: number | null;
   ticketCapacity: number | null;
   stripePriceId: string | null;
+  checkoutFields: CheckoutField[];
+  waiverText: string | null;
 };
 
 export type Ticket = {
@@ -504,17 +514,17 @@ export async function getEventTicket(eventId: number): Promise<{ ticket: Ticket 
   return apiFetch<{ ticket: Ticket | null }>(`/tickets/event/${eventId}`);
 }
 
-export async function createCheckoutSession(eventId: number): Promise<{ url: string; sessionId: string }> {
+export async function createCheckoutSession(eventId: number, checkoutData?: Record<string, string>): Promise<{ url: string; sessionId: string }> {
   return apiFetch<{ url: string; sessionId: string }>("/tickets/checkout", {
     method: "POST",
-    body: JSON.stringify({ eventId }),
+    body: JSON.stringify({ eventId, checkoutData }),
   });
 }
 
-export async function registerFreeTicket(eventId: number): Promise<{ ticket: Ticket }> {
+export async function registerFreeTicket(eventId: number, checkoutData?: Record<string, string>): Promise<{ ticket: Ticket }> {
   return apiFetch<{ ticket: Ticket }>("/tickets/free", {
     method: "POST",
-    body: JSON.stringify({ eventId }),
+    body: JSON.stringify({ eventId, checkoutData }),
   });
 }
 

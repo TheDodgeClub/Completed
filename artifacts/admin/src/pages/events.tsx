@@ -1,16 +1,17 @@
 import { useState } from "react";
-import { useEvents, useCreateEvent, useUpdateEvent, useDeleteEvent, usePublishEvent, useSetTicketPricing, Event, EventInput } from "@/hooks/use-events";
+import { useEvents, useCreateEvent, useUpdateEvent, useDeleteEvent, usePublishEvent, useSetTicketPricing, useUpdateCheckoutForm, Event, EventInput, CheckoutField } from "@/hooks/use-events";
 import { formatDateTime, toDateTimeInput } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit2, Trash2, MapPin, Users, Ticket, CalendarDays, ArrowUpDown, ArrowUp, ArrowDown, Globe, EyeOff, CreditCard, CheckCircle } from "lucide-react";
+import { Plus, Edit2, Trash2, MapPin, Users, CalendarDays, ArrowUpDown, ArrowUp, ArrowDown, Globe, EyeOff, CreditCard, CheckCircle, ClipboardList, X, GripVertical } from "lucide-react";
 import { ImageUploader } from "@/components/image-uploader";
 import { useForm } from "react-hook-form";
 
@@ -23,6 +24,7 @@ export default function Events() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [ticketEvent, setTicketEvent] = useState<Event | null>(null);
+  const [checkoutEvent, setCheckoutEvent] = useState<Event | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
@@ -185,9 +187,18 @@ export default function Events() {
                           size="icon"
                           className="h-8 w-8 rounded-lg hover:bg-accent/10 hover:text-accent"
                           onClick={() => setTicketEvent(event)}
-                          title="Configure tickets"
+                          title="Configure ticket pricing"
                         >
                           <CreditCard className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 rounded-lg hover:bg-blue-400/10 hover:text-blue-400"
+                          onClick={() => setCheckoutEvent(event)}
+                          title="Edit checkout form & waiver"
+                        >
+                          <ClipboardList className="w-4 h-4" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -218,6 +229,7 @@ export default function Events() {
       {isCreateOpen && <EventFormModal onClose={() => setIsCreateOpen(false)} />}
       {editingEvent && <EventFormModal event={editingEvent} onClose={() => setEditingEvent(null)} />}
       {ticketEvent && <TicketPricingModal event={ticketEvent} onClose={() => setTicketEvent(null)} />}
+      {checkoutEvent && <CheckoutFormModal event={checkoutEvent} onClose={() => setCheckoutEvent(null)} />}
 
       <DeleteConfirmDialog
         id={deleteId}
@@ -227,6 +239,183 @@ export default function Events() {
         description="Are you sure? This will permanently delete the event and all associated attendance records."
       />
     </div>
+  );
+}
+
+const PRESET_FIELDS: Array<{ id: string; label: string; type: CheckoutField["type"] }> = [
+  { id: "phone", label: "Phone Number", type: "phone" },
+  { id: "dob", label: "Date of Birth", type: "date" },
+  { id: "emergency_name", label: "Emergency Contact Name", type: "text" },
+  { id: "emergency_phone", label: "Emergency Contact Phone", type: "phone" },
+  { id: "medical_notes", label: "Medical Notes", type: "textarea" },
+  { id: "tshirt_size", label: "T-Shirt Size", type: "select" },
+];
+
+const TSHIRT_OPTIONS = ["XS", "S", "M", "L", "XL", "XXL"];
+
+function CheckoutFormModal({ event, onClose }: { event: Event; onClose: () => void }) {
+  const { mutate: updateCheckout, isPending } = useUpdateCheckoutForm();
+  const { toast } = useToast();
+  const [fields, setFields] = useState<CheckoutField[]>(event.checkoutFields ?? []);
+  const [waiverText, setWaiverText] = useState(event.waiverText ?? "");
+  const [customLabel, setCustomLabel] = useState("");
+  const [customType, setCustomType] = useState<CheckoutField["type"]>("text");
+
+  const activeIds = new Set(fields.map((f) => f.id));
+
+  const togglePreset = (preset: typeof PRESET_FIELDS[number]) => {
+    if (activeIds.has(preset.id)) {
+      setFields((f) => f.filter((x) => x.id !== preset.id));
+    } else {
+      const newField: CheckoutField = {
+        id: preset.id,
+        label: preset.label,
+        type: preset.type,
+        required: false,
+        options: preset.id === "tshirt_size" ? TSHIRT_OPTIONS : undefined,
+      };
+      setFields((f) => [...f, newField]);
+    }
+  };
+
+  const addCustomField = () => {
+    const trimmed = customLabel.trim();
+    if (!trimmed) return;
+    const id = `custom_${Date.now()}`;
+    setFields((f) => [...f, { id, label: trimmed, type: customType, required: false }]);
+    setCustomLabel("");
+  };
+
+  const removeField = (id: string) => setFields((f) => f.filter((x) => x.id !== id));
+  const toggleRequired = (id: string) =>
+    setFields((f) => f.map((x) => (x.id === id ? { ...x, required: !x.required } : x)));
+
+  const handleSave = () => {
+    updateCheckout({ id: event.id, checkoutFields: fields, waiverText }, {
+      onSuccess: () => { toast({ title: "Form & waiver saved" }); onClose(); },
+      onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+    });
+  };
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[560px] max-h-[90vh] overflow-y-auto bg-card border-border/50 text-foreground">
+        <DialogHeader>
+          <DialogTitle className="font-display text-xl flex items-center gap-2">
+            <ClipboardList className="w-5 h-5 text-blue-400" /> Checkout Form & Waiver
+          </DialogTitle>
+          <DialogDescription className="text-muted-foreground">
+            Configure what buyers must fill out before purchasing a ticket for <span className="text-foreground font-medium">{event.title}</span>.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-6 py-2">
+          {/* Preset fields */}
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold">Quick-Add Fields</Label>
+            <p className="text-xs text-muted-foreground">Toggle fields to include in the buyer form. Name and email are always collected.</p>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              {PRESET_FIELDS.map((preset) => {
+                const active = activeIds.has(preset.id);
+                return (
+                  <button
+                    key={preset.id}
+                    onClick={() => togglePreset(preset)}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm transition-colors ${
+                      active
+                        ? "border-blue-400/50 bg-blue-400/10 text-blue-300"
+                        : "border-border/50 bg-background text-muted-foreground hover:border-blue-400/30 hover:text-foreground"
+                    }`}
+                  >
+                    <CheckCircle className={`w-4 h-4 shrink-0 ${active ? "text-blue-400" : "text-muted-foreground/40"}`} />
+                    {preset.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Custom field adder */}
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold">Add Custom Field</Label>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Field label…"
+                value={customLabel}
+                onChange={(e) => setCustomLabel(e.target.value)}
+                className="bg-background border-border rounded-xl flex-1"
+                onKeyDown={(e) => e.key === "Enter" && addCustomField()}
+              />
+              <select
+                value={customType}
+                onChange={(e) => setCustomType(e.target.value as CheckoutField["type"])}
+                className="bg-background border border-border rounded-xl px-2 text-sm text-foreground"
+              >
+                <option value="text">Text</option>
+                <option value="email">Email</option>
+                <option value="phone">Phone</option>
+                <option value="date">Date</option>
+                <option value="textarea">Long text</option>
+              </select>
+              <Button onClick={addCustomField} variant="outline" className="rounded-xl border-border/50 shrink-0">
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Active fields list */}
+          {fields.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Active Fields ({fields.length})</Label>
+              <div className="space-y-2">
+                {fields.map((field) => (
+                  <div key={field.id} className="flex items-center gap-3 px-3 py-2 rounded-xl border border-border/50 bg-background">
+                    <GripVertical className="w-4 h-4 text-muted-foreground/40 shrink-0" />
+                    <span className="flex-1 text-sm">{field.label}</span>
+                    <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md">{field.type}</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs text-muted-foreground">Required</span>
+                      <Switch
+                        checked={field.required}
+                        onCheckedChange={() => toggleRequired(field.id)}
+                        className="scale-75"
+                      />
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 rounded-lg hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => removeField(field.id)}
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Waiver */}
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold">Waiver / Liability Agreement</Label>
+            <p className="text-xs text-muted-foreground">If filled in, buyers must check an "I agree" box before purchase.</p>
+            <Textarea
+              placeholder="Participants must agree to the terms of participation…"
+              value={waiverText}
+              onChange={(e) => setWaiverText(e.target.value)}
+              className="bg-background border-border rounded-xl min-h-[100px] text-sm"
+            />
+          </div>
+        </div>
+
+        <DialogFooter className="pt-2">
+          <Button variant="outline" onClick={onClose} disabled={isPending} className="rounded-xl border-border/50 hover:bg-secondary">Cancel</Button>
+          <Button onClick={handleSave} disabled={isPending} className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-lg">
+            {isPending ? "Saving…" : "Save Form & Waiver"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

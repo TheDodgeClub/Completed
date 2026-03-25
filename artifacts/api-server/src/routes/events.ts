@@ -19,6 +19,8 @@ function toEvent(e: typeof eventsTable.$inferSelect) {
     ticketPrice: e.ticketPrice !== null && e.ticketPrice !== undefined ? Number(e.ticketPrice) : null,
     ticketCapacity: e.ticketCapacity ?? null,
     stripePriceId: e.stripePriceId ?? null,
+    checkoutFields: (e.checkoutFields as any[]) ?? [],
+    waiverText: e.waiverText ?? null,
   };
 }
 

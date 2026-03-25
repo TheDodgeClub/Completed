@@ -10,6 +10,10 @@ import {
   Alert,
   Modal,
   SafeAreaView,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableOpacity,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -26,6 +30,7 @@ import {
   registerFreeTicket,
   Event,
   Ticket,
+  CheckoutField,
 } from "@/lib/api";
 
 export default function TicketsScreen() {
@@ -50,7 +55,8 @@ export default function TicketsScreen() {
   });
 
   const { mutate: registerFree, isPending: registeringFree } = useMutation({
-    mutationFn: registerFreeTicket,
+    mutationFn: ({ eventId, checkoutData }: { eventId: number; checkoutData?: Record<string, string> }) =>
+      registerFreeTicket(eventId, checkoutData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-tickets"] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -60,6 +66,10 @@ export default function TicketsScreen() {
   });
 
   const [buyingEventId, setBuyingEventId] = useState<number | null>(null);
+  const [checkoutFormEvent, setCheckoutFormEvent] = useState<Event | null>(null);
+
+  const needsForm = (event: Event) =>
+    (event.checkoutFields?.length ?? 0) > 0 || !!event.waiverText;
 
   const handleBuyTicket = useCallback(async (event: Event) => {
     if (!user) {
@@ -77,10 +87,21 @@ export default function TicketsScreen() {
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
+    // If event has checkout form or waiver, show modal first
+    if (needsForm(event)) {
+      setCheckoutFormEvent(event);
+      return;
+    }
+
+    // No form — proceed directly
+    await doBuyTicket(event, undefined);
+  }, [user, myTickets, registerFree, refetchTickets]);
+
+  const doBuyTicket = useCallback(async (event: Event, checkoutData?: Record<string, string>) => {
     // Free event
     if (!event.stripePriceId) {
       if (event.ticketPrice === 0) {
-        registerFree(event.id);
+        registerFree({ eventId: event.id, checkoutData });
       } else {
         Alert.alert("Tickets not available", "This event does not have tickets configured yet.");
       }
@@ -90,10 +111,9 @@ export default function TicketsScreen() {
     // Paid event — launch Stripe Checkout
     setBuyingEventId(event.id);
     try {
-      const { url } = await createCheckoutSession(event.id);
+      const { url } = await createCheckoutSession(event.id, checkoutData);
       const result = await WebBrowser.openAuthSessionAsync(url, "");
       if (result.type === "success" || result.type === "dismiss") {
-        // Refresh tickets after returning (payment may have completed)
         await refetchTickets();
         const fresh = await refetchTickets();
         const newTicket = (fresh.data ?? []).find(t => t.eventId === event.id);
@@ -108,7 +128,7 @@ export default function TicketsScreen() {
     } finally {
       setBuyingEventId(null);
     }
-  }, [user, myTickets, registerFree, refetchTickets]);
+  }, [registerFree, refetchTickets]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -208,6 +228,20 @@ export default function TicketsScreen() {
           ticket={selectedTicket}
           Colors={Colors}
           onClose={() => setSelectedTicket(null)}
+        />
+      )}
+
+      {/* Checkout Form & Waiver Modal */}
+      {checkoutFormEvent && (
+        <CheckoutFormModal
+          event={checkoutFormEvent}
+          Colors={Colors}
+          onClose={() => setCheckoutFormEvent(null)}
+          onSubmit={(formData) => {
+            const event = checkoutFormEvent;
+            setCheckoutFormEvent(null);
+            doBuyTicket(event, formData);
+          }}
         />
       )}
     </View>
@@ -420,6 +454,163 @@ function TicketQRModal({ ticket, Colors, onClose }: { ticket: Ticket; Colors: an
           </Text>
         </ScrollView>
       </SafeAreaView>
+    </Modal>
+  );
+}
+
+function CheckoutFormModal({
+  event,
+  Colors,
+  onClose,
+  onSubmit,
+}: {
+  event: Event;
+  Colors: any;
+  onClose: () => void;
+  onSubmit: (formData: Record<string, string>) => void;
+}) {
+  const insets = useSafeAreaInsets();
+  const [formData, setFormData] = useState<Record<string, string>>({});
+  const [waiverAgreed, setWaiverAgreed] = useState(false);
+
+  const fields: CheckoutField[] = event.checkoutFields ?? [];
+  const hasWaiver = !!event.waiverText;
+
+  const cfStyles = StyleSheet.create({
+    overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" },
+    sheet: { backgroundColor: Colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: insets.bottom + 20, maxHeight: "90%" as any },
+    sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.border, alignSelf: "center" as const, marginTop: 12, marginBottom: 8 },
+    sheetHeader: { flexDirection: "row" as const, alignItems: "center" as const, justifyContent: "space-between" as const, paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border },
+    sheetTitle: { fontSize: 18, fontWeight: "700" as const, color: Colors.text },
+    sheetSubtitle: { fontSize: 13, color: Colors.textMuted, marginTop: 2 },
+    body: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
+    fieldGroup: { marginBottom: 16 },
+    fieldLabel: { fontSize: 13, fontWeight: "600" as const, color: Colors.textMuted, marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: 0.5 },
+    input: { backgroundColor: Colors.background, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, color: Colors.text, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15 },
+    optionChip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.background },
+    optionChipActive: { borderColor: Colors.primary, backgroundColor: Colors.primary + "20" },
+    optionChipText: { fontSize: 14, color: Colors.textMuted },
+    optionChipTextActive: { color: Colors.primary, fontWeight: "600" as const },
+    waiverBox: { backgroundColor: Colors.background, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, padding: 14, marginBottom: 16 },
+    waiverTitle: { fontSize: 13, fontWeight: "700" as const, color: Colors.textMuted, marginBottom: 8, textTransform: "uppercase" as const, letterSpacing: 0.5 },
+    waiverText: { fontSize: 13, color: Colors.textMuted, lineHeight: 19 },
+    waiverCheck: { flexDirection: "row" as const, alignItems: "center" as const, gap: 12, marginTop: 12 },
+    waiverCheckBox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: Colors.primary, alignItems: "center" as const, justifyContent: "center" as const, backgroundColor: "transparent" },
+    waiverCheckBoxChecked: { backgroundColor: Colors.primary },
+    waiverCheckLabel: { flex: 1, fontSize: 13, color: Colors.text, fontWeight: "500" as const },
+    proceedBtn: { marginHorizontal: 20, backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 15, alignItems: "center" as const, marginBottom: 8 },
+    proceedBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" as const },
+    cancelBtn: { marginHorizontal: 20, paddingVertical: 12, alignItems: "center" as const },
+    cancelBtnText: { color: Colors.textMuted, fontSize: 15 },
+  });
+
+  const handleSubmit = () => {
+    // Validate required fields
+    for (const field of fields) {
+      if (field.required && !formData[field.id]?.trim()) {
+        Alert.alert("Required field", `Please fill in: ${field.label}`);
+        return;
+      }
+    }
+    if (hasWaiver && !waiverAgreed) {
+      Alert.alert("Waiver required", "Please agree to the waiver before proceeding.");
+      return;
+    }
+    onSubmit(formData);
+  };
+
+  const renderField = (field: CheckoutField) => {
+    if (field.type === "select" && field.options?.length) {
+      return (
+        <View key={field.id} style={cfStyles.fieldGroup}>
+          <Text style={cfStyles.fieldLabel}>
+            {field.label}{field.required ? " *" : ""}
+          </Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 6 }}>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              {field.options.map((opt) => (
+                <TouchableOpacity
+                  key={opt}
+                  style={[cfStyles.optionChip, formData[field.id] === opt && cfStyles.optionChipActive]}
+                  onPress={() => setFormData((d) => ({ ...d, [field.id]: opt }))}
+                >
+                  <Text style={[cfStyles.optionChipText, formData[field.id] === opt && cfStyles.optionChipTextActive]}>
+                    {opt}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
+        </View>
+      );
+    }
+
+    return (
+      <View key={field.id} style={cfStyles.fieldGroup}>
+        <Text style={cfStyles.fieldLabel}>
+          {field.label}{field.required ? " *" : ""}
+        </Text>
+        <TextInput
+          style={cfStyles.input}
+          value={formData[field.id] ?? ""}
+          onChangeText={(val) => setFormData((d) => ({ ...d, [field.id]: val }))}
+          placeholder={field.type === "date" ? "DD/MM/YYYY" : field.type === "email" ? "you@example.com" : field.type === "phone" ? "+44 7000 000000" : ""}
+          placeholderTextColor={Colors.textMuted}
+          keyboardType={field.type === "email" ? "email-address" : field.type === "phone" ? "phone-pad" : "default"}
+          multiline={field.type === "textarea"}
+          numberOfLines={field.type === "textarea" ? 3 : 1}
+          returnKeyType="next"
+        />
+      </View>
+    );
+  };
+
+  return (
+    <Modal visible animationType="slide" transparent onRequestClose={onClose}>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={cfStyles.overlay}>
+        <View style={cfStyles.sheet}>
+          <View style={cfStyles.sheetHandle} />
+          <View style={cfStyles.sheetHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={cfStyles.sheetTitle}>Buyer Details</Text>
+              <Text style={cfStyles.sheetSubtitle}>{event.title}</Text>
+            </View>
+            <TouchableOpacity onPress={onClose} hitSlop={12}>
+              <Feather name="x" size={22} color={Colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={cfStyles.body} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            {fields.map(renderField)}
+
+            {hasWaiver && (
+              <View style={cfStyles.waiverBox}>
+                <Text style={cfStyles.waiverTitle}>Waiver & Agreement</Text>
+                <Text style={cfStyles.waiverText}>{event.waiverText}</Text>
+                <TouchableOpacity
+                  style={cfStyles.waiverCheck}
+                  onPress={() => setWaiverAgreed((v) => !v)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[cfStyles.waiverCheckBox, waiverAgreed && cfStyles.waiverCheckBoxChecked]}>
+                    {waiverAgreed && <Feather name="check" size={14} color="#fff" />}
+                  </View>
+                  <Text style={cfStyles.waiverCheckLabel}>I have read and agree to the waiver above</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            <View style={{ height: 16 }} />
+          </ScrollView>
+
+          <TouchableOpacity style={cfStyles.proceedBtn} onPress={handleSubmit} activeOpacity={0.85}>
+            <Text style={cfStyles.proceedBtnText}>Proceed to Checkout</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={cfStyles.cancelBtn} onPress={onClose}>
+            <Text style={cfStyles.cancelBtnText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
