@@ -77,7 +77,7 @@ export default function HomeScreen() {
         </View>
 
         <Text style={styles.heroTagline}>
-          Come alone - Win together.
+          Come alone – Win together.
         </Text>
 
         <View style={styles.heroCTARow}>
