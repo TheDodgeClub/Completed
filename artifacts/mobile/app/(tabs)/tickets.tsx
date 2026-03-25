@@ -42,7 +42,7 @@ export default function TicketsScreen() {
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
-  const [activeTab, setActiveTab] = useState<"my" | "buy">("my");
+  const [activeTab, setActiveTab] = useState<"my" | "buy">("buy");
 
   const { data: events, isLoading: eventsLoading, refetch: refetchEvents } = useQuery({
     queryKey: ["all-events"],
@@ -156,16 +156,16 @@ export default function TicketsScreen() {
         {/* Tab switcher */}
         <View style={styles.tabs}>
           <Pressable
-            style={[styles.tab, activeTab === "my" && styles.tabActive]}
-            onPress={() => setActiveTab("my")}
-          >
-            <Text style={[styles.tabText, activeTab === "my" && styles.tabTextActive]}>My Tickets</Text>
-          </Pressable>
-          <Pressable
             style={[styles.tab, activeTab === "buy" && styles.tabActive]}
             onPress={() => setActiveTab("buy")}
           >
             <Text style={[styles.tabText, activeTab === "buy" && styles.tabTextActive]}>Buy Tickets</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.tab, activeTab === "my" && styles.tabActive]}
+            onPress={() => setActiveTab("my")}
+          >
+            <Text style={[styles.tabText, activeTab === "my" && styles.tabTextActive]}>My Tickets</Text>
           </Pressable>
         </View>
       </View>

@@ -54,23 +54,23 @@ export function EliteBanner({ isElite, isAuthenticated }: Props) {
       }}
     >
       <LinearGradient
-        colors={["#1a1200", "#2a1d00"]}
+        colors={["#3d2500", "#1f1200"]}
         start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+        end={{ x: 1, y: 0 }}
         style={styles.gradient}
       >
         <View style={styles.left}>
-          <View style={[styles.iconWrap, { backgroundColor: Colors.accent + "25", borderColor: Colors.accent + "50", borderWidth: 1 }]}>
-            <Feather name="star" size={20} color={Colors.accent} />
+          <View style={[styles.iconWrap, { backgroundColor: "#FFC10730", borderColor: "#FFC10780", borderWidth: 1.5 }]}>
+            <Feather name="star" size={20} color="#FFC107" />
           </View>
           <View>
-            <Text style={[styles.title, { color: Colors.accent }]}>Go Elite</Text>
-            <Text style={[styles.sub, { color: "rgba(255,215,0,0.6)" }]}>
+            <Text style={[styles.title, { color: "#FFC107", textShadowColor: "#FFDD6080", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 }]}>Go Elite</Text>
+            <Text style={[styles.sub, { color: "rgba(255,193,7,0.65)" }]}>
               {isAuthenticated ? "£8.99/month · Cancel anytime" : "Log in to join · £8.99/month"}
             </Text>
           </View>
         </View>
-        <View style={styles.cta}>
+        <View style={[styles.cta, { backgroundColor: "#FFC107", shadowColor: "#FFC107", shadowOpacity: 0.5, shadowOffset: { width: 0, height: 2 }, shadowRadius: 8, elevation: 4 }]}>
           <Text style={styles.ctaText}>Join</Text>
         </View>
       </LinearGradient>
