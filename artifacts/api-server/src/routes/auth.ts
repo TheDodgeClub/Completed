@@ -24,20 +24,9 @@ async function getUserStats(userId: number) {
     .select({ cnt: count() })
     .from(attendanceTable)
     .where(eq(attendanceTable.userId, userId));
-  const medals = await db
-    .select({ cnt: count() })
-    .from(attendanceTable)
-    .where(eq(attendanceTable.userId, userId));
 
   const eventsAttended = Number(attended[0]?.cnt ?? 0);
-  const medalsEarned = (
-    await db
-      .select({ cnt: count() })
-      .from(attendanceTable)
-      .where(eq(attendanceTable.userId, userId))
-  )[0]?.cnt ?? 0;
 
-  // medals = rows where earnedMedal = true
   const medalRows = await db.query.attendanceTable.findMany({
     where: (t, { eq, and }) => and(eq(t.userId, userId), eq(t.earnedMedal, true)),
   });
@@ -47,7 +36,7 @@ async function getUserStats(userId: number) {
 
 /* ---------- GET /api/auth/me ---------- */
 router.get("/me", async (req, res) => {
-  const userId = (req as any).session?.userId;
+  const userId = req.session?.userId;
   if (!userId) {
     res.status(401).json({ error: "Unauthorized" });
     return;
@@ -84,7 +73,7 @@ router.post("/register", async (req, res) => {
   const passwordHash = await bcrypt.hash(password, 10);
   const [user] = await db.insert(usersTable).values({ email, passwordHash, name }).returning();
 
-  (req as any).session = { userId: user.id };
+  req.session = { userId: user.id };
   res.json({ user: toProfile(user, 0, 0), token: String(user.id) });
 });
 
@@ -109,13 +98,13 @@ router.post("/login", async (req, res) => {
   }
 
   const { eventsAttended, medalsEarned } = await getUserStats(user.id);
-  (req as any).session = { userId: user.id };
+  req.session = { userId: user.id };
   res.json({ user: toProfile(user, eventsAttended, medalsEarned), token: String(user.id) });
 });
 
 /* ---------- POST /api/auth/logout ---------- */
 router.post("/logout", (req, res) => {
-  (req as any).session = null;
+  req.session = null;
   res.json({ message: "Logged out" });
 });
 

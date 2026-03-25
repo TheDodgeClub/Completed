@@ -93,10 +93,9 @@ router.get("/posts", async (_req, res) => {
 
 /* POST /api/admin/posts — create */
 router.post("/posts", async (req, res) => {
-  const session = (req as any).session as { userId: number };
   const { title, content, imageUrl, isMembersOnly } = req.body;
   const [post] = await db.insert(postsTable)
-    .values({ title, content, imageUrl: imageUrl || null, isMembersOnly: !!isMembersOnly, authorId: session.userId })
+    .values({ title, content, imageUrl: imageUrl || null, isMembersOnly: !!isMembersOnly, authorId: req.session!.userId })
     .returning();
   const author = await db.query.usersTable.findFirst({ where: eq(usersTable.id, post.authorId) });
   res.status(201).json({

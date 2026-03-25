@@ -35,9 +35,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use((req: Request, _res: Response, next: NextFunction) => {
   const token = req.headers["x-auth-token"] as string | undefined;
   if (token && /^\d+$/.test(token)) {
-    (req as any).session = { userId: Number(token) };
+    req.session = { userId: Number(token) };
   } else {
-    (req as any).session = null;
+    req.session = null;
   }
   next();
 });

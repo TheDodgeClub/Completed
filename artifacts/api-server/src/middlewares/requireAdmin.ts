@@ -3,14 +3,13 @@ import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
 export async function requireAdmin(req: Request, res: Response, next: NextFunction) {
-  const session = (req as any).session as { userId: number } | null;
-  if (!session?.userId) {
+  if (!req.session?.userId) {
     res.status(401).json({ error: "Unauthorised" });
     return;
   }
 
   const user = await db.query.usersTable.findFirst({
-    where: eq(usersTable.id, session.userId),
+    where: eq(usersTable.id, req.session.userId),
   });
 
   if (!user || !user.isAdmin) {
