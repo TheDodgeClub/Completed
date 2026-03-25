@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { DeleteConfirmDialog } from "./events";
 import { Plus, Edit2, Trash2, Globe, LockKeyhole, MessageSquare } from "lucide-react";
+import { ImageUploader } from "@/components/image-uploader";
 import { useForm } from "react-hook-form";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -146,10 +147,11 @@ function PostFormModal({ post, onClose }: { post?: Post; onClose: () => void }) 
             <Label>Content</Label>
             <Textarea {...register("content", { required: true })} className="bg-background border-border rounded-xl min-h-[150px] font-medium" placeholder="Write your post here..." />
           </div>
-          <div className="space-y-2">
-            <Label>Image URL (Optional)</Label>
-            <Input type="url" {...register("imageUrl")} className="bg-background border-border rounded-xl" placeholder="https://..." />
-          </div>
+          <ImageUploader
+            label="Post Image"
+            value={watch("imageUrl") ?? ""}
+            onChange={(url) => setValue("imageUrl", url || undefined)}
+          />
           <div className="flex items-center space-x-3 p-4 bg-background rounded-xl border border-border/50">
             <Checkbox 
               id="isMembersOnly" 

@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { DeleteConfirmDialog } from "./events";
 import { Plus, Edit2, Trash2, ShoppingBag, ExternalLink, Image as ImageIcon } from "lucide-react";
+import { ImageUploader } from "@/components/image-uploader";
 import { useForm } from "react-hook-form";
 import { Switch } from "@/components/ui/switch";
 
@@ -198,10 +199,11 @@ function MerchFormModal({ product, onClose }: { product?: MerchProduct; onClose:
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Image URL (Optional)</Label>
-            <Input type="url" {...register("imageUrl")} className="bg-background border-border rounded-xl" placeholder="https://..." />
-          </div>
+          <ImageUploader
+            label="Product Image"
+            value={watch("imageUrl") ?? ""}
+            onChange={(url) => setValue("imageUrl", url || undefined)}
+          />
           <div className="space-y-2">
             <Label>External Buy Link (Optional)</Label>
             <Input type="url" {...register("buyUrl")} className="bg-background border-border rounded-xl" placeholder="https://shop.dodgeclub.com/..." />

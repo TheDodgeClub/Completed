@@ -20,4 +20,6 @@ export * from "./merchProduct";
 export * from "./messageResponse";
 export * from "./post";
 export * from "./registerRequest";
+export * from "./uploadUrlRequest";
+export * from "./uploadUrlResponse";
 export * from "./userProfile";

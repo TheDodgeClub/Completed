@@ -11,6 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit2, Trash2, MapPin, Users, Ticket, CalendarDays, ArrowUpDown, ArrowUp, ArrowDown, Globe, EyeOff } from "lucide-react";
+import { ImageUploader } from "@/components/image-uploader";
 import { useForm } from "react-hook-form";
 
 type SortKey = "date" | "title" | "attendeeCount";
@@ -216,7 +217,7 @@ function EventFormModal({ event, onClose }: { event?: Event; onClose: () => void
   const { mutate: update, isPending: updating } = useUpdateEvent();
   const { toast } = useToast();
 
-  const { register, handleSubmit } = useForm<EventInput>({
+  const { register, handleSubmit, setValue, watch } = useForm<EventInput>({
     defaultValues: event ? {
       title: event.title,
       description: event.description,
@@ -281,10 +282,11 @@ function EventFormModal({ event, onClose }: { event?: Event; onClose: () => void
             <Label>Ticket URL (Optional)</Label>
             <Input type="url" {...register("ticketUrl")} className="bg-background border-border rounded-xl" placeholder="https://eventbrite.com/..." />
           </div>
-          <div className="space-y-2">
-            <Label>Cover Image URL (Optional)</Label>
-            <Input type="url" {...register("imageUrl")} className="bg-background border-border rounded-xl" placeholder="https://..." />
-          </div>
+          <ImageUploader
+            label="Cover Image"
+            value={watch("imageUrl") ?? ""}
+            onChange={(url) => setValue("imageUrl", url || undefined)}
+          />
           <DialogFooter className="pt-4">
             <Button type="button" variant="outline" onClick={onClose} disabled={pending} className="rounded-xl border-border/50 hover:bg-secondary">Cancel</Button>
             <Button type="submit" disabled={pending} className="rounded-xl bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20">
