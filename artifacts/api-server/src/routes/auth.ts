@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
 import { db, usersTable, attendanceTable, awardsTable } from "@workspace/db";
-import { eq, count } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -50,18 +50,14 @@ function toProfile(
 }
 
 async function getUserStats(userId: number) {
-  const attended = await db.select({ cnt: count() }).from(attendanceTable).where(eq(attendanceTable.userId, userId));
-  const eventsAttended = Number(attended[0]?.cnt ?? 0);
-
-  const medalRows = await db.query.attendanceTable.findMany({
-    where: (t, { eq, and }) => and(eq(t.userId, userId), eq(t.earnedMedal, true)),
-  });
-
-  const awards = await db.select().from(awardsTable).where(eq(awardsTable.userId, userId));
-  const directMedals = awards.filter(a => a.type === "medal").length;
+  const [records, awards] = await Promise.all([
+    db.select().from(attendanceTable).where(eq(attendanceTable.userId, userId)),
+    db.select().from(awardsTable).where(eq(awardsTable.userId, userId)),
+  ]);
+  const eventsAttended = records.length;
+  const medalsEarned = records.filter(r => r.earnedMedal).length + awards.filter(a => a.type === "medal").length;
   const ringsEarned = awards.filter(a => a.type === "ring").length;
-
-  return { eventsAttended, medalsEarned: medalRows.length + directMedals, ringsEarned };
+  return { eventsAttended, medalsEarned, ringsEarned };
 }
 
 /* ---------- GET /api/auth/me ---------- */

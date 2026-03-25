@@ -28,14 +28,15 @@ function xpForNextLevel(xp: number): { current: number; next: number; level: num
   return { current: xp - currentThreshold, next: nextThreshold - currentThreshold, level };
 }
 
-async function getUserStats(userId: number) {
-  const records = await db.query.attendanceTable.findMany({ where: eq(attendanceTable.userId, userId) });
-  const awards = await db.query.awardsTable.findMany({ where: eq(awardsTable.userId, userId) });
+async function getUserStats(userId: number, bonusXp: number = 0) {
+  const [records, awards] = await Promise.all([
+    db.query.attendanceTable.findMany({ where: eq(attendanceTable.userId, userId) }),
+    db.query.awardsTable.findMany({ where: eq(awardsTable.userId, userId) }),
+  ]);
   const eventsAttended = records.length;
   const medalsEarned = records.filter(r => r.earnedMedal).length + awards.filter(a => a.type === "medal").length;
   const ringsEarned = awards.filter(a => a.type === "ring").length;
-  const user = await db.query.usersTable.findFirst({ where: eq(usersTable.id, userId) });
-  const xp = computeXP(eventsAttended, medalsEarned, ringsEarned, user?.bonusXp ?? 0);
+  const xp = computeXP(eventsAttended, medalsEarned, ringsEarned, bonusXp);
   const level = computeLevel(xp);
   const xpProgress = xpForNextLevel(xp);
   return { eventsAttended, medalsEarned, ringsEarned, xp, level, xpProgress };
@@ -77,7 +78,7 @@ router.get("/", async (_req, res) => {
 router.get("/:id/profile", async (req, res) => {
   const user = await db.query.usersTable.findFirst({ where: eq(usersTable.id, Number(req.params.id)) });
   if (!user) { res.status(404).json({ error: "Not found" }); return; }
-  const stats = await getUserStats(user.id);
+  const stats = await getUserStats(user.id, user.bonusXp ?? 0);
   res.json(toProfile(user, stats));
 });
 

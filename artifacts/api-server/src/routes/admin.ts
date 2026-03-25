@@ -352,10 +352,27 @@ function computeLevel(xp: number) {
 
 /* GET /api/admin/members — list all users */
 router.get("/members", async (_req, res) => {
-  const users = await db.select().from(usersTable).orderBy(usersTable.name);
-  const result = await Promise.all(users.map(async (u) => {
-    const records = await db.select().from(attendanceTable).where(eq(attendanceTable.userId, u.id));
-    const awards = await db.select().from(awardsTable).where(eq(awardsTable.userId, u.id));
+  // 3 queries total instead of 2N+1 — fetch everything then group in memory
+  const [users, allAttendance, allAwards] = await Promise.all([
+    db.select().from(usersTable).orderBy(usersTable.name),
+    db.select().from(attendanceTable),
+    db.select().from(awardsTable),
+  ]);
+
+  const attendanceByUser = new Map<number, typeof allAttendance>();
+  for (const r of allAttendance) {
+    if (!attendanceByUser.has(r.userId)) attendanceByUser.set(r.userId, []);
+    attendanceByUser.get(r.userId)!.push(r);
+  }
+  const awardsByUser = new Map<number, typeof allAwards>();
+  for (const a of allAwards) {
+    if (!awardsByUser.has(a.userId)) awardsByUser.set(a.userId, []);
+    awardsByUser.get(a.userId)!.push(a);
+  }
+
+  const result = users.map((u) => {
+    const records = attendanceByUser.get(u.id) ?? [];
+    const awards = awardsByUser.get(u.id) ?? [];
     const eventsAttended = records.length;
     const medalsEarned = records.filter(r => r.earnedMedal).length + awards.filter(a => a.type === "medal").length;
     const ringsEarned = awards.filter(a => a.type === "ring").length;
@@ -379,7 +396,7 @@ router.get("/members", async (_req, res) => {
       eliteSince: u.eliteSince?.toISOString() ?? null,
       stripeSubscriptionId: u.stripeSubscriptionId ?? null,
     };
-  }));
+  });
   res.json(result);
 });
 
