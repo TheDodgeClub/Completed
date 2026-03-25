@@ -229,7 +229,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       flexDirection: "row",
       alignItems: "center",
       gap: 12,
-      marginBottom: 36,
+      marginBottom: 16,
     },
     logoImg: {
       width: 180,
