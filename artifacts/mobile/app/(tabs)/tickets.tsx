@@ -582,10 +582,15 @@ function CheckoutFormModal({
   const hitSlop = { top: 12, bottom: 12, left: 12, right: 12 };
 
   return (
-    <Modal visible transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
-      <View style={cfStyles.backdrop}>
-        {/* Tapping the dark area dismisses the sheet */}
-        <Pressable style={{ flex: 1 }} onPress={onClose} />
+    <Modal visible transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
+      {/* Outer container fills the modal — flex-end pushes sheet to bottom */}
+      <View style={{ flex: 1, justifyContent: "flex-end" }}>
+        {/* Dark dismissable backdrop rendered first (behind the sheet) */}
+        <Pressable
+          style={[StyleSheet.absoluteFillObject, { backgroundColor: "rgba(0,0,0,0.6)" }]}
+          onPress={onClose}
+        />
+        {/* Sheet — rendered after the Pressable so it sits on top and receives touches */}
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={{ width: "100%" }}
@@ -593,53 +598,53 @@ function CheckoutFormModal({
         >
           <View style={cfStyles.sheet}>
             <View style={cfStyles.sheetInner}>
-            {/* Handle + header — never scroll */}
-            <View style={cfStyles.sheetHandle} />
-            <View style={cfStyles.sheetHeader}>
-              <View style={{ flex: 1 }}>
-                <Text style={cfStyles.sheetTitle}>Buyer Details</Text>
-                <Text style={cfStyles.sheetSubtitle}>{event.title}</Text>
-              </View>
-              <TouchableOpacity onPress={onClose} hitSlop={hitSlop}>
-                <Feather name="x" size={22} color={Colors.textMuted} />
-              </TouchableOpacity>
-            </View>
-
-            {/* Scrollable form */}
-            <ScrollView
-              contentContainerStyle={cfStyles.scrollContent}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              {fields.map(renderField)}
-
-              {hasWaiver && (
-                <View style={cfStyles.waiverBox}>
-                  <Text style={cfStyles.waiverTitle}>Waiver & Agreement</Text>
-                  <Text style={cfStyles.waiverText}>{event.waiverText}</Text>
-                  <TouchableOpacity
-                    style={cfStyles.waiverCheck}
-                    onPress={() => setWaiverAgreed((v) => !v)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[cfStyles.waiverCheckBox, waiverAgreed && cfStyles.waiverCheckBoxChecked]}>
-                      {waiverAgreed && <Feather name="check" size={14} color="#fff" />}
-                    </View>
-                    <Text style={cfStyles.waiverCheckLabel}>I have read and agree to the waiver above</Text>
-                  </TouchableOpacity>
+              {/* Handle + header — never scroll */}
+              <View style={cfStyles.sheetHandle} />
+              <View style={cfStyles.sheetHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text style={cfStyles.sheetTitle}>Buyer Details</Text>
+                  <Text style={cfStyles.sheetSubtitle}>{event.title}</Text>
                 </View>
-              )}
-            </ScrollView>
+                <TouchableOpacity onPress={onClose} hitSlop={hitSlop}>
+                  <Feather name="x" size={22} color={Colors.textMuted} />
+                </TouchableOpacity>
+              </View>
 
-            {/* Sticky footer buttons */}
-            <View style={cfStyles.footer}>
-              <TouchableOpacity style={cfStyles.proceedBtn} onPress={handleSubmit} activeOpacity={0.85}>
-                <Text style={cfStyles.proceedBtnText}>Proceed to Checkout</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={cfStyles.cancelBtn} onPress={onClose}>
-                <Text style={cfStyles.cancelBtnText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
+              {/* Scrollable form */}
+              <ScrollView
+                contentContainerStyle={cfStyles.scrollContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
+                {fields.map(renderField)}
+
+                {hasWaiver && (
+                  <View style={cfStyles.waiverBox}>
+                    <Text style={cfStyles.waiverTitle}>Waiver & Agreement</Text>
+                    <Text style={cfStyles.waiverText}>{event.waiverText}</Text>
+                    <TouchableOpacity
+                      style={cfStyles.waiverCheck}
+                      onPress={() => setWaiverAgreed((v) => !v)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[cfStyles.waiverCheckBox, waiverAgreed && cfStyles.waiverCheckBoxChecked]}>
+                        {waiverAgreed && <Feather name="check" size={14} color="#fff" />}
+                      </View>
+                      <Text style={cfStyles.waiverCheckLabel}>I have read and agree to the waiver above</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </ScrollView>
+
+              {/* Sticky footer buttons */}
+              <View style={cfStyles.footer}>
+                <TouchableOpacity style={cfStyles.proceedBtn} onPress={handleSubmit} activeOpacity={0.85}>
+                  <Text style={cfStyles.proceedBtnText}>Proceed to Checkout</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={cfStyles.cancelBtn} onPress={onClose}>
+                  <Text style={cfStyles.cancelBtnText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </KeyboardAvoidingView>
