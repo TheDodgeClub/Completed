@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMembers, useMemberAttendance, useMemberAwards, useMemberTeamHistory, useMarkAttendance, useDeleteAttendance, useGrantAward, useRevokeAward, useUpdateMember, useAddTeamHistory, useDeleteTeamHistory, AdminMember } from "@/hooks/use-members";
+import { useMembers, useMemberAttendance, useMemberAwards, useMarkAttendance, useDeleteAttendance, useGrantAward, useRevokeAward, useUpdateMember, AdminMember } from "@/hooks/use-members";
 import { useEvents } from "@/hooks/use-events";
 import { formatDateTime } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Trophy, CalendarCheck, Trash2, ShieldCheck, Loader2, CircleDot, Star, Users, Pencil } from "lucide-react";
+import { Search, Trophy, CalendarCheck, Trash2, ShieldCheck, Loader2, CircleDot, Star, Pencil } from "lucide-react";
 
 const PLAYER_ROLES = ["Thrower", "Catcher", "Dodger", "All-Rounder"] as const;
 const LEVEL_NAMES = ["Rookie", "Player", "Contender", "Competitor", "Veteran", "Elite", "Pro", "Champion", "Legend", "Icon"];
@@ -143,15 +143,12 @@ export default function Members() {
 function MemberDetailSheet({ member, onClose }: { member: AdminMember | null; onClose: () => void }) {
   const { data: attendance, isLoading: loadingAttendance } = useMemberAttendance(member?.id ?? null);
   const { data: awards, isLoading: loadingAwards } = useMemberAwards(member?.id ?? null);
-  const { data: teamHistory, isLoading: loadingTeamHistory } = useMemberTeamHistory(member?.id ?? null);
   const { data: events } = useEvents();
   const { mutate: markAttendance, isPending: marking } = useMarkAttendance();
   const { mutate: deleteAttendance, isPending: deleting } = useDeleteAttendance();
   const { mutate: grantAward, isPending: granting } = useGrantAward();
   const { mutate: revokeAward, isPending: revoking } = useRevokeAward();
   const { mutate: updateMember, isPending: updatingProfile } = useUpdateMember();
-  const { mutate: addTeamHistory, isPending: addingTeamHistory } = useAddTeamHistory();
-  const { mutate: deleteTeamHistory, isPending: deletingTeamHistory } = useDeleteTeamHistory();
   const { toast } = useToast();
 
   const [selectedEvent, setSelectedEvent] = useState("");
@@ -164,12 +161,6 @@ function MemberDetailSheet({ member, onClose }: { member: AdminMember | null; on
   const [editBio, setEditBio] = useState("");
   const [editRole, setEditRole] = useState("");
   const [profileExpanded, setProfileExpanded] = useState(false);
-
-  // Team history form
-  const [thTeamName, setThTeamName] = useState("");
-  const [thSeason, setThSeason] = useState("");
-  const [thRole, setThRole] = useState("");
-  const [thNotes, setThNotes] = useState("");
 
   const handleAddAttendance = (e: React.FormEvent) => {
     e.preventDefault();
@@ -208,23 +199,6 @@ function MemberDetailSheet({ member, onClose }: { member: AdminMember | null; on
     if (!member) return;
     updateMember({ id: member.id, data: { name: editName, username: editUsername || undefined, bio: editBio || undefined, preferredRole: editRole || undefined } }, {
       onSuccess: () => { toast({ title: "Profile updated" }); setProfileExpanded(false); },
-      onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
-    });
-  };
-
-  const handleAddTeamHistory = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!member || !thTeamName || !thSeason) return;
-    addTeamHistory({ userId: member.id, data: { teamName: thTeamName, season: thSeason, roleInTeam: thRole || undefined, notes: thNotes || undefined } }, {
-      onSuccess: () => { toast({ title: "Team history added" }); setThTeamName(""); setThSeason(""); setThRole(""); setThNotes(""); },
-      onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
-    });
-  };
-
-  const handleDeleteTeamHistory = (id: number) => {
-    if (!member) return;
-    deleteTeamHistory({ id, userId: member.id }, {
-      onSuccess: () => toast({ title: "Entry removed" }),
       onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
     });
   };
@@ -338,60 +312,6 @@ function MemberDetailSheet({ member, onClose }: { member: AdminMember | null; on
                       {updatingProfile ? "Saving..." : "Save Profile"}
                     </Button>
                   </form>
-                )}
-              </div>
-
-              {/* ---- TEAM HISTORY ---- */}
-              <div className="space-y-4">
-                <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2">
-                  <Users className="w-5 h-5 text-primary" /> Team History
-                </h3>
-                <form onSubmit={handleAddTeamHistory} className="bg-secondary/20 border border-border/50 p-4 rounded-2xl space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <Label className="text-xs">Team Name *</Label>
-                      <Input required value={thTeamName} onChange={e => setThTeamName(e.target.value)} placeholder="e.g. Fire Dodgers" className="bg-background border-border rounded-xl text-sm" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Season *</Label>
-                      <Input required value={thSeason} onChange={e => setThSeason(e.target.value)} placeholder="e.g. Summer 2024" className="bg-background border-border rounded-xl text-sm" />
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Role in Team</Label>
-                    <Input value={thRole} onChange={e => setThRole(e.target.value)} placeholder="e.g. Captain, Thrower..." className="bg-background border-border rounded-xl text-sm" />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Notes</Label>
-                    <Input value={thNotes} onChange={e => setThNotes(e.target.value)} placeholder="Optional notes..." className="bg-background border-border rounded-xl text-sm" />
-                  </div>
-                  <Button type="submit" disabled={addingTeamHistory || !thTeamName || !thSeason} className="w-full rounded-xl bg-primary/90 hover:bg-primary text-white shadow-sm">
-                    {addingTeamHistory ? "Adding..." : "Add Entry"}
-                  </Button>
-                </form>
-
-                {loadingTeamHistory ? (
-                  <div className="text-center py-4"><Loader2 className="w-4 h-4 animate-spin mx-auto text-muted-foreground" /></div>
-                ) : teamHistory && teamHistory.length > 0 ? (
-                  <div className="space-y-2">
-                    {teamHistory.map(entry => (
-                      <div key={entry.id} className="flex items-start justify-between p-3 bg-background border border-border/50 rounded-xl group hover:border-primary/30 transition-colors">
-                        <div>
-                          <div className="font-semibold text-sm text-foreground">{entry.teamName}</div>
-                          <div className="text-xs text-muted-foreground">{entry.season}{entry.roleInTeam ? ` · ${entry.roleInTeam}` : ""}</div>
-                          {entry.notes && <div className="text-xs text-muted-foreground mt-1 italic">{entry.notes}</div>}
-                        </div>
-                        <Button
-                          variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all"
-                          onClick={() => handleDeleteTeamHistory(entry.id)} disabled={deletingTeamHistory}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground text-center py-2">No team history recorded yet.</p>
                 )}
               </div>
 

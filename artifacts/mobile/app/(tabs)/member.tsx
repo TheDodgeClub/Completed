@@ -174,7 +174,7 @@ function ProgressSection({ attendance }: { attendance: AttendanceRecord[] | unde
     if (bucket) {
       bucket.events += 1;
       if (rec.earnedMedal) bucket.medals += 1;
-      bucket.xp += 100 + (rec.earnedMedal ? 150 : 0);
+      bucket.xp += 50 + (rec.earnedMedal ? 100 : 0);
     }
   }
 
