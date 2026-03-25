@@ -194,8 +194,8 @@ export default function HomeScreen() {
             <Text style={styles.gameCardEmoji}>🏐</Text>
           </View>
           <View style={styles.gameCardBody}>
-            <Text style={styles.gameCardTitle}>PVP DODGEBALL</Text>
-            <Text style={styles.gameCardSub}>2 players, 1 phone — winner earns XP!</Text>
+            <Text style={styles.gameCardTitle}>DODGEBALL</Text>
+            <Text style={styles.gameCardSub}>Throw at the opponent — earn up to +50 XP</Text>
           </View>
           <Feather name="chevron-right" size={20} color="#FFD700" />
         </Pressable>

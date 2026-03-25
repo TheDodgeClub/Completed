@@ -9,138 +9,140 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/context/ThemeContext";
 import { awardGameXp } from "@/lib/api";
 
 const WIN = Dimensions.get("window");
 const SCREEN_W = WIN.width;
-const SCREEN_H = WIN.height;
 
-const CHAR_W = 70;
-const CHAR_H = 26;
-const BALL_R = 13;
+const HEAD_R = 14;
+const BODY_W = 8;
+const BODY_H = 28;
+const ARM_W = 22;
+const ARM_H = 6;
+const LEG_W = 6;
+const LEG_H = 20;
+const CHAR_TOTAL_H = HEAD_R * 2 + BODY_H + LEG_H;
+const CHAR_VISUAL_W = ARM_W * 2 + BODY_W;
+
+const BALL_R = 11;
 const LIVES_MAX = 3;
-const BALL_SPEED = 480;
-const THROW_COOLDOWN = 700;
+const BALL_SPEED = 560;
+const OPP_BASE_SPEED = 120;
+const OPP_ACCEL = 18;
+const THROW_COOLDOWN = 900;
 
-type Ball = { id: number; x: number; y: number; vy: number; owner: 1 | 2 };
-type Phase = "idle" | "playing" | "ended";
+type Phase = "idle" | "playing" | "dead";
 
-function clamp(val: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, val));
+function clamp(v: number, lo: number, hi: number) {
+  return Math.max(lo, Math.min(hi, v));
+}
+
+type StickFigureProps = {
+  color: string;
+  headColor: string;
+  flip?: boolean;
+  hasBall?: boolean;
+  ballColor?: string;
+};
+
+function StickFigure({ color, headColor, flip = false, hasBall = false, ballColor = "#FFD700" }: StickFigureProps) {
+  const scaleY = flip ? -1 : 1;
+  return (
+    <View style={{ width: CHAR_VISUAL_W + 20, height: CHAR_TOTAL_H, transform: [{ scaleY }] }}>
+      {/* Head */}
+      <View style={{
+        alignSelf: "center",
+        width: HEAD_R * 2, height: HEAD_R * 2,
+        borderRadius: HEAD_R,
+        backgroundColor: headColor,
+        borderWidth: 2, borderColor: color,
+      }} />
+      {/* Body */}
+      <View style={{ alignSelf: "center", width: BODY_W, height: BODY_H, backgroundColor: color }} />
+      {/* Arms */}
+      <View style={{ position: "absolute", top: HEAD_R * 2 + 4, left: 0, width: ARM_W, height: ARM_H, backgroundColor: color, borderRadius: 3 }} />
+      <View style={{ position: "absolute", top: HEAD_R * 2 + 4, right: 0, width: ARM_W, height: ARM_H, backgroundColor: color, borderRadius: 3 }} />
+      {/* Ball held in right arm */}
+      {hasBall && (
+        <View style={{
+          position: "absolute",
+          top: HEAD_R * 2 + 4 - BALL_R + ARM_H / 2,
+          right: -BALL_R,
+          width: BALL_R * 2, height: BALL_R * 2,
+          borderRadius: BALL_R,
+          backgroundColor: ballColor,
+          borderWidth: 2, borderColor: "#cc9900",
+        }} />
+      )}
+      {/* Legs */}
+      <View style={{ position: "absolute", top: HEAD_R * 2 + BODY_H, left: CHAR_VISUAL_W / 2 - BODY_W, width: LEG_W, height: LEG_H, backgroundColor: color, borderRadius: 3, transform: [{ rotate: "-12deg" }] }} />
+      <View style={{ position: "absolute", top: HEAD_R * 2 + BODY_H, left: CHAR_VISUAL_W / 2 + 2, width: LEG_W, height: LEG_H, backgroundColor: color, borderRadius: 3, transform: [{ rotate: "12deg" }] }} />
+    </View>
+  );
 }
 
 function makeStyles(
   C: ReturnType<typeof useColors>,
   insets: ReturnType<typeof import("react-native-safe-area-context").useSafeAreaInsets>
 ) {
-  const HALF = SCREEN_H / 2;
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: "#0D0D0D" },
-    arena: { width: SCREEN_W, height: SCREEN_H, overflow: "hidden" },
-    divider: {
-      position: "absolute",
-      left: 0, right: 0,
-      top: HALF - 1,
-      height: 2,
-      backgroundColor: "#FFD700",
-      opacity: 0.5,
+    container: { flex: 1, backgroundColor: "#0D0D0D" },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingTop: insets.top + 8,
+      paddingHorizontal: 16,
+      paddingBottom: 12,
     },
-    exitBtn: {
-      position: "absolute",
-      top: insets.top + 8,
-      right: 12,
-      width: 32, height: 32,
-      borderRadius: 16,
-      backgroundColor: "rgba(0,0,0,0.6)",
+    backBtn: {
+      width: 36, height: 36, borderRadius: 18,
+      backgroundColor: "#1a1a1a",
       alignItems: "center", justifyContent: "center",
-      zIndex: 20,
     },
-    exitBtnP2: {
-      top: "auto",
-      bottom: insets.bottom + 8,
-      right: 12,
+    title: { flex: 1, textAlign: "center", color: "#FFD700", fontWeight: "700", fontSize: 18 },
+    arena: { flex: 1, overflow: "hidden" },
+    hud: {
+      position: "absolute", top: 12, left: 0, right: 0,
+      flexDirection: "row", justifyContent: "space-between",
+      paddingHorizontal: 20,
     },
-    exitText: { color: "#fff", fontWeight: "700", fontSize: 14 },
-    zone: {
+    hudText: { color: "#fff", fontSize: 15, fontWeight: "600" },
+    livesRow: { flexDirection: "row", gap: 6 },
+    heart: { fontSize: 17 },
+    ball: {
       position: "absolute",
-      left: 0,
-      width: SCREEN_W,
-      height: HALF,
+      width: BALL_R * 2, height: BALL_R * 2,
+      borderRadius: BALL_R,
+      backgroundColor: "#FFD700",
+      borderWidth: 2, borderColor: "#cc9900",
     },
-    zoneP1: { top: HALF, backgroundColor: "#0a0a18" },
-    zoneP2: { top: 0, backgroundColor: "#180a0a", transform: [{ rotate: "180deg" }] },
     throwBtn: {
       position: "absolute",
       bottom: 0, left: 0, right: 0,
-      height: 56,
-      backgroundColor: C.primary ?? "#0B5E2F",
+      height: 64,
+      backgroundColor: "#0B5E2F",
       alignItems: "center", justifyContent: "center",
     },
-    throwBtnText: { color: "#FFD700", fontWeight: "800", fontSize: 16, letterSpacing: 2 },
-    throwBtnDisabled: { backgroundColor: "#1a2a1a" },
-    char1: {
-      position: "absolute",
-      width: CHAR_W, height: CHAR_H,
-      borderRadius: 8,
-      backgroundColor: "#1A8C4E",
-      borderWidth: 2, borderColor: "#FFD700",
-      alignItems: "center", justifyContent: "center",
-    },
-    char2: {
-      position: "absolute",
-      width: CHAR_W, height: CHAR_H,
-      borderRadius: 8,
-      backgroundColor: "#8C1A1A",
-      borderWidth: 2, borderColor: "#FFD700",
-      alignItems: "center", justifyContent: "center",
-    },
-    charText: { color: "#fff", fontWeight: "700", fontSize: 10 },
-    ball1: {
-      position: "absolute",
-      width: BALL_R * 2, height: BALL_R * 2,
-      borderRadius: BALL_R,
-      backgroundColor: "#1A8C4E",
-      borderWidth: 2, borderColor: "#4ade80",
-    },
-    ball2: {
-      position: "absolute",
-      width: BALL_R * 2, height: BALL_R * 2,
-      borderRadius: BALL_R,
-      backgroundColor: "#8C1A1A",
-      borderWidth: 2, borderColor: "#f87171",
-    },
-    hud1: {
-      position: "absolute",
-      top: 12, left: 0, right: 0,
-      flexDirection: "row",
-      justifyContent: "space-between",
-      paddingHorizontal: 16,
-    },
-    hud2: {
-      position: "absolute",
-      top: 12, left: 0, right: 0,
-      flexDirection: "row",
-      justifyContent: "space-between",
-      paddingHorizontal: 16,
-    },
-    hudLabel: { color: "#fff", fontWeight: "700", fontSize: 13 },
-    hearts: { flexDirection: "row", gap: 4 },
-    heart: { fontSize: 15 },
+    throwBtnReady: { backgroundColor: "#0B5E2F" },
+    throwBtnCooldown: { backgroundColor: "#111" },
+    throwBtnText: { color: "#FFD700", fontWeight: "800", fontSize: 18, letterSpacing: 3 },
+    cooldownText: { color: "#444", fontWeight: "600", fontSize: 14 },
     overlay: {
       position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: "rgba(0,0,0,0.82)",
+      backgroundColor: "rgba(0,0,0,0.8)",
       alignItems: "center", justifyContent: "center",
-      zIndex: 30,
     },
     overlayTitle: { color: "#FFD700", fontSize: 30, fontWeight: "800", marginBottom: 8 },
-    overlaySub: { color: "#ccc", fontSize: 15, textAlign: "center", marginBottom: 6 },
-    xpText: { color: "#FFD700", fontSize: 18, fontWeight: "700", marginVertical: 8 },
+    overlaySub: { color: "#ccc", fontSize: 15, textAlign: "center", marginBottom: 6, paddingHorizontal: 32 },
+    xpLabel: { color: "#FFD700", fontSize: 20, fontWeight: "700", marginVertical: 8 },
     startBtn: {
       marginTop: 20, paddingVertical: 14, paddingHorizontal: 48,
       backgroundColor: "#0B5E2F", borderRadius: 10,
     },
     startBtnText: { color: "#FFD700", fontWeight: "800", fontSize: 16 },
+    hitFlash: { backgroundColor: "#ff000022" },
   });
 }
 
@@ -149,154 +151,142 @@ export default function DodgeGame() {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors, insets), [Colors, insets]);
 
-  const HALF = SCREEN_H / 2;
-  const THROW_BTN_H = 56;
+  const HEADER_H = insets.top + 60;
+  const THROW_BTN_H = 64;
+  const ARENA_H = WIN.height - HEADER_H;
 
-  const P1_Y = SCREEN_H - THROW_BTN_H - CHAR_H / 2 - 10;
-  const P2_Y_SCREEN = THROW_BTN_H + CHAR_H / 2 + 10;
+  const OPP_CENTER_Y = 60 + CHAR_TOTAL_H / 2;
+  const PLAYER_BOTTOM_Y = ARENA_H - THROW_BTN_H - CHAR_TOTAL_H - 8;
+  const PLAYER_CENTER_Y = PLAYER_BOTTOM_Y + CHAR_TOTAL_H / 2;
 
   const [phase, setPhase] = useState<Phase>("idle");
-  const [winner, setWinner] = useState<1 | 2 | null>(null);
+  const [score, setScore] = useState(0);
+  const [lives, setLives] = useState(LIVES_MAX);
   const [awardedXp, setAwardedXp] = useState(0);
-  const [p1X, setP1X] = useState(SCREEN_W / 2 - CHAR_W / 2);
-  const [p2X, setP2X] = useState(SCREEN_W / 2 - CHAR_W / 2);
-  const [p1Lives, setP1Lives] = useState(LIVES_MAX);
-  const [p2Lives, setP2Lives] = useState(LIVES_MAX);
-  const [balls, setBalls] = useState<Ball[]>([]);
-  const [p1CanThrow, setP1CanThrow] = useState(true);
-  const [p2CanThrow, setP2CanThrow] = useState(true);
+  const [playerX, setPlayerX] = useState(SCREEN_W / 2);
+  const [oppX, setOppX] = useState(SCREEN_W / 2);
+  const [ballPos, setBallPos] = useState<{ x: number; y: number } | null>(null);
+  const [canThrow, setCanThrow] = useState(true);
+  const [oppHit, setOppHit] = useState(false);
 
   const phaseRef = useRef<Phase>("idle");
-  const p1XRef = useRef(SCREEN_W / 2 - CHAR_W / 2);
-  const p2XRef = useRef(SCREEN_W / 2 - CHAR_W / 2);
-  const p1LivesRef = useRef(LIVES_MAX);
-  const p2LivesRef = useRef(LIVES_MAX);
-  const ballsRef = useRef<Ball[]>([]);
-  const nextBallId = useRef(0);
+  const playerXRef = useRef(SCREEN_W / 2);
+  const oppXRef = useRef(SCREEN_W / 2);
+  const oppVelRef = useRef(OPP_BASE_SPEED);
+  const scoreRef = useRef(0);
+  const livesRef = useRef(LIVES_MAX);
+  const ballPosRef = useRef<{ x: number; y: number } | null>(null);
+  const ballFlyingRef = useRef(false);
+  const cooldownRef = useRef(false);
   const lastFrameRef = useRef(0);
   const rafRef = useRef<number>(0);
-  const p1ThrowCooldownRef = useRef(false);
-  const p2ThrowCooldownRef = useRef(false);
+  const hitFlashRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const endGame = useCallback((w: 1 | 2) => {
-    phaseRef.current = "ended";
-    setPhase("ended");
-    setWinner(w);
-    const earned = Math.min(30, 50);
-    setAwardedXp(earned);
-    awardGameXp(earned).catch(() => {});
-  }, []);
+  const clampPlayer = (x: number) => clamp(x, CHAR_VISUAL_W / 2 + 20, SCREEN_W - CHAR_VISUAL_W / 2 - 20);
+  const clampOpp = (x: number) => clamp(x, CHAR_VISUAL_W / 2 + 20, SCREEN_W - CHAR_VISUAL_W / 2 - 20);
 
-  const panP1 = useMemo(() => PanResponder.create({
+  const panResponder = useMemo(() => PanResponder.create({
     onStartShouldSetPanResponder: () => phaseRef.current === "playing",
     onMoveShouldSetPanResponder: () => phaseRef.current === "playing",
     onPanResponderMove: (_, gs) => {
-      const nx = clamp(gs.moveX - CHAR_W / 2, 0, SCREEN_W - CHAR_W);
-      p1XRef.current = nx;
-      setP1X(nx);
+      const nx = clampPlayer(gs.moveX);
+      playerXRef.current = nx;
+      setPlayerX(nx);
     },
   }), []);
 
-  const panP2 = useMemo(() => PanResponder.create({
-    onStartShouldSetPanResponder: () => phaseRef.current === "playing",
-    onMoveShouldSetPanResponder: () => phaseRef.current === "playing",
-    onPanResponderMove: (_, gs) => {
-      const mirroredX = SCREEN_W - gs.moveX;
-      const nx = clamp(mirroredX - CHAR_W / 2, 0, SCREEN_W - CHAR_W);
-      p2XRef.current = nx;
-      setP2X(nx);
-    },
-  }), []);
-
-  const throwBallP1 = useCallback(() => {
-    if (phaseRef.current !== "playing" || p1ThrowCooldownRef.current) return;
-    p1ThrowCooldownRef.current = true;
-    setP1CanThrow(false);
-    const bx = p1XRef.current + CHAR_W / 2;
-    ballsRef.current = [...ballsRef.current, { id: nextBallId.current++, x: bx, y: P1_Y - CHAR_H, vy: -BALL_SPEED, owner: 1 }];
-    setBalls([...ballsRef.current]);
-    setTimeout(() => { p1ThrowCooldownRef.current = false; setP1CanThrow(true); }, THROW_COOLDOWN);
-  }, [P1_Y]);
-
-  const throwBallP2 = useCallback(() => {
-    if (phaseRef.current !== "playing" || p2ThrowCooldownRef.current) return;
-    p2ThrowCooldownRef.current = true;
-    setP2CanThrow(false);
-    const bx = p2XRef.current + CHAR_W / 2;
-    ballsRef.current = [...ballsRef.current, { id: nextBallId.current++, x: bx, y: P2_Y_SCREEN + CHAR_H, vy: BALL_SPEED, owner: 2 }];
-    setBalls([...ballsRef.current]);
-    setTimeout(() => { p2ThrowCooldownRef.current = false; setP2CanThrow(true); }, THROW_COOLDOWN);
-  }, [P2_Y_SCREEN]);
+  const throwBall = useCallback(() => {
+    if (phaseRef.current !== "playing" || cooldownRef.current || ballFlyingRef.current) return;
+    cooldownRef.current = true;
+    ballFlyingRef.current = true;
+    setCanThrow(false);
+    const bx = playerXRef.current;
+    const by = PLAYER_CENTER_Y - CHAR_TOTAL_H / 2 - BALL_R;
+    ballPosRef.current = { x: bx, y: by };
+    setBallPos({ x: bx, y: by });
+  }, [PLAYER_CENTER_Y]);
 
   const tick = useCallback((now: number) => {
     if (phaseRef.current !== "playing") return;
     const dt = Math.min(now - lastFrameRef.current, 50);
     lastFrameRef.current = now;
 
-    const px1 = p1XRef.current;
-    const px2 = p2XRef.current;
-    let p1Hit = false;
-    let p2Hit = false;
+    let ox = oppXRef.current;
+    let ov = oppVelRef.current;
+    ox += ov * (dt / 1000);
+    const minOX = clampOpp(0);
+    const maxOX = clampOpp(SCREEN_W);
+    if (ox < minOX) { ox = minOX; ov = Math.abs(ov); }
+    if (ox > maxOX) { ox = maxOX; ov = -Math.abs(ov); }
+    oppXRef.current = ox;
+    oppVelRef.current = ov;
+    setOppX(ox);
 
-    const next: Ball[] = [];
-    for (const b of ballsRef.current) {
-      const ny = b.y + b.vy * (dt / 1000);
+    if (ballFlyingRef.current && ballPosRef.current) {
+      const bp = ballPosRef.current;
+      const ny = bp.y - BALL_SPEED * (dt / 1000);
 
-      if (b.owner === 1) {
-        if (ny < -BALL_R * 2) continue;
-        const nearP2 = ny - BALL_R <= P2_Y_SCREEN + CHAR_H / 2 && ny + BALL_R >= P2_Y_SCREEN - CHAR_H / 2;
-        if (nearP2) {
-          const hitX = b.x >= px2 && b.x <= px2 + CHAR_W;
-          if (hitX) { p2Hit = true; continue; }
+      if (ny < -BALL_R * 2) {
+        ballFlyingRef.current = false;
+        ballPosRef.current = null;
+        setBallPos(null);
+        const nl = livesRef.current - 1;
+        livesRef.current = nl;
+        setLives(nl);
+        if (nl <= 0) {
+          phaseRef.current = "dead";
+          setPhase("dead");
+          const earned = Math.min(scoreRef.current * 5, 50);
+          setAwardedXp(earned);
+          awardGameXp(earned).catch(() => {});
+          return;
         }
+        setTimeout(() => { cooldownRef.current = false; setCanThrow(true); }, THROW_COOLDOWN);
       } else {
-        if (ny > SCREEN_H + BALL_R * 2) continue;
-        const nearP1 = ny + BALL_R >= P1_Y - CHAR_H / 2 && ny - BALL_R <= P1_Y + CHAR_H / 2;
-        if (nearP1) {
-          const hitX = b.x >= px1 && b.x <= px1 + CHAR_W;
-          if (hitX) { p1Hit = true; continue; }
+        const dx = bp.x - ox;
+        const dy = ny - OPP_CENTER_Y;
+        const hitRadius = BALL_R + HEAD_R + 6;
+        if (dx * dx + dy * dy < hitRadius * hitRadius) {
+          ballFlyingRef.current = false;
+          ballPosRef.current = null;
+          setBallPos(null);
+          const ns = scoreRef.current + 1;
+          scoreRef.current = ns;
+          setScore(ns);
+          const dir = oppVelRef.current < 0 ? -1 : 1;
+          oppVelRef.current = (OPP_BASE_SPEED + ns * OPP_ACCEL) * dir;
+          setOppHit(true);
+          if (hitFlashRef.current) clearTimeout(hitFlashRef.current);
+          hitFlashRef.current = setTimeout(() => setOppHit(false), 300);
+          setTimeout(() => { cooldownRef.current = false; setCanThrow(true); }, THROW_COOLDOWN);
+        } else {
+          ballPosRef.current = { x: bp.x, y: ny };
+          setBallPos({ x: bp.x, y: ny });
         }
       }
-
-      next.push({ ...b, y: ny });
-    }
-
-    ballsRef.current = next;
-    setBalls([...next]);
-
-    if (p2Hit) {
-      const nl = p2LivesRef.current - 1;
-      p2LivesRef.current = nl;
-      setP2Lives(nl);
-      if (nl <= 0) { endGame(1); return; }
-    }
-    if (p1Hit) {
-      const nl = p1LivesRef.current - 1;
-      p1LivesRef.current = nl;
-      setP1Lives(nl);
-      if (nl <= 0) { endGame(2); return; }
     }
 
     rafRef.current = requestAnimationFrame(tick);
-  }, [P1_Y, P2_Y_SCREEN, endGame]);
+  }, [OPP_CENTER_Y]);
 
   const startGame = useCallback(() => {
-    ballsRef.current = [];
-    p1XRef.current = SCREEN_W / 2 - CHAR_W / 2;
-    p2XRef.current = SCREEN_W / 2 - CHAR_W / 2;
-    p1LivesRef.current = LIVES_MAX;
-    p2LivesRef.current = LIVES_MAX;
-    p1ThrowCooldownRef.current = false;
-    p2ThrowCooldownRef.current = false;
-    setBalls([]);
-    setP1X(SCREEN_W / 2 - CHAR_W / 2);
-    setP2X(SCREEN_W / 2 - CHAR_W / 2);
-    setP1Lives(LIVES_MAX);
-    setP2Lives(LIVES_MAX);
-    setP1CanThrow(true);
-    setP2CanThrow(true);
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    ballFlyingRef.current = false;
+    ballPosRef.current = null;
+    cooldownRef.current = false;
+    playerXRef.current = SCREEN_W / 2;
+    oppXRef.current = SCREEN_W / 2;
+    oppVelRef.current = OPP_BASE_SPEED;
+    scoreRef.current = 0;
+    livesRef.current = LIVES_MAX;
+    setBallPos(null);
+    setCanThrow(true);
+    setPlayerX(SCREEN_W / 2);
+    setOppX(SCREEN_W / 2);
+    setScore(0);
+    setLives(LIVES_MAX);
     setAwardedXp(0);
-    setWinner(null);
+    setOppHit(false);
     phaseRef.current = "playing";
     setPhase("playing");
     const now = performance.now();
@@ -304,128 +294,108 @@ export default function DodgeGame() {
     rafRef.current = requestAnimationFrame(tick);
   }, [tick]);
 
-  useEffect(() => () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); }, []);
+  useEffect(() => () => {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    if (hitFlashRef.current) clearTimeout(hitFlashRef.current);
+  }, []);
 
-  const p1Balls = balls.filter(b => b.owner === 1);
-  const p2Balls = balls.filter(b => b.owner === 2);
+  const playerLeft = playerX - (CHAR_VISUAL_W + 20) / 2;
+  const oppLeft = oppX - (CHAR_VISUAL_W + 20) / 2;
 
   return (
-    <View style={styles.root}>
-      <View style={styles.arena}>
-
-        {/* P2 zone — top half, rotated so P2 holds phone upside down */}
-        <View style={[styles.zone, styles.zoneP2]} {...panP2.panHandlers}>
-          <View style={styles.hud2}>
-            <Text style={styles.hudLabel}>P2</Text>
-            <View style={styles.hearts}>
-              {Array.from({ length: LIVES_MAX }).map((_, i) => (
-                <Text key={i} style={styles.heart}>{i < p2Lives ? "❤️" : "🖤"}</Text>
-              ))}
-            </View>
-          </View>
-          {phase === "playing" && (
-            <View style={[styles.char2, {
-              left: SCREEN_W - p2X - CHAR_W,
-              top: HALF - CHAR_H - 12,
-            }]}>
-              <Text style={styles.charText}>P2</Text>
-            </View>
-          )}
-          {phase === "playing" && (
-            <Pressable
-              style={[styles.throwBtn, !p2CanThrow && styles.throwBtnDisabled]}
-              onPress={throwBallP2}
-            >
-              <Text style={styles.throwBtnText}>
-                {p2CanThrow ? "THROW!" : "·  ·  ·"}
-              </Text>
-            </Pressable>
-          )}
-        </View>
-
-        {/* P1 zone — bottom half */}
-        <View style={[styles.zone, styles.zoneP1]} {...panP1.panHandlers}>
-          <View style={styles.hud1}>
-            <Text style={styles.hudLabel}>P1</Text>
-            <View style={styles.hearts}>
-              {Array.from({ length: LIVES_MAX }).map((_, i) => (
-                <Text key={i} style={styles.heart}>{i < p1Lives ? "❤️" : "🖤"}</Text>
-              ))}
-            </View>
-          </View>
-          {phase === "playing" && (
-            <View style={[styles.char1, {
-              position: "absolute",
-              left: p1X,
-              bottom: THROW_BTN_H + 10,
-            }]}>
-              <Text style={styles.charText}>P1</Text>
-            </View>
-          )}
-          {phase === "playing" && (
-            <Pressable
-              style={[styles.throwBtn, { position: "absolute", bottom: 0 }, !p1CanThrow && styles.throwBtnDisabled]}
-              onPress={throwBallP1}
-            >
-              <Text style={styles.throwBtnText}>
-                {p1CanThrow ? "THROW!" : "·  ·  ·"}
-              </Text>
-            </Pressable>
-          )}
-        </View>
-
-        {/* Balls rendered in absolute screen coords on top of both zones */}
-        {p1Balls.map(b => (
-          <View key={b.id} style={[styles.ball1, { left: b.x - BALL_R, top: b.y - BALL_R }]} />
-        ))}
-        {p2Balls.map(b => (
-          <View key={b.id} style={[styles.ball2, { left: b.x - BALL_R, top: b.y - BALL_R }]} />
-        ))}
-
-        {/* Divider */}
-        <View style={styles.divider} />
-
-        {/* Exit button (P1 side) */}
-        <Pressable style={styles.exitBtn} onPress={() => router.back()}>
-          <Text style={styles.exitText}>✕</Text>
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Pressable style={styles.backBtn} onPress={() => router.back()}>
+          <Feather name="arrow-left" size={18} color="#fff" />
         </Pressable>
+        <Text style={styles.title}>DODGEBALL</Text>
+        <View style={{ width: 36 }} />
+      </View>
+
+      <View style={styles.arena} {...panResponder.panHandlers}>
+        {/* Opponent character */}
+        {phase === "playing" && (
+          <View style={{
+            position: "absolute",
+            left: oppLeft,
+            top: 40,
+            opacity: oppHit ? 0.4 : 1,
+          }}>
+            <StickFigure color="#cc2222" headColor="#f87171" flip />
+          </View>
+        )}
+
+        {/* Flying ball */}
+        {ballPos && (
+          <View style={[styles.ball, { left: ballPos.x - BALL_R, top: ballPos.y - BALL_R }]} />
+        )}
+
+        {/* Player character */}
+        {phase === "playing" && (
+          <View style={{ position: "absolute", left: playerLeft, top: PLAYER_BOTTOM_Y }}>
+            <StickFigure
+              color="#0B5E2F"
+              headColor="#4ade80"
+              hasBall={!ballFlyingRef.current && canThrow}
+              ballColor="#FFD700"
+            />
+          </View>
+        )}
+
+        {/* HUD */}
+        <View style={styles.hud}>
+          <Text style={styles.hudText}>Score: {score}</Text>
+          <View style={styles.livesRow}>
+            {Array.from({ length: LIVES_MAX }).map((_, i) => (
+              <Text key={i} style={styles.heart}>{i < lives ? "❤️" : "🖤"}</Text>
+            ))}
+          </View>
+        </View>
+
+        {/* Throw button */}
+        {phase === "playing" && (
+          <Pressable
+            style={[styles.throwBtn, canThrow ? styles.throwBtnReady : styles.throwBtnCooldown]}
+            onPress={throwBall}
+          >
+            {canThrow ? (
+              <Text style={styles.throwBtnText}>THROW!</Text>
+            ) : (
+              <Text style={styles.cooldownText}>loading...</Text>
+            )}
+          </Pressable>
+        )}
 
         {/* Overlay */}
         {phase !== "playing" && (
           <View style={styles.overlay}>
             {phase === "idle" && (
               <>
-                <Text style={styles.overlayTitle}>PVP DODGEBALL</Text>
+                <Text style={styles.overlayTitle}>DODGEBALL</Text>
                 <Text style={styles.overlaySub}>
-                  Two players, one phone.{"\n"}
-                  P1 holds the bottom — P2 holds the top (upside down).{"\n"}
-                  Slide to dodge. Tap THROW! to attack.{"\n"}
-                  3 hits and you're out!
+                  Slide left & right to aim.{"\n"}
+                  Tap THROW! to launch the ball at the opponent.{"\n"}
+                  Miss 3 times and you're out!
                 </Text>
-                <Pressable style={styles.startBtn} onPress={startGame}>
-                  <Text style={styles.startBtnText}>START GAME</Text>
-                </Pressable>
+                <Text style={styles.overlaySub}>Earn up to +50 XP</Text>
               </>
             )}
-            {phase === "ended" && (
+            {phase === "dead" && (
               <>
-                <Text style={styles.overlayTitle}>
-                  {winner === 1 ? "PLAYER 1 WINS!" : "PLAYER 2 WINS!"}
-                </Text>
-                <Text style={styles.overlaySub}>
-                  {winner === 1 ? "P1 is the dodgeball champion 🏆" : "P2 is the dodgeball champion 🏆"}
-                </Text>
-                {awardedXp > 0 && (
-                  <Text style={styles.xpText}>Winner earns +{awardedXp} XP!</Text>
+                <Text style={styles.overlayTitle}>GAME OVER</Text>
+                <Text style={styles.overlaySub}>You hit the target {score} time{score !== 1 ? "s" : ""}</Text>
+                {awardedXp > 0 ? (
+                  <Text style={styles.xpLabel}>+{awardedXp} XP earned!</Text>
+                ) : (
+                  <Text style={styles.overlaySub}>Land a hit to earn XP next time</Text>
                 )}
-                <Pressable style={styles.startBtn} onPress={startGame}>
-                  <Text style={styles.startBtnText}>PLAY AGAIN</Text>
-                </Pressable>
-                <Pressable onPress={() => router.back()} style={{ marginTop: 14 }}>
-                  <Text style={{ color: "#888", fontSize: 14 }}>Back to home</Text>
-                </Pressable>
               </>
             )}
+            <Pressable style={styles.startBtn} onPress={startGame}>
+              <Text style={styles.startBtnText}>
+                {phase === "idle" ? "PLAY" : "PLAY AGAIN"}
+              </Text>
+            </Pressable>
           </View>
         )}
       </View>
