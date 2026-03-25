@@ -1,5 +1,6 @@
-import express, { type Express } from "express";
+import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
@@ -25,9 +26,21 @@ app.use(
     },
   }),
 );
-app.use(cors());
+app.use(cors({ origin: true, credentials: true }));
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Simple in-memory session store keyed by token header
+app.use((req: Request, _res: Response, next: NextFunction) => {
+  const token = req.headers["x-auth-token"] as string | undefined;
+  if (token && /^\d+$/.test(token)) {
+    (req as any).session = { userId: Number(token) };
+  } else {
+    (req as any).session = null;
+  }
+  next();
+});
 
 app.use("/api", router);
 

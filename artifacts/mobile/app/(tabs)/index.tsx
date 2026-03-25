@@ -1,0 +1,329 @@
+import React from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  Pressable,
+  StyleSheet,
+  ActivityIndicator,
+  RefreshControl,
+} from "react-native";
+import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Feather } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { useQuery } from "@tanstack/react-query";
+import * as Haptics from "expo-haptics";
+import Colors from "@/constants/colors";
+import { useAuth } from "@/context/AuthContext";
+import { listUpcomingEvents, listPosts, getStats } from "@/lib/api";
+import { EventCard } from "@/components/EventCard";
+import { PostCard } from "@/components/PostCard";
+import { StatCard } from "@/components/StatCard";
+
+export default function HomeScreen() {
+  const insets = useSafeAreaInsets();
+  const { user, isAuthenticated } = useAuth();
+
+  const { data: events, isLoading: eventsLoading, refetch: refetchEvents } = useQuery({
+    queryKey: ["upcoming-events"],
+    queryFn: listUpcomingEvents,
+  });
+
+  const { data: posts, isLoading: postsLoading, refetch: refetchPosts } = useQuery({
+    queryKey: ["posts"],
+    queryFn: listPosts,
+  });
+
+  const { data: stats, refetch: refetchStats } = useQuery({
+    queryKey: ["stats"],
+    queryFn: getStats,
+  });
+
+  const [refreshing, setRefreshing] = React.useState(false);
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([refetchEvents(), refetchPosts(), refetchStats()]);
+    setRefreshing(false);
+  };
+
+  const publicPosts = posts?.filter(p => !p.isMembersOnly).slice(0, 3) ?? [];
+
+  return (
+    <ScrollView
+      style={styles.screen}
+      contentInsetAdjustmentBehavior="automatic"
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Colors.primary} />
+      }
+    >
+      {/* Hero */}
+      <LinearGradient
+        colors={[Colors.primary, "#8B0000"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.hero, { paddingTop: insets.top + 24 }]}
+      >
+        <View style={styles.heroTopRow}>
+          <View>
+            <Text style={styles.heroEyebrow}>THE DODGE</Text>
+            <Text style={styles.heroTitle}>CLUB</Text>
+          </View>
+          <Pressable
+            style={styles.notifBtn}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }}
+          >
+            <Feather name="bell" size={20} color="#fff" />
+          </Pressable>
+        </View>
+
+        <Text style={styles.heroTagline}>
+          Where legends dodge and champions are made.
+        </Text>
+
+        <View style={styles.heroCTARow}>
+          {isAuthenticated ? (
+            <Pressable
+              style={({ pressed }) => [styles.heroBtn, styles.heroBtnPrimary, { opacity: pressed ? 0.85 : 1 }]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                router.push("/(tabs)/member");
+              }}
+            >
+              <Feather name="shield" size={16} color="#fff" />
+              <Text style={styles.heroBtnPrimaryText}>Member Zone</Text>
+            </Pressable>
+          ) : (
+            <Pressable
+              style={({ pressed }) => [styles.heroBtn, styles.heroBtnPrimary, { opacity: pressed ? 0.85 : 1 }]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                router.push("/(auth)/register");
+              }}
+            >
+              <Feather name="user-plus" size={16} color="#fff" />
+              <Text style={styles.heroBtnPrimaryText}>Join Now</Text>
+            </Pressable>
+          )}
+          <Pressable
+            style={({ pressed }) => [styles.heroBtn, styles.heroBtnSecondary, { opacity: pressed ? 0.85 : 1 }]}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.push("/(tabs)/tickets");
+            }}
+          >
+            <Feather name="tag" size={16} color="#fff" />
+            <Text style={styles.heroBtnSecondaryText}>Buy Tickets</Text>
+          </Pressable>
+        </View>
+      </LinearGradient>
+
+      <View style={styles.body}>
+        {/* Stats */}
+        {stats && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Community Stats</Text>
+            <View style={styles.statsRow}>
+              <StatCard value={stats.totalEvents} label="Events" color={Colors.primary} />
+              <StatCard value={stats.totalMembers} label="Members" color={Colors.secondary} />
+              <StatCard value={stats.totalTicketsSold} label="Tickets" color={Colors.accent} />
+            </View>
+          </View>
+        )}
+
+        {/* Upcoming Events */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Upcoming Events</Text>
+            <Pressable onPress={() => router.push("/(tabs)/tickets")}>
+              <Text style={styles.seeAll}>See All</Text>
+            </Pressable>
+          </View>
+          {eventsLoading ? (
+            <ActivityIndicator color={Colors.primary} style={{ marginTop: 16 }} />
+          ) : events && events.length > 0 ? (
+            events.slice(0, 3).map(event => (
+              <EventCard key={event.id} event={event} compact />
+            ))
+          ) : (
+            <View style={styles.empty}>
+              <Feather name="calendar" size={32} color={Colors.textMuted} />
+              <Text style={styles.emptyText}>No upcoming events yet</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Latest Updates */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Latest Updates</Text>
+            <Pressable onPress={() => router.push("/(tabs)/updates")}>
+              <Text style={styles.seeAll}>See All</Text>
+            </Pressable>
+          </View>
+          {postsLoading ? (
+            <ActivityIndicator color={Colors.primary} style={{ marginTop: 16 }} />
+          ) : publicPosts.length > 0 ? (
+            publicPosts.map(post => (
+              <PostCard key={post.id} post={post} />
+            ))
+          ) : (
+            <View style={styles.empty}>
+              <Feather name="message-square" size={32} color={Colors.textMuted} />
+              <Text style={styles.emptyText}>No updates yet</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Merch CTA */}
+        <Pressable
+          style={({ pressed }) => [styles.merchCTA, { opacity: pressed ? 0.9 : 1 }]}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            router.push("/(tabs)/merch");
+          }}
+        >
+          <LinearGradient
+            colors={[Colors.secondary, "#C25E2A"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.merchCTAGradient}
+          >
+            <Feather name="shopping-bag" size={24} color="#fff" />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.merchCTATitle}>Official Merch</Text>
+              <Text style={styles.merchCTASubtitle}>Rep the Dodge Club. Shop now.</Text>
+            </View>
+            <Feather name="arrow-right" size={20} color="#fff" />
+          </LinearGradient>
+        </Pressable>
+      </View>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  hero: {
+    paddingHorizontal: 24,
+    paddingBottom: 32,
+  },
+  heroTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 16,
+  },
+  heroEyebrow: {
+    fontFamily: "Poppins_700Bold",
+    fontSize: 12,
+    color: "rgba(255,255,255,0.75)",
+    letterSpacing: 3,
+  },
+  heroTitle: {
+    fontFamily: "Poppins_800ExtraBold",
+    fontSize: 44,
+    color: "#fff",
+    lineHeight: 48,
+  },
+  notifBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroTagline: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 15,
+    color: "rgba(255,255,255,0.85)",
+    marginBottom: 24,
+    lineHeight: 22,
+    maxWidth: 260,
+  },
+  heroCTARow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  heroBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  heroBtnPrimary: {
+    backgroundColor: "rgba(255,255,255,0.2)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.4)",
+  },
+  heroBtnPrimaryText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 14,
+    color: "#fff",
+  },
+  heroBtnSecondary: {
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.25)",
+  },
+  heroBtnSecondaryText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 14,
+    color: "#fff",
+  },
+  body: { padding: 20, gap: 8 },
+  section: { marginBottom: 28 },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  sectionTitle: {
+    fontFamily: "Poppins_800ExtraBold",
+    fontSize: 20,
+    color: Colors.text,
+  },
+  seeAll: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
+    color: Colors.primary,
+  },
+  statsRow: { flexDirection: "row", gap: 10 },
+  empty: {
+    alignItems: "center",
+    padding: 32,
+    gap: 10,
+  },
+  emptyText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: Colors.textMuted,
+  },
+  merchCTA: { marginBottom: 32, borderRadius: 18, overflow: "hidden" },
+  merchCTAGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 20,
+    gap: 14,
+  },
+  merchCTATitle: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 16,
+    color: "#fff",
+  },
+  merchCTASubtitle: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    color: "rgba(255,255,255,0.8)",
+  },
+});
