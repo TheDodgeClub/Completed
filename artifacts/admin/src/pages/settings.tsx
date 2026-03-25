@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback } from "react";
-import { Layout } from "@/components/layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -90,8 +89,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <Layout>
-      <div className="p-8 space-y-8 max-w-2xl">
+    <div className="p-8 space-y-8 max-w-2xl">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">App Settings</h1>
           <p className="text-muted-foreground mt-1">Configure global settings for the mobile app.</p>
@@ -210,6 +208,5 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       </div>
-    </Layout>
   );
 }
