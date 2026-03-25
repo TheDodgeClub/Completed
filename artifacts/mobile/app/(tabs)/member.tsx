@@ -677,18 +677,21 @@ export default function MemberScreen() {
             style={({ pressed }) => [styles.quickBtn, { opacity: pressed ? 0.8 : 1 }]}
             onPress={() => router.push("/(tabs)/tickets")}
           >
+            <Feather name="tag" size={20} color={Colors.primary} />
             <Text style={styles.quickBtnText}>Tickets</Text>
           </Pressable>
           <Pressable
             style={({ pressed }) => [styles.quickBtn, { opacity: pressed ? 0.8 : 1 }]}
             onPress={() => router.push("/(tabs)/merch")}
           >
+            <Feather name="shopping-bag" size={20} color={Colors.secondary} />
             <Text style={styles.quickBtnText}>Merch</Text>
           </Pressable>
           <Pressable
             style={({ pressed }) => [styles.quickBtn, { opacity: pressed ? 0.8 : 1 }]}
             onPress={() => router.push("/(tabs)/updates")}
           >
+            <Feather name="bell" size={20} color={Colors.accent} />
             <Text style={styles.quickBtnText}>Updates</Text>
           </Pressable>
         </View>
