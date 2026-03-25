@@ -83,7 +83,7 @@ export default function ForgotPasswordScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView
-        contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + 32, paddingTop: insets.top + 80 }]}
+        contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + 32, paddingTop: insets.top + 160 }]}
         keyboardShouldPersistTaps="handled"
       >
         <Pressable style={styles.backBtn} onPress={() => router.back()}>
