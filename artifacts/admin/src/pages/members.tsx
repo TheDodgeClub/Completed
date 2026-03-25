@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useMembers, useMemberAttendance, useMemberAwards, useMarkAttendance, useDeleteAttendance, useGrantAward, useRevokeAward, useUpdateMember, AdminMember } from "@/hooks/use-members";
+import { useState, useEffect } from "react";
+import { useMembers, useMemberAttendance, useMemberAwards, useMarkAttendance, useDeleteAttendance, useGrantAward, useRevokeAward, useUpdateMember, useDeleteMember, AdminMember } from "@/hooks/use-members";
 import { useEvents } from "@/hooks/use-events";
 import { formatDateTime } from "@/lib/format";
 import { Button } from "@/components/ui/button";
@@ -149,7 +149,11 @@ function MemberDetailSheet({ member, onClose }: { member: AdminMember | null; on
   const { mutate: grantAward, isPending: granting } = useGrantAward();
   const { mutate: revokeAward, isPending: revoking } = useRevokeAward();
   const { mutate: updateMember, isPending: updatingProfile } = useUpdateMember();
+  const { mutate: deleteMember, isPending: deletingMember } = useDeleteMember();
   const { toast } = useToast();
+
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  useEffect(() => { setConfirmDelete(false); }, [member?.id]);
 
   const [selectedEvent, setSelectedEvent] = useState("");
   const [earnedMedal, setEarnedMedal] = useState(false);
@@ -199,6 +203,18 @@ function MemberDetailSheet({ member, onClose }: { member: AdminMember | null; on
     if (!member) return;
     updateMember({ id: member.id, data: { name: editName, username: editUsername || undefined, bio: editBio || undefined, preferredRole: editRole || undefined } }, {
       onSuccess: () => { toast({ title: "Profile updated" }); setProfileExpanded(false); },
+      onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+    });
+  };
+
+  const handleDeleteMember = () => {
+    if (!member) return;
+    deleteMember(member.id, {
+      onSuccess: () => {
+        toast({ title: `${member.name} has been removed` });
+        setConfirmDelete(false);
+        onClose();
+      },
       onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
     });
   };
@@ -460,6 +476,53 @@ function MemberDetailSheet({ member, onClose }: { member: AdminMember | null; on
                         </Button>
                       </div>
                     ))}
+                  </div>
+                )}
+              </div>
+
+              {/* ---- DANGER ZONE ---- */}
+              <div className="border border-destructive/30 rounded-2xl p-4 bg-destructive/5">
+                <h3 className="font-display font-bold text-sm text-destructive mb-2 flex items-center gap-2">
+                  <Trash2 className="w-4 h-4" /> Danger Zone
+                </h3>
+                {!confirmDelete ? (
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-muted-foreground">Permanently remove this member and all their data.</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="ml-3 shrink-0 border-destructive/40 text-destructive hover:bg-destructive hover:text-white"
+                      onClick={() => setConfirmDelete(true)}
+                    >
+                      Delete Member
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-xs text-destructive font-medium">
+                      This will permanently delete <span className="font-bold">{member?.name}</span> and all their attendance, awards, and history. This cannot be undone.
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={handleDeleteMember}
+                        disabled={deletingMember}
+                        className="flex-1"
+                      >
+                        {deletingMember ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                        Yes, delete
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setConfirmDelete(false)}
+                        disabled={deletingMember}
+                        className="flex-1 border-border/50"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>

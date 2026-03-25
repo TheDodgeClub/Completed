@@ -128,6 +128,16 @@ export function useRevokeAward() {
   });
 }
 
+export function useDeleteMember() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => fetchApi(`/api/admin/members/${id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["members"] });
+    },
+  });
+}
+
 export function useUpdateMember() {
   const queryClient = useQueryClient();
   return useMutation({

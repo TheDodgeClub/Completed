@@ -260,6 +260,16 @@ router.put("/members/:id", async (req, res) => {
   });
 });
 
+/* DELETE /api/admin/members/:id */
+router.delete("/members/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  await db.delete(attendanceTable).where(eq(attendanceTable.userId, id));
+  await db.delete(awardsTable).where(eq(awardsTable.userId, id));
+  await db.delete(teamHistoryTable).where(eq(teamHistoryTable.userId, id));
+  await db.delete(usersTable).where(eq(usersTable.id, id));
+  res.json({ ok: true });
+});
+
 /* GET /api/admin/members/:id/team-history */
 router.get("/members/:id/team-history", async (req, res) => {
   const history = await db.query.teamHistoryTable.findMany({
