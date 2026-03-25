@@ -44,6 +44,15 @@ workspace/
 - **Updates** — Message board; guests see public posts, members see all
 - **Member Zone** — Protected dashboard with stats, achievements, event history
 
+### Ticket Confirmation Emails
+- Sent automatically after free ticket registration and paid Stripe checkout
+- Uses Brevo transactional email API (REST, no SDK) via `BREVO_API_KEY` secret
+- Email service: `artifacts/api-server/src/services/email.ts`
+- Template variables: `{{userName}}`, `{{eventName}}`, `{{eventDate}}`, `{{eventLocation}}`, `{{ticketCode}}`
+- Template customisable from Admin → Settings (stored in `settings` table as `emailFromName`, `emailFromAddress`, `emailSubject`, `emailBodyHtml`)
+- Default branded HTML template used if no custom body is set
+- Admin can send a test email via Settings → "Send Test Email" button (`POST /api/settings/admin/test-email`)
+
 ### Authentication
 - Email + password registration and login
 - Token stored in AsyncStorage, sent via `x-auth-token` header

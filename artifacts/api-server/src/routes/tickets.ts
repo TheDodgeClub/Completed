@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db, ticketsTable, eventsTable, usersTable } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
 import { getUncachableStripeClient, getStripePublishableKey } from "../stripeClient";
+import { sendTicketConfirmationEmail } from "../services/email";
 import crypto from "crypto";
 
 const router: IRouter = Router();
@@ -199,18 +200,47 @@ router.get("/success", async (req, res) => {
               amountPaid: session.amount_total ?? 0,
             })
             .where(eq(ticketsTable.id, existingBySession.id));
+
+          // Send confirmation email
+          const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+          const [event] = await db.select().from(eventsTable).where(eq(eventsTable.id, evId)).limit(1);
+          if (user && event) {
+            sendTicketConfirmationEmail({
+              toEmail: user.email,
+              toName: user.name ?? user.email,
+              eventName: event.title,
+              eventDate: event.date,
+              eventLocation: event.location,
+              ticketCode: existingBySession.ticketCode,
+            }).catch((e) => console.error("[email] send error:", e));
+          }
         }
       } else {
         // Fallback: create fresh if no pending ticket was found
+        const ticketCode = generateTicketCode();
         await db.insert(ticketsTable).values({
           userId,
           eventId: evId,
           stripeCheckoutSessionId: session_id,
           stripePaymentIntentId: typeof session.payment_intent === "string" ? session.payment_intent : null,
           status: "paid",
-          ticketCode: generateTicketCode(),
+          ticketCode,
           amountPaid: session.amount_total ?? 0,
         });
+
+        // Send confirmation email
+        const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+        const [event] = await db.select().from(eventsTable).where(eq(eventsTable.id, evId)).limit(1);
+        if (user && event) {
+          sendTicketConfirmationEmail({
+            toEmail: user.email,
+            toName: user.name ?? user.email,
+            eventName: event.title,
+            eventDate: event.date,
+            eventLocation: event.location,
+            ticketCode,
+          }).catch((e) => console.error("[email] send error:", e));
+        }
       }
     }
   } catch (err) {
@@ -257,6 +287,20 @@ router.post("/free", requireAuth, async (req: any, res) => {
     .insert(ticketsTable)
     .values({ userId, eventId, status: "paid", ticketCode: generateTicketCode(), amountPaid: 0, checkoutData: checkoutData ?? null })
     .returning();
+
+  // Send confirmation email (non-blocking)
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  if (user) {
+    sendTicketConfirmationEmail({
+      toEmail: user.email,
+      toName: user.name ?? user.email,
+      eventName: event.title,
+      eventDate: event.date,
+      eventLocation: event.location,
+      ticketCode: ticket.ticketCode,
+    }).catch((e) => console.error("[email] send error:", e));
+  }
+
   res.status(201).json({ ticket });
 });
 

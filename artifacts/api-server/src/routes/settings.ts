@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
-import { db, settingsTable } from "@workspace/db";
+import { db, settingsTable, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { sendTicketConfirmationEmail } from "../services/email";
 
 const router: IRouter = Router();
 
@@ -54,6 +55,29 @@ router.put("/admin", requireAdmin, async (req, res) => {
     settings[row.key] = row.value;
   }
   res.json(settings);
+});
+
+/* POST /api/admin/settings/test-email — send a test confirmation email to the admin */
+router.post("/admin/test-email", requireAdmin, async (req: any, res) => {
+  const userId = req.session.userId;
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  if (!user) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+  try {
+    await sendTicketConfirmationEmail({
+      toEmail: user.email,
+      toName: user.name ?? user.email,
+      eventName: "Example Dodge Ball Night",
+      eventDate: new Date(),
+      eventLocation: "Dodge Club Arena, London",
+      ticketCode: "TEST-1234",
+    });
+    res.json({ ok: true, sentTo: user.email });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message ?? "Failed to send test email" });
+  }
 });
 
 export { router as settingsRouter, getSetting };
