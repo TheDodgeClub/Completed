@@ -18,9 +18,10 @@ import * as Haptics from "expo-haptics";
 import { useColors } from "@/context/ThemeContext";
 import { resolveImageUrl } from "@/constants/api";
 import { useAuth } from "@/context/AuthContext";
-import { listUpcomingEvents, listPosts } from "@/lib/api";
+import { listUpcomingEvents, listPosts, Post } from "@/lib/api";
 import { EventCard } from "@/components/EventCard";
 import { PostCard } from "@/components/PostCard";
+import { PostDetailModal } from "@/components/PostDetailModal";
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -38,6 +39,7 @@ export default function HomeScreen() {
     queryFn: listPosts,
   });
 
+  const [selectedPost, setSelectedPost] = React.useState<Post | null>(null);
   const [refreshing, setRefreshing] = React.useState(false);
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -48,6 +50,7 @@ export default function HomeScreen() {
   const publicPosts = posts?.filter(p => !p.isMembersOnly).slice(0, 3) ?? [];
 
   return (
+    <>
     <ScrollView
       style={styles.screen}
       contentInsetAdjustmentBehavior="automatic"
@@ -173,7 +176,14 @@ export default function HomeScreen() {
             <ActivityIndicator color={Colors.primary} style={{ marginTop: 16 }} />
           ) : publicPosts.length > 0 ? (
             publicPosts.map(post => (
-              <PostCard key={post.id} post={post} />
+              <PostCard
+                key={post.id}
+                post={post}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setSelectedPost(post);
+                }}
+              />
             ))
           ) : (
             <View style={styles.empty}>
@@ -207,6 +217,11 @@ export default function HomeScreen() {
         </Pressable>
       </View>
     </ScrollView>
+
+    {selectedPost && (
+      <PostDetailModal post={selectedPost} onClose={() => setSelectedPost(null)} />
+    )}
+  </>
   );
 }
 
