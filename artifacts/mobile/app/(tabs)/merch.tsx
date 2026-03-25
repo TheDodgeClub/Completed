@@ -9,15 +9,19 @@ import {
   ActivityIndicator,
   Linking,
   RefreshControl,
+  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
+import { resolveImageUrl } from "@/constants/api";
 import { listMerch, MerchProduct } from "@/lib/api";
 
 function MerchCard({ item }: { item: MerchProduct }) {
+  const imageUri = resolveImageUrl(item.imageUrl);
+
   const handleBuy = async () => {
     if (!item.buyUrl) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -26,9 +30,15 @@ function MerchCard({ item }: { item: MerchProduct }) {
 
   return (
     <View style={styles.card}>
-      {/* Image placeholder */}
-      <View style={styles.imagePlaceholder}>
-        <Feather name="shopping-bag" size={36} color={Colors.textMuted} />
+      {/* Product image */}
+      <View style={styles.imageContainer}>
+        {imageUri ? (
+          <Image source={{ uri: imageUri }} style={styles.productImage} resizeMode="cover" />
+        ) : (
+          <View style={styles.imagePlaceholder}>
+            <Feather name="shopping-bag" size={36} color={Colors.textMuted} />
+          </View>
+        )}
       </View>
 
       {/* Category badge */}
@@ -140,6 +150,15 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderWidth: 1,
     borderColor: Colors.border,
+  },
+  imageContainer: {
+    height: 140,
+    backgroundColor: Colors.surface2,
+    overflow: "hidden",
+  },
+  productImage: {
+    width: "100%",
+    height: 140,
   },
   imagePlaceholder: {
     height: 140,

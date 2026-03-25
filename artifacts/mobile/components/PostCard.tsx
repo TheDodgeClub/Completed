@@ -1,7 +1,8 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, Image } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import Colors from "@/constants/colors";
+import { resolveImageUrl } from "@/constants/api";
 import type { Post } from "@/lib/api";
 
 type Props = {
@@ -16,30 +17,36 @@ export function PostCard({ post, isLocked }: Props) {
     month: "short",
     year: "numeric",
   });
+  const imageUri = resolveImageUrl(post.imageUrl);
 
   return (
     <View style={styles.card}>
-      {post.isMembersOnly && (
-        <View style={styles.membersBadge}>
-          <Feather name="shield" size={10} color={Colors.accent} />
-          <Text style={styles.membersBadgeText}>Members Only</Text>
-        </View>
+      {imageUri && (
+        <Image source={{ uri: imageUri }} style={styles.postImage} resizeMode="cover" />
       )}
-      <Text style={styles.title}>{post.title}</Text>
-      {isLocked ? (
-        <View style={styles.lockedRow}>
-          <Feather name="lock" size={14} color={Colors.textMuted} />
-          <Text style={styles.lockedText}>Sign in to read member updates</Text>
+      <View style={styles.cardContent}>
+        {post.isMembersOnly && (
+          <View style={styles.membersBadge}>
+            <Feather name="shield" size={10} color={Colors.accent} />
+            <Text style={styles.membersBadgeText}>Members Only</Text>
+          </View>
+        )}
+        <Text style={styles.title}>{post.title}</Text>
+        {isLocked ? (
+          <View style={styles.lockedRow}>
+            <Feather name="lock" size={14} color={Colors.textMuted} />
+            <Text style={styles.lockedText}>Sign in to read member updates</Text>
+          </View>
+        ) : (
+          <Text style={styles.content} numberOfLines={4}>{post.content}</Text>
+        )}
+        <View style={styles.footer}>
+          <View style={styles.authorRow}>
+            <View style={styles.authorDot} />
+            <Text style={styles.author}>{post.authorName}</Text>
+          </View>
+          <Text style={styles.date}>{formatted}</Text>
         </View>
-      ) : (
-        <Text style={styles.content} numberOfLines={4}>{post.content}</Text>
-      )}
-      <View style={styles.footer}>
-        <View style={styles.authorRow}>
-          <View style={styles.authorDot} />
-          <Text style={styles.author}>{post.authorName}</Text>
-        </View>
-        <Text style={styles.date}>{formatted}</Text>
       </View>
     </View>
   );
@@ -49,10 +56,17 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.surface,
     borderRadius: 18,
-    padding: 18,
+    overflow: "hidden",
     borderWidth: 1,
     borderColor: Colors.border,
     marginBottom: 12,
+  },
+  postImage: {
+    width: "100%",
+    height: 160,
+  },
+  cardContent: {
+    padding: 18,
   },
   membersBadge: {
     flexDirection: "row",
