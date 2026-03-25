@@ -80,11 +80,17 @@ router.get("/me", async (req, res) => {
   res.json(toProfile(user, eventsAttended, medalsEarned, ringsEarned));
 });
 
+const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+
 /* ---------- POST /api/auth/register ---------- */
 router.post("/register", async (req, res) => {
   const { email, password, name } = req.body;
   if (!email || !password || !name) {
     res.status(400).json({ error: "Missing required fields" });
+    return;
+  }
+  if (!isValidEmail(email)) {
+    res.status(400).json({ error: "Please enter a valid email address" });
     return;
   }
   if (password.length < 6) {

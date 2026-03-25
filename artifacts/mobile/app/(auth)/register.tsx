@@ -29,9 +29,15 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+
   const handleRegister = async () => {
     if (!name.trim() || !email.trim() || !password.trim()) {
       Alert.alert("Missing Info", "Please fill in all fields.");
+      return;
+    }
+    if (!isValidEmail(email.trim())) {
+      Alert.alert("Invalid Email", "Please enter a valid email address (e.g. you@example.com).");
       return;
     }
     if (password.length < 6) {
