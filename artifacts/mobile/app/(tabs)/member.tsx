@@ -286,7 +286,6 @@ function GuestView() {
           { icon: "zap" as const, label: "Earn XP and level up your player card" },
           { icon: "award" as const, label: "Collect medals and achievements" },
           { icon: "calendar" as const, label: "Track your event attendance" },
-          { icon: "users" as const, label: "See your team history" },
         ].map(item => (
           <View key={item.label} style={styles.guestFeature}>
             <View style={styles.guestFeatureIcon}>
