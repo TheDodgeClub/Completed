@@ -210,28 +210,6 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* Merch CTA */}
-        <Pressable
-          style={({ pressed }) => [styles.merchCTA, { opacity: pressed ? 0.9 : 1 }]}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            router.push("/(tabs)/merch");
-          }}
-        >
-          <LinearGradient
-            colors={[Colors.secondary, "#0E5C30"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.merchCTAGradient}
-          >
-            <Feather name="shopping-bag" size={24} color="#fff" />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.merchCTATitle}>Official Merch</Text>
-              <Text style={styles.merchCTASubtitle}>Rep the Dodge Club. Shop now.</Text>
-            </View>
-            <Feather name="arrow-right" size={20} color="#fff" />
-          </LinearGradient>
-        </Pressable>
       </View>
     </ScrollView>
 
@@ -363,23 +341,6 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       fontFamily: "Inter_400Regular",
       fontSize: 14,
       color: Colors.textMuted,
-    },
-    merchCTA: { marginBottom: 32, borderRadius: 18, overflow: "hidden" },
-    merchCTAGradient: {
-      flexDirection: "row",
-      alignItems: "center",
-      padding: 20,
-      gap: 14,
-    },
-    merchCTATitle: {
-      fontFamily: "Inter_700Bold",
-      fontSize: 16,
-      color: "#fff",
-    },
-    merchCTASubtitle: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 13,
-      color: "rgba(255,255,255,0.8)",
     },
   });
 }
