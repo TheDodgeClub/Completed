@@ -61,10 +61,11 @@ export default function HomeScreen() {
         style={[styles.hero, { paddingTop: insets.top + 24 }]}
       >
         <View style={styles.heroTopRow}>
-          <View>
-            <Text style={styles.heroEyebrow}>THE DODGE</Text>
-            <Text style={styles.heroTitle}>CLUB</Text>
-          </View>
+          <Image
+            source={require("@/assets/images/icon.png")}
+            style={styles.heroLogo}
+            resizeMode="contain"
+          />
           <Pressable
             style={styles.notifBtn}
             onPress={() => {
@@ -76,7 +77,7 @@ export default function HomeScreen() {
         </View>
 
         <Text style={styles.heroTagline}>
-          Where legends dodge and champions are made.
+          Come alone - Win together.
         </Text>
 
         <View style={styles.heroCTARow}>
@@ -225,17 +226,9 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     marginBottom: 16,
   },
-  heroEyebrow: {
-    fontFamily: "Poppins_700Bold",
-    fontSize: 12,
-    color: "rgba(255,255,255,0.75)",
-    letterSpacing: 3,
-  },
-  heroTitle: {
-    fontFamily: "Poppins_800ExtraBold",
-    fontSize: 44,
-    color: "#fff",
-    lineHeight: 48,
+  heroLogo: {
+    height: 48,
+    width: 160,
   },
   notifBtn: {
     width: 40,
@@ -246,7 +239,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   heroTagline: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Impact",
+    fontWeight: "700",
     fontSize: 15,
     color: "rgba(255,255,255,0.85)",
     marginBottom: 24,
