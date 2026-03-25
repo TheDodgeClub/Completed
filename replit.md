@@ -39,7 +39,7 @@ workspace/
 ### Mobile App (Expo)
 - **Updates tab** — Published videos (horizontal scroll carousel with thumbnails, tap to open URL) + posts/announcements
 - **Home** — Hero section, community stats, upcoming events (published only), latest updates, merch CTA
-- **Tickets** — All events with buy ticket links (external URL)
+- **Tickets** — My Tickets (QR codes for purchased tickets) + Buy Tickets (Stripe Checkout or free registration)
 - **Merch** — Product grid with buy links (external URL, Shopify-ready)
 - **Updates** — Message board; guests see public posts, members see all
 - **Member Zone** — Protected dashboard with stats, achievements, event history
@@ -50,11 +50,20 @@ workspace/
 - Protected routes in Member Zone
 
 ### Data Models
-- `users` — id, email, passwordHash, name, isAdmin, avatarUrl
-- `events` — id, title, description, date, location, ticketUrl, imageUrl, attendeeCount
+- `users` — id, email, passwordHash, name, isAdmin, avatarUrl, stripeCustomerId
+- `events` — id, title, description, date, location, ticketUrl, imageUrl, attendeeCount, ticketPrice, ticketCapacity, stripeProductId, stripePriceId
+- `tickets` — id, userId, eventId, stripeCheckoutSessionId, stripePaymentIntentId, status (pending/paid/free/cancelled), ticketCode (16-char hex), checkedIn, amountPaid
 - `attendance` — id, userId, eventId, earnedMedal, attendedAt
 - `posts` — id, title, content, imageUrl, isMembersOnly, authorId
 - `merch` — id, name, description, price, imageUrl, buyUrl, category, inStock
+
+### Stripe Ticket Purchasing
+- Admin configures ticket price/capacity per event via "Configure Tickets" (CreditCard icon) in Events table
+- Paid events: admin sets £ price → creates Stripe product + price automatically
+- Free events: set price = 0, users register with one tap
+- Mobile checkout: `POST /api/tickets/checkout` → Stripe Checkout URL → `expo-web-browser` → redirect back to app → ticket issued
+- Tickets stored with unique 16-char QR code, displayed in My Tickets tab as scannable QR code
+- API routes: `GET /api/tickets/my`, `GET /api/tickets/event/:id`, `POST /api/tickets/checkout`, `POST /api/tickets/free`, `GET /api/tickets/success`
 
 ### Achievement System
 - First Timer (1 event)

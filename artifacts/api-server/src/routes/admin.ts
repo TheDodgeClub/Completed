@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
-import { db, eventsTable, postsTable, merchTable, usersTable, attendanceTable, awardsTable, videosTable, teamHistoryTable, eventRegistrationsTable, userSessionsTable } from "@workspace/db";
+import { db, eventsTable, postsTable, merchTable, usersTable, attendanceTable, awardsTable, videosTable, teamHistoryTable, eventRegistrationsTable, userSessionsTable, ticketsTable } from "@workspace/db";
 import { eq, desc, and, avg, count, sum, gte, sql } from "drizzle-orm";
+import { getUncachableStripeClient } from "../stripeClient";
 import { requireAdmin } from "../middlewares/requireAdmin";
 
 const router: IRouter = Router();
@@ -21,6 +22,10 @@ function toAdminEvent(e: typeof eventsTable.$inferSelect) {
     isUpcoming: e.date > new Date(),
     isPublished: e.isPublished,
     attendeeCount: e.attendeeCount,
+    ticketPrice: e.ticketPrice ? Number(e.ticketPrice) : null,
+    ticketCapacity: e.ticketCapacity ?? null,
+    stripeProductId: e.stripeProductId ?? null,
+    stripePriceId: e.stripePriceId ?? null,
   };
 }
 
@@ -66,6 +71,94 @@ router.delete("/events/:id", async (req, res) => {
   await db.delete(attendanceTable).where(eq(attendanceTable.eventId, Number(req.params.id)));
   await db.delete(eventsTable).where(eq(eventsTable.id, Number(req.params.id)));
   res.json({ ok: true });
+});
+
+/* POST /api/admin/events/:id/tickets — set ticket price (creates/updates Stripe product+price) */
+router.post("/events/:id/tickets", async (req, res) => {
+  const eventId = Number(req.params.id);
+  const { price, capacity } = req.body as { price?: number; capacity?: number };
+
+  const [event] = await db.select().from(eventsTable).where(eq(eventsTable.id, eventId)).limit(1);
+  if (!event) { res.status(404).json({ error: "Not found" }); return; }
+
+  // price = 0 means free (no Stripe needed)
+  if (!price || price <= 0) {
+    const [updated] = await db.update(eventsTable)
+      .set({ ticketPrice: "0", ticketCapacity: capacity ?? null, stripeProductId: null, stripePriceId: null })
+      .where(eq(eventsTable.id, eventId))
+      .returning();
+    res.json(toAdminEvent(updated));
+    return;
+  }
+
+  try {
+    const stripe = await getUncachableStripeClient();
+    const priceInCents = Math.round(price * 100);
+
+    let productId = event.stripeProductId;
+    if (!productId) {
+      const product = await stripe.products.create({
+        name: `Ticket — ${event.title}`,
+        description: event.description,
+        metadata: { eventId: String(eventId) },
+      });
+      productId = product.id;
+    } else {
+      await stripe.products.update(productId, {
+        name: `Ticket — ${event.title}`,
+        metadata: { eventId: String(eventId) },
+      });
+    }
+
+    // Archive old price if it exists
+    if (event.stripePriceId) {
+      await stripe.prices.update(event.stripePriceId, { active: false }).catch(() => {});
+    }
+
+    const stripePrice = await stripe.prices.create({
+      product: productId,
+      unit_amount: priceInCents,
+      currency: "gbp",
+      metadata: { eventId: String(eventId) },
+    });
+
+    const [updated] = await db.update(eventsTable)
+      .set({
+        ticketPrice: String(price),
+        ticketCapacity: capacity ?? null,
+        stripeProductId: productId,
+        stripePriceId: stripePrice.id,
+      })
+      .where(eq(eventsTable.id, eventId))
+      .returning();
+
+    res.json(toAdminEvent(updated));
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Stripe error" });
+  }
+});
+
+/* GET /api/admin/events/:id/tickets — ticket sales for an event */
+router.get("/events/:id/tickets", async (req, res) => {
+  const eventId = Number(req.params.id);
+  const tickets = await db
+    .select({
+      id: ticketsTable.id,
+      userId: ticketsTable.userId,
+      status: ticketsTable.status,
+      ticketCode: ticketsTable.ticketCode,
+      checkedIn: ticketsTable.checkedIn,
+      checkedInAt: ticketsTable.checkedInAt,
+      amountPaid: ticketsTable.amountPaid,
+      createdAt: ticketsTable.createdAt,
+      userName: usersTable.name,
+      userEmail: usersTable.email,
+    })
+    .from(ticketsTable)
+    .innerJoin(usersTable, eq(ticketsTable.userId, usersTable.id))
+    .where(and(eq(ticketsTable.eventId, eventId), eq(ticketsTable.status, "paid")))
+    .orderBy(desc(ticketsTable.createdAt));
+  res.json(tickets);
 });
 
 /* ========== POSTS ========== */

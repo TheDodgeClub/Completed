@@ -49,6 +49,24 @@ export type Event = {
   imageUrl: string | null;
   isUpcoming: boolean;
   attendeeCount: number;
+  ticketPrice: number | null;
+  ticketCapacity: number | null;
+  stripePriceId: string | null;
+};
+
+export type Ticket = {
+  id: number;
+  eventId: number;
+  status: "paid" | "free" | "pending" | "cancelled";
+  ticketCode: string;
+  checkedIn: boolean;
+  checkedInAt: string | null;
+  amountPaid: number;
+  createdAt: string;
+  eventTitle: string;
+  eventDate: string;
+  eventLocation: string;
+  eventImageUrl: string | null;
 };
 
 export type AttendanceRecord = {
@@ -474,6 +492,30 @@ export async function setNotificationsEnabled(enabled: boolean): Promise<void> {
 
 export async function getNotificationStatus(): Promise<{ notificationsEnabled: boolean }> {
   return apiFetch<{ notificationsEnabled: boolean }>("/users/me/notification-status");
+}
+
+/* ---- tickets ---- */
+
+export async function getMyTickets(): Promise<Ticket[]> {
+  return apiFetch<Ticket[]>("/tickets/my");
+}
+
+export async function getEventTicket(eventId: number): Promise<{ ticket: Ticket | null }> {
+  return apiFetch<{ ticket: Ticket | null }>(`/tickets/event/${eventId}`);
+}
+
+export async function createCheckoutSession(eventId: number): Promise<{ url: string; sessionId: string }> {
+  return apiFetch<{ url: string; sessionId: string }>("/tickets/checkout", {
+    method: "POST",
+    body: JSON.stringify({ eventId }),
+  });
+}
+
+export async function registerFreeTicket(eventId: number): Promise<{ ticket: Ticket }> {
+  return apiFetch<{ ticket: Ticket }>("/tickets/free", {
+    method: "POST",
+    body: JSON.stringify({ eventId }),
+  });
 }
 
 /* ---- admin: send push notification ---- */

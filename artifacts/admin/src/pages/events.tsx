@@ -1,16 +1,16 @@
 import { useState } from "react";
-import { useEvents, useCreateEvent, useUpdateEvent, useDeleteEvent, usePublishEvent, Event, EventInput } from "@/hooks/use-events";
+import { useEvents, useCreateEvent, useUpdateEvent, useDeleteEvent, usePublishEvent, useSetTicketPricing, Event, EventInput } from "@/hooks/use-events";
 import { formatDateTime, toDateTimeInput } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit2, Trash2, MapPin, Users, Ticket, CalendarDays, ArrowUpDown, ArrowUp, ArrowDown, Globe, EyeOff } from "lucide-react";
+import { Plus, Edit2, Trash2, MapPin, Users, Ticket, CalendarDays, ArrowUpDown, ArrowUp, ArrowDown, Globe, EyeOff, CreditCard, CheckCircle } from "lucide-react";
 import { ImageUploader } from "@/components/image-uploader";
 import { useForm } from "react-hook-form";
 
@@ -22,6 +22,7 @@ export default function Events() {
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [ticketEvent, setTicketEvent] = useState<Event | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
@@ -101,13 +102,14 @@ export default function Events() {
                 >
                   <span className="flex items-center justify-center">Attendees <SortIcon col="attendeeCount" /></span>
                 </TableHead>
+                <TableHead className="text-muted-foreground py-4 text-center">Tickets</TableHead>
                 <TableHead className="text-muted-foreground py-4 px-6 text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sorted.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-40 text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="h-40 text-center text-muted-foreground">
                     <CalendarDays className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
                     <p className="font-medium">No events yet</p>
                     <p className="text-sm">Create your first event to get started.</p>
@@ -159,19 +161,34 @@ export default function Events() {
                         <Users className="w-3.5 h-3.5 text-accent" /> {event.attendeeCount}
                       </div>
                     </TableCell>
+                    <TableCell className="py-4 text-center">
+                      {event.stripePriceId ? (
+                        <div className="flex flex-col items-center gap-0.5">
+                          <div className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-400">
+                            <CheckCircle className="w-3.5 h-3.5" />
+                            £{event.ticketPrice?.toFixed(2)}
+                          </div>
+                          {event.ticketCapacity && (
+                            <div className="text-xs text-muted-foreground">Cap: {event.ticketCapacity}</div>
+                          )}
+                        </div>
+                      ) : event.ticketPrice === 0 ? (
+                        <span className="text-xs font-semibold text-blue-400">Free</span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
                     <TableCell className="py-4 px-6 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        {event.ticketUrl && (
-                          <a
-                            href={event.ticketUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="p-1.5 rounded-lg text-muted-foreground hover:text-blue-400 hover:bg-blue-400/10 transition-colors"
-                            title="View tickets"
-                          >
-                            <Ticket className="w-4 h-4" />
-                          </a>
-                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 rounded-lg hover:bg-accent/10 hover:text-accent"
+                          onClick={() => setTicketEvent(event)}
+                          title="Configure tickets"
+                        >
+                          <CreditCard className="w-4 h-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -200,6 +217,7 @@ export default function Events() {
 
       {isCreateOpen && <EventFormModal onClose={() => setIsCreateOpen(false)} />}
       {editingEvent && <EventFormModal event={editingEvent} onClose={() => setEditingEvent(null)} />}
+      {ticketEvent && <TicketPricingModal event={ticketEvent} onClose={() => setTicketEvent(null)} />}
 
       <DeleteConfirmDialog
         id={deleteId}
@@ -209,6 +227,79 @@ export default function Events() {
         description="Are you sure? This will permanently delete the event and all associated attendance records."
       />
     </div>
+  );
+}
+
+function TicketPricingModal({ event, onClose }: { event: Event; onClose: () => void }) {
+  const { mutate: setTicketPricing, isPending } = useSetTicketPricing();
+  const { toast } = useToast();
+  const [price, setPrice] = useState(event.ticketPrice != null ? String(event.ticketPrice) : "");
+  const [capacity, setCapacity] = useState(event.ticketCapacity != null ? String(event.ticketCapacity) : "");
+
+  const handleSave = () => {
+    const priceNum = parseFloat(price) || 0;
+    const capacityNum = parseInt(capacity) || undefined;
+    setTicketPricing({ id: event.id, price: priceNum, capacity: capacityNum }, {
+      onSuccess: () => { toast({ title: priceNum > 0 ? "Ticket pricing configured in Stripe" : "Event marked as free" }); onClose(); },
+      onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+    });
+  };
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[420px] bg-card border-border/50 text-foreground">
+        <DialogHeader>
+          <DialogTitle className="font-display text-xl flex items-center gap-2">
+            <CreditCard className="w-5 h-5 text-accent" /> Configure Tickets
+          </DialogTitle>
+          <DialogDescription className="text-muted-foreground">
+            Set a ticket price for <span className="text-foreground font-medium">{event.title}</span>. Leave price at 0 for a free event.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label>Ticket Price (£)</Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold">£</span>
+              <Input
+                type="number"
+                min="0"
+                step="0.50"
+                placeholder="0.00"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                className="bg-background border-border rounded-xl pl-7"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">Set to 0 for a free event. Paid events create a Stripe product automatically.</p>
+          </div>
+          <div className="space-y-2">
+            <Label>Capacity (optional)</Label>
+            <Input
+              type="number"
+              min="1"
+              placeholder="Unlimited"
+              value={capacity}
+              onChange={(e) => setCapacity(e.target.value)}
+              className="bg-background border-border rounded-xl"
+            />
+            <p className="text-xs text-muted-foreground">Maximum number of tickets that can be sold.</p>
+          </div>
+          {event.stripePriceId && (
+            <div className="flex items-center gap-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-3 py-2">
+              <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+              <p className="text-xs text-emerald-400">Stripe product active. Updating price will archive the old one.</p>
+            </div>
+          )}
+        </div>
+        <DialogFooter className="pt-2">
+          <Button variant="outline" onClick={onClose} disabled={isPending} className="rounded-xl border-border/50 hover:bg-secondary">Cancel</Button>
+          <Button onClick={handleSave} disabled={isPending} className="rounded-xl bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20">
+            {isPending ? "Saving to Stripe..." : "Save Pricing"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -225,8 +316,13 @@ function EventFormModal({ event, onClose }: { event?: Event; onClose: () => void
       location: event.location,
       ticketUrl: event.ticketUrl || "",
       imageUrl: event.imageUrl || "",
+      ticketPrice: event.ticketPrice,
+      ticketCapacity: event.ticketCapacity,
+      stripeProductId: event.stripeProductId,
+      stripePriceId: event.stripePriceId,
     } : {
-      title: "", description: "", date: "", location: "", ticketUrl: "", imageUrl: ""
+      title: "", description: "", date: "", location: "", ticketUrl: "", imageUrl: "",
+      ticketPrice: null, ticketCapacity: null, stripeProductId: null, stripePriceId: null,
     }
   });
 

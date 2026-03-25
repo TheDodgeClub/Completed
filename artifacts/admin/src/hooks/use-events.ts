@@ -12,6 +12,10 @@ export interface Event {
   isUpcoming: boolean;
   isPublished: boolean;
   attendeeCount: number;
+  ticketPrice: number | null;
+  ticketCapacity: number | null;
+  stripeProductId: string | null;
+  stripePriceId: string | null;
 }
 
 export type EventInput = Omit<Event, "id" | "isUpcoming" | "isPublished" | "attendeeCount">;
@@ -47,6 +51,10 @@ export function useCreateEvent() {
         attendeeCount: 0,
         ticketUrl: newData.ticketUrl || null,
         imageUrl: newData.imageUrl || null,
+        ticketPrice: null,
+        ticketCapacity: null,
+        stripeProductId: null,
+        stripePriceId: null,
       };
       queryClient.setQueryData<Event[]>(["events"], (old = []) => [optimistic, ...old]);
       return { previous };
@@ -100,6 +108,18 @@ export function usePublishEvent() {
     onError: (_err, _vars, context) => {
       if (context?.previous) queryClient.setQueryData(["events"], context.previous);
     },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["events"] }),
+  });
+}
+
+export function useSetTicketPricing() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, price, capacity }: { id: number; price: number; capacity?: number }) =>
+      fetchApi<Event>(`/api/admin/events/${id}/tickets`, {
+        method: "POST",
+        body: JSON.stringify({ price, capacity }),
+      }),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["events"] }),
   });
 }
