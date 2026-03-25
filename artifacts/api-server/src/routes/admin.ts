@@ -803,4 +803,41 @@ router.get("/sessions/stats", async (_req, res) => {
   });
 });
 
+/* ========== ELITE MANAGEMENT ========== */
+
+/* POST /api/admin/elite/grant — manually grant Elite to any user */
+router.post("/elite/grant", async (req: any, res) => {
+  const { userId } = req.body as { userId?: number };
+  if (!userId) { res.status(400).json({ error: "userId required" }); return; }
+
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  if (!user) { res.status(404).json({ error: "User not found" }); return; }
+
+  const grantBonus = !user.isElite;
+  await db.update(usersTable)
+    .set({
+      isElite: true,
+      eliteSince: user.eliteSince ?? new Date(),
+      ...(grantBonus ? { bonusXp: 500 } : {}),
+    })
+    .where(eq(usersTable.id, userId));
+
+  res.json({ ok: true });
+});
+
+/* POST /api/admin/elite/revoke — manually revoke Elite from a user */
+router.post("/elite/revoke", async (req: any, res) => {
+  const { userId } = req.body as { userId?: number };
+  if (!userId) { res.status(400).json({ error: "userId required" }); return; }
+
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  if (!user) { res.status(404).json({ error: "User not found" }); return; }
+
+  await db.update(usersTable)
+    .set({ isElite: false, stripeSubscriptionId: null })
+    .where(eq(usersTable.id, userId));
+
+  res.json({ ok: true });
+});
+
 export default router;
