@@ -111,10 +111,25 @@ router.post("/checkout", requireAuth, async (req: any, res) => {
   // Get/create Stripe customer
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
   const stripe = await getUncachableStripeClient();
+  const isValidEmail = (e: string | null) => !!e && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
   let customerId = user.stripeCustomerId;
+  if (customerId) {
+    // Verify the stored customer still exists in this Stripe account
+    // (it may be stale if the Stripe account was switched)
+    try {
+      const existing = await stripe.customers.retrieve(customerId);
+      if ((existing as any).deleted) customerId = null;
+    } catch (err: any) {
+      if (err?.code === "resource_missing") {
+        customerId = null;
+        await db.update(usersTable).set({ stripeCustomerId: null }).where(eq(usersTable.id, userId));
+      } else {
+        throw err;
+      }
+    }
+  }
   if (!customerId) {
-    const isValidEmail = (e: string | null) => !!e && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
     const customer = await stripe.customers.create({
       ...(isValidEmail(user.email) ? { email: user.email! } : {}),
       ...(user.name ? { name: user.name } : {}),
@@ -149,6 +164,23 @@ router.post("/checkout", requireAuth, async (req: any, res) => {
     amountPaid: 0,
     checkoutData: checkoutData ?? null,
   }).returning();
+
+  // Verify the price ID still exists in this Stripe account before creating the session
+  try {
+    await stripe.prices.retrieve(event.stripePriceId!);
+  } catch (err: any) {
+    if (err?.code === "resource_missing") {
+      // Clear stale price/product IDs so admin can reconfigure
+      await db.update(eventsTable)
+        .set({ stripePriceId: null, stripeProductId: null })
+        .where(eq(eventsTable.id, eventId));
+      // Clean up the pending ticket we just created
+      await db.delete(ticketsTable).where(eq(ticketsTable.id, pendingTicket.id));
+      res.status(400).json({ error: "Ticket pricing needs to be reconfigured by an admin (Stripe account was changed)." });
+      return;
+    }
+    throw err;
+  }
 
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
