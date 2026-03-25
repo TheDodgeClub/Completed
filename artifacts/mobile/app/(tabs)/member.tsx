@@ -671,9 +671,6 @@ export default function MemberScreen() {
       </View>
 
       <View style={styles.body}>
-        {/* ── Progress ── */}
-        <ProgressSection attendance={attendance} />
-
         {/* ── Quick Actions ── */}
         <View style={styles.quickActions}>
           <Pressable
