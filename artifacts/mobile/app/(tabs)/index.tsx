@@ -166,7 +166,12 @@ export default function HomeScreen() {
             <ActivityIndicator color={Colors.primary} style={{ marginTop: 16 }} />
           ) : events && events.length > 0 ? (
             events.slice(0, 3).map(event => (
-              <EventCard key={event.id} event={event} compact />
+              <EventCard
+                key={event.id}
+                event={event}
+                compact
+                onPress={() => router.push("/(tabs)/tickets")}
+              />
             ))
           ) : (
             <View style={styles.empty}>

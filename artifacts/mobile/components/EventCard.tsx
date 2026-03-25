@@ -8,9 +8,10 @@ import type { Event } from "@/lib/api";
 type Props = {
   event: Event;
   compact?: boolean;
+  onPress?: () => void;
 };
 
-export function EventCard({ event, compact }: Props) {
+export function EventCard({ event, compact, onPress }: Props) {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const date = new Date(event.date);
@@ -24,8 +25,8 @@ export function EventCard({ event, compact }: Props) {
     await Linking.openURL(event.ticketUrl);
   };
 
-  return (
-    <View style={[styles.card, compact && styles.cardCompact]}>
+  const content = (
+    <>
       <View style={styles.dateBadge}>
         <Text style={styles.dateDay}>{day}</Text>
         <Text style={styles.dateMonth}>{month}</Text>
@@ -46,7 +47,9 @@ export function EventCard({ event, compact }: Props) {
         )}
       </View>
 
-      {!compact && event.ticketUrl && (
+      {compact ? (
+        <Feather name="chevron-right" size={18} color={Colors.textMuted} style={styles.chevron} />
+      ) : event.ticketUrl ? (
         <Pressable
           style={({ pressed }) => [styles.ticketBtn, { opacity: pressed ? 0.8 : 1 }]}
           onPress={handleBuyTicket}
@@ -54,7 +57,27 @@ export function EventCard({ event, compact }: Props) {
           <Text style={styles.ticketBtnText}>Get Ticket</Text>
           <Feather name="arrow-right" size={14} color="#fff" />
         </Pressable>
-      )}
+      ) : null}
+    </>
+  );
+
+  if (onPress || compact) {
+    return (
+      <Pressable
+        style={({ pressed }) => [styles.card, compact && styles.cardCompact, { opacity: pressed ? 0.82 : 1 }]}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          onPress?.();
+        }}
+      >
+        {content}
+      </Pressable>
+    );
+  }
+
+  return (
+    <View style={[styles.card, styles.cardCompact]}>
+      {content}
     </View>
   );
 }
@@ -67,6 +90,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       padding: 16,
       flexDirection: "row",
       gap: 14,
+      alignItems: "center",
       borderWidth: 1,
       borderColor: Colors.border,
       marginBottom: 12,
@@ -118,6 +142,10 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       fontSize: 13,
       color: Colors.textSecondary,
       marginTop: 4,
+    },
+    chevron: {
+      alignSelf: "center",
+      flexShrink: 0,
     },
     ticketBtn: {
       backgroundColor: Colors.primary,
