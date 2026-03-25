@@ -16,6 +16,9 @@ function toEvent(e: typeof eventsTable.$inferSelect) {
     isUpcoming: e.date > new Date(),
     isPublished: e.isPublished,
     attendeeCount: e.attendeeCount,
+    ticketPrice: e.ticketPrice !== null && e.ticketPrice !== undefined ? Number(e.ticketPrice) : null,
+    ticketCapacity: e.ticketCapacity ?? null,
+    stripePriceId: e.stripePriceId ?? null,
   };
 }
 
