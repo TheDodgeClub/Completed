@@ -13,19 +13,25 @@ import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/context/ThemeContext";
 import { awardGameXp } from "@/lib/api";
 
-const PLAYER_W = 52;
-const PLAYER_H = 28;
-const BALL_R = 18;
+const LAUNCHER_W = 60;
+const LAUNCHER_H = 24;
+const BALL_R = 14;
+const TARGET_R = 30;
 const LIVES_MAX = 3;
-const BALL_SPEED_BASE = 220;
-const BALL_SPEED_SCALE = 60;
-const SPAWN_INTERVAL_BASE = 1400;
-const SPAWN_INTERVAL_MIN = 600;
+const BALL_SPEED = 520;
+const TARGET_BASE_SPEED = 140;
+const TARGET_ACCEL = 12;
 
-type Ball = { id: number; x: number; y: number; vx: number; vy: number };
+type Ball = { id: number; x: number; y: number };
 type Phase = "idle" | "playing" | "dead";
 
-function makeStyles(C: ReturnType<typeof useColors>, insets: ReturnType<typeof import("react-native-safe-area-context").useSafeAreaInsets>) {
+const WIN = Dimensions.get("window");
+const ARENA_W = WIN.width;
+
+function makeStyles(
+  C: ReturnType<typeof useColors>,
+  insets: ReturnType<typeof import("react-native-safe-area-context").useSafeAreaInsets>
+) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: "#0D0D0D" },
     header: {
@@ -36,8 +42,7 @@ function makeStyles(C: ReturnType<typeof useColors>, insets: ReturnType<typeof i
       paddingBottom: 12,
     },
     backBtn: {
-      width: 36, height: 36,
-      borderRadius: 18,
+      width: 36, height: 36, borderRadius: 18,
       backgroundColor: "#1a1a1a",
       alignItems: "center", justifyContent: "center",
     },
@@ -51,14 +56,20 @@ function makeStyles(C: ReturnType<typeof useColors>, insets: ReturnType<typeof i
     hudText: { color: "#fff", fontSize: 15, fontWeight: "600" },
     livesRow: { flexDirection: "row", gap: 6 },
     heart: { fontSize: 18 },
-    player: {
+    target: {
       position: "absolute",
-      width: PLAYER_W, height: PLAYER_H,
-      borderRadius: 6,
-      backgroundColor: C.primary ?? "#0B5E2F",
+      width: TARGET_R * 2, height: TARGET_R * 2,
+      borderRadius: TARGET_R,
+      backgroundColor: "#ff3333",
+      borderWidth: 3, borderColor: "#ff7777",
       alignItems: "center", justifyContent: "center",
     },
-    playerText: { color: "#fff", fontSize: 10, fontWeight: "700" },
+    targetInner: {
+      width: TARGET_R * 0.8, height: TARGET_R * 0.8,
+      borderRadius: TARGET_R * 0.4,
+      backgroundColor: "#fff",
+      opacity: 0.7,
+    },
     ball: {
       position: "absolute",
       width: BALL_R * 2, height: BALL_R * 2,
@@ -66,14 +77,34 @@ function makeStyles(C: ReturnType<typeof useColors>, insets: ReturnType<typeof i
       backgroundColor: "#FFD700",
       borderWidth: 2, borderColor: "#cc9900",
     },
+    launcher: {
+      position: "absolute",
+      width: LAUNCHER_W, height: LAUNCHER_H,
+      borderRadius: 8,
+      backgroundColor: "#0B5E2F",
+      borderWidth: 2, borderColor: "#1A8C4E",
+      alignItems: "center", justifyContent: "center",
+    },
+    launcherLine: {
+      position: "absolute",
+      width: 2, backgroundColor: "rgba(255,215,0,0.25)",
+    },
+    throwBtn: {
+      position: "absolute",
+      bottom: 0, left: 0, right: 0,
+      paddingVertical: 16,
+      alignItems: "center",
+      backgroundColor: "#0B5E2F",
+    },
+    throwBtnText: { color: "#FFD700", fontWeight: "800", fontSize: 17, letterSpacing: 2 },
     overlay: {
       position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
       alignItems: "center", justifyContent: "center",
-      backgroundColor: "rgba(0,0,0,0.7)",
+      backgroundColor: "rgba(0,0,0,0.75)",
     },
     overlayTitle: { color: "#FFD700", fontSize: 30, fontWeight: "800", marginBottom: 8 },
     overlayBody: { color: "#ccc", fontSize: 15, textAlign: "center", marginBottom: 6 },
-    xpLabel: { color: "#FFD700", fontSize: 18, fontWeight: "700", marginVertical: 6 },
+    xpLabel: { color: "#FFD700", fontSize: 20, fontWeight: "700", marginVertical: 8 },
     startBtn: {
       marginTop: 20, paddingVertical: 14, paddingHorizontal: 48,
       backgroundColor: "#0B5E2F", borderRadius: 10,
@@ -87,105 +118,112 @@ export default function DodgeGame() {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors, insets), [Colors, insets]);
 
+  const HEADER_H = insets.top + 60;
+  const THROW_BTN_H = 56;
+  const ARENA_H = WIN.height - HEADER_H;
+  const LAUNCHER_Y = ARENA_H - THROW_BTN_H - LAUNCHER_H - 16;
+  const TARGET_Y = 60;
+
   const [phase, setPhase] = useState<Phase>("idle");
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(LIVES_MAX);
   const [awardedXp, setAwardedXp] = useState(0);
   const [balls, setBalls] = useState<Ball[]>([]);
+  const [targetX, setTargetX] = useState(ARENA_W / 2);
+  const [launcherX, setLauncherX] = useState(ARENA_W / 2 - LAUNCHER_W / 2);
 
-  const WIN = Dimensions.get("window");
-  const ARENA_W = WIN.width;
-  const HEADER_H = insets.top + 60;
-  const ARENA_H = WIN.height - HEADER_H;
-  const PLAYER_Y = ARENA_H - PLAYER_H - 20;
-
-  const playerXRef = useRef(ARENA_W / 2 - PLAYER_W / 2);
-  const [playerX, setPlayerX] = useState(playerXRef.current);
   const phaseRef = useRef<Phase>("idle");
   const livesRef = useRef(LIVES_MAX);
   const scoreRef = useRef(0);
   const ballsRef = useRef<Ball[]>([]);
+  const targetXRef = useRef(ARENA_W / 2);
+  const targetVelRef = useRef(TARGET_BASE_SPEED);
+  const launcherXRef = useRef(ARENA_W / 2 - LAUNCHER_W / 2);
   const nextBallId = useRef(0);
   const lastFrameRef = useRef(0);
-  const lastSpawnRef = useRef(0);
-  const spawnIntervalRef = useRef(SPAWN_INTERVAL_BASE);
   const rafRef = useRef<number>(0);
 
-  const clampPlayerX = (x: number) => Math.max(0, Math.min(ARENA_W - PLAYER_W, x));
+  const clampLauncher = (x: number) => Math.max(0, Math.min(ARENA_W - LAUNCHER_W, x));
 
   const panResponder = useMemo(() => PanResponder.create({
     onStartShouldSetPanResponder: () => phaseRef.current === "playing",
     onMoveShouldSetPanResponder: () => phaseRef.current === "playing",
     onPanResponderMove: (_, gs) => {
-      const nx = clampPlayerX(gs.moveX - PLAYER_W / 2);
-      playerXRef.current = nx;
-      setPlayerX(nx);
+      const nx = clampLauncher(gs.moveX - LAUNCHER_W / 2);
+      launcherXRef.current = nx;
+      setLauncherX(nx);
     },
-  }), [ARENA_W]);
+  }), []);
 
-  const spawnBall = useCallback((now: number) => {
-    const x = BALL_R + Math.random() * (ARENA_W - BALL_R * 2);
-    const speedMult = 1 + (scoreRef.current / 30) * BALL_SPEED_SCALE / BALL_SPEED_BASE;
-    const vy = (BALL_SPEED_BASE + scoreRef.current * 2) * speedMult / 1000;
-    const vx = (Math.random() - 0.5) * 0.15;
+  const throwBall = useCallback(() => {
+    if (phaseRef.current !== "playing") return;
+    const ballX = launcherXRef.current + LAUNCHER_W / 2;
+    const ballY = LAUNCHER_Y - BALL_R;
     ballsRef.current = [
       ...ballsRef.current,
-      { id: nextBallId.current++, x, y: -BALL_R * 2, vx, vy },
+      { id: nextBallId.current++, x: ballX, y: ballY },
     ];
-    const interval = Math.max(SPAWN_INTERVAL_MIN, SPAWN_INTERVAL_BASE - scoreRef.current * 8);
-    spawnIntervalRef.current = interval;
-    lastSpawnRef.current = now;
-  }, [ARENA_W]);
-
-  const gameStartRef = useRef(0);
+    setBalls([...ballsRef.current]);
+  }, [LAUNCHER_Y]);
 
   const tick = useCallback((now: number) => {
     if (phaseRef.current !== "playing") return;
     const dt = Math.min(now - lastFrameRef.current, 50);
     lastFrameRef.current = now;
 
-    const elapsed = (now - gameStartRef.current) / 1000;
-    scoreRef.current = elapsed;
-    setScore(elapsed);
+    let tx = targetXRef.current;
+    let tv = targetVelRef.current;
+    tx += tv * (dt / 1000);
+    if (tx - TARGET_R < 0) { tx = TARGET_R; tv = Math.abs(tv); }
+    if (tx + TARGET_R > ARENA_W) { tx = ARENA_W - TARGET_R; tv = -Math.abs(tv); }
+    targetXRef.current = tx;
+    targetVelRef.current = tv;
+    setTargetX(tx);
 
-    if (now - lastSpawnRef.current > spawnIntervalRef.current) {
-      spawnBall(now);
-    }
-
-    const px = playerXRef.current;
+    let missThisFrame = false;
     let hitThisFrame = false;
 
     const nextBalls: Ball[] = [];
     for (const b of ballsRef.current) {
-      const nx = b.x + b.vx * dt;
-      const ny = b.y + b.vy * dt;
+      const ny = b.y - BALL_SPEED * (dt / 1000);
 
-      if (ny > ARENA_H + BALL_R * 2) continue;
-
-      const closestX = Math.max(px, Math.min(nx, px + PLAYER_W));
-      const closestY = Math.max(PLAYER_Y, Math.min(ny, PLAYER_Y + PLAYER_H));
-      const distX = nx - closestX;
-      const distY = ny - closestY;
-      const hit = distX * distX + distY * distY < BALL_R * BALL_R;
-
-      if (hit) {
-        hitThisFrame = true;
-      } else {
-        nextBalls.push({ ...b, x: nx, y: ny });
+      if (ny + BALL_R < 0) {
+        missThisFrame = true;
+        continue;
       }
+
+      if (ny - BALL_R <= TARGET_Y + TARGET_R && ny + BALL_R >= TARGET_Y - TARGET_R) {
+        const dx = b.x - tx;
+        const dy = ny - TARGET_Y;
+        if (dx * dx + dy * dy < (BALL_R + TARGET_R) * (BALL_R + TARGET_R)) {
+          hitThisFrame = true;
+          continue;
+        }
+      }
+
+      nextBalls.push({ ...b, y: ny });
     }
 
     ballsRef.current = nextBalls;
     setBalls([...nextBalls]);
 
     if (hitThisFrame) {
+      const newScore = scoreRef.current + 1;
+      scoreRef.current = newScore;
+      setScore(newScore);
+      const speedUp = TARGET_BASE_SPEED + newScore * TARGET_ACCEL;
+      const dir = targetVelRef.current < 0 ? -1 : 1;
+      targetVelRef.current = speedUp * dir;
+    }
+
+    if (missThisFrame) {
       const newLives = livesRef.current - 1;
       livesRef.current = newLives;
       setLives(newLives);
       if (newLives <= 0) {
         phaseRef.current = "dead";
         setPhase("dead");
-        const earned = Math.min(Math.floor(scoreRef.current * 2), 50);
+        const earned = Math.min(scoreRef.current * 5, 50);
         setAwardedXp(earned);
         awardGameXp(earned).catch(() => {});
         return;
@@ -193,35 +231,31 @@ export default function DodgeGame() {
     }
 
     rafRef.current = requestAnimationFrame(tick);
-  }, [ARENA_H, PLAYER_Y, spawnBall]);
+  }, [TARGET_Y]);
 
   const startGame = useCallback(() => {
     ballsRef.current = [];
-    playerXRef.current = ARENA_W / 2 - PLAYER_W / 2;
-    setPlayerX(playerXRef.current);
+    launcherXRef.current = ARENA_W / 2 - LAUNCHER_W / 2;
+    targetXRef.current = ARENA_W / 2;
+    targetVelRef.current = TARGET_BASE_SPEED;
     livesRef.current = LIVES_MAX;
     scoreRef.current = 0;
     setBalls([]);
     setLives(LIVES_MAX);
     setScore(0);
     setAwardedXp(0);
+    setLauncherX(ARENA_W / 2 - LAUNCHER_W / 2);
+    setTargetX(ARENA_W / 2);
     phaseRef.current = "playing";
     setPhase("playing");
     const now = performance.now();
     lastFrameRef.current = now;
-    lastSpawnRef.current = now;
-    gameStartRef.current = now;
-    spawnIntervalRef.current = SPAWN_INTERVAL_BASE;
     rafRef.current = requestAnimationFrame(tick);
-  }, [ARENA_W, tick]);
+  }, [tick]);
 
   useEffect(() => {
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
   }, []);
-
-  const displayScore = Math.floor(typeof score === "number" ? score : 0);
 
   return (
     <View style={styles.container}>
@@ -229,11 +263,22 @@ export default function DodgeGame() {
         <Pressable style={styles.backBtn} onPress={() => router.back()}>
           <Feather name="arrow-left" size={18} color="#fff" />
         </Pressable>
-        <Text style={styles.title}>DODGE!</Text>
+        <Text style={styles.title}>THROW!</Text>
         <View style={{ width: 36 }} />
       </View>
 
       <View style={styles.arena} {...panResponder.panHandlers}>
+        {phase === "playing" && (
+          <View
+            style={[styles.target, {
+              left: targetX - TARGET_R,
+              top: TARGET_Y - TARGET_R,
+            }]}
+          >
+            <View style={styles.targetInner} />
+          </View>
+        )}
+
         {balls.map(b => (
           <View
             key={b.id}
@@ -242,13 +287,18 @@ export default function DodgeGame() {
         ))}
 
         {phase === "playing" && (
-          <View style={[styles.player, { left: playerX, top: PLAYER_Y }]}>
-            <Text style={styles.playerText}>YOU</Text>
-          </View>
+          <>
+            <View style={[styles.launcherLine, {
+              left: launcherX + LAUNCHER_W / 2 - 1,
+              top: TARGET_Y + TARGET_R,
+              height: LAUNCHER_Y - TARGET_Y - TARGET_R,
+            }]} />
+            <View style={[styles.launcher, { left: launcherX, top: LAUNCHER_Y }]} />
+          </>
         )}
 
         <View style={styles.hud}>
-          <Text style={styles.hudText}>{displayScore}s</Text>
+          <Text style={styles.hudText}>Score: {score}</Text>
           <View style={styles.livesRow}>
             {Array.from({ length: LIVES_MAX }).map((_, i) => (
               <Text key={i} style={styles.heart}>{i < lives ? "❤️" : "🖤"}</Text>
@@ -256,13 +306,19 @@ export default function DodgeGame() {
           </View>
         </View>
 
+        {phase === "playing" && (
+          <Pressable style={styles.throwBtn} onPress={throwBall}>
+            <Text style={styles.throwBtnText}>THROW!</Text>
+          </Pressable>
+        )}
+
         {phase !== "playing" && (
           <View style={styles.overlay}>
             {phase === "idle" && (
               <>
-                <Text style={styles.overlayTitle}>DODGE!</Text>
+                <Text style={styles.overlayTitle}>THROW!</Text>
                 <Text style={styles.overlayBody}>
-                  Slide left & right to dodge the balls.{"\n"}Survive as long as you can!
+                  Slide left & right to aim.{"\n"}Tap THROW! to launch the ball.{"\n"}Hit the moving target!
                 </Text>
                 <Text style={styles.overlayBody}>Earn up to +50 XP per game</Text>
               </>
@@ -270,12 +326,11 @@ export default function DodgeGame() {
             {phase === "dead" && (
               <>
                 <Text style={styles.overlayTitle}>GAME OVER</Text>
-                <Text style={styles.overlayBody}>You survived {displayScore} seconds</Text>
-                {awardedXp > 0 && (
+                <Text style={styles.overlayBody}>You hit the target {score} time{score !== 1 ? "s" : ""}</Text>
+                {awardedXp > 0 ? (
                   <Text style={styles.xpLabel}>+{awardedXp} XP earned!</Text>
-                )}
-                {awardedXp === 0 && (
-                  <Text style={styles.overlayBody}>Survive longer to earn XP</Text>
+                ) : (
+                  <Text style={styles.overlayBody}>Hit the target to earn XP</Text>
                 )}
               </>
             )}

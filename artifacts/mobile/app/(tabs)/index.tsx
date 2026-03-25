@@ -194,8 +194,8 @@ export default function HomeScreen() {
             <Text style={styles.gameCardEmoji}>🏐</Text>
           </View>
           <View style={styles.gameCardBody}>
-            <Text style={styles.gameCardTitle}>DODGE!</Text>
-            <Text style={styles.gameCardSub}>Earn up to +50 XP per game</Text>
+            <Text style={styles.gameCardTitle}>THROW!</Text>
+            <Text style={styles.gameCardSub}>Hit the target — earn up to +50 XP</Text>
           </View>
           <Feather name="chevron-right" size={20} color="#FFD700" />
         </Pressable>
