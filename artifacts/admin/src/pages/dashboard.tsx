@@ -7,9 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { CalendarDays, MessageSquare, Users, Trophy, Zap, CircleDot, Bell, Send, CheckCircle, Clock, Activity, BarChart2, TrendingUp, Wifi } from "lucide-react";
+import {
+  CalendarDays, MessageSquare, Users, Trophy, Zap, CircleDot,
+  Bell, Send, CheckCircle, Clock, Activity, BarChart2, TrendingUp, Wifi,
+  ArrowRight, Plus, FileText,
+} from "lucide-react";
 import { Link } from "wouter";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
 
@@ -97,6 +101,7 @@ export default function Dashboard() {
   const [notifBody, setNotifBody] = useState("");
   const [notifSending, setNotifSending] = useState(false);
   const [notifResult, setNotifResult] = useState<{ sent: number; failed: number } | null>(null);
+  const notifRef = useRef<HTMLDivElement>(null);
 
   const handleSendNotification = async () => {
     if (!notifTitle.trim() || !notifBody.trim()) return;
@@ -119,7 +124,6 @@ export default function Dashboard() {
 
   const upcomingEvents = events?.filter(e => e.isUpcoming)?.length || 0;
   const totalMedals = members?.reduce((sum, m) => sum + m.medalsEarned, 0) || 0;
-  const totalRings = members?.reduce((sum, m) => sum + m.ringsEarned, 0) || 0;
   const totalXp = members?.reduce((sum, m) => sum + (m.xp ?? 0), 0) || 0;
 
   const topByXp = [...(members ?? [])].sort((a, b) => (b.xp ?? 0) - (a.xp ?? 0)).slice(0, 5);
@@ -132,9 +136,10 @@ export default function Dashboard() {
       value: membersLoading ? "..." : members?.length || 0,
       subtext: "Active in the club",
       icon: Users,
-      color: "text-blue-500",
-      bg: "bg-blue-500/10",
-      href: "/members"
+      color: "text-blue-400",
+      bg: "bg-blue-400/10",
+      badgeColor: "text-blue-400 bg-blue-400/10",
+      href: "/members",
     },
     {
       title: "Total XP Earned",
@@ -143,7 +148,8 @@ export default function Dashboard() {
       icon: Zap,
       color: "text-accent",
       bg: "bg-accent/10",
-      href: "/members"
+      badgeColor: "text-accent bg-accent/10",
+      href: "/members",
     },
     {
       title: "Medals Awarded",
@@ -152,7 +158,8 @@ export default function Dashboard() {
       icon: Trophy,
       color: "text-yellow-500",
       bg: "bg-yellow-500/10",
-      href: "/members"
+      badgeColor: "text-yellow-500 bg-yellow-500/10",
+      href: "/members",
     },
     {
       title: "Upcoming Events",
@@ -161,7 +168,8 @@ export default function Dashboard() {
       icon: CalendarDays,
       color: "text-primary",
       bg: "bg-primary/10",
-      href: "/events"
+      badgeColor: "text-primary bg-primary/10",
+      href: "/events",
     },
   ];
 
@@ -175,14 +183,81 @@ export default function Dashboard() {
   const liveCount = liveData?.count ?? 0;
   const liveUsers = liveData?.users ?? [];
 
+  const quickActions = [
+    {
+      label: "Send Notification",
+      desc: "Broadcast to all members",
+      icon: Bell,
+      color: "text-accent",
+      bg: "bg-accent/10",
+      border: "border-accent/25",
+      onClick: () => notifRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }),
+    },
+    {
+      label: "Add Event",
+      desc: "Schedule a new session",
+      icon: Plus,
+      color: "text-primary",
+      bg: "bg-primary/10",
+      border: "border-primary/25",
+      href: "/events",
+    },
+    {
+      label: "New Post",
+      desc: "Publish to the feed",
+      icon: FileText,
+      color: "text-blue-400",
+      bg: "bg-blue-400/10",
+      border: "border-blue-400/25",
+      href: "/posts",
+    },
+    {
+      label: "View Members",
+      desc: `Manage all ${members?.length ?? "..."} members`,
+      icon: Users,
+      color: "text-purple-400",
+      bg: "bg-purple-400/10",
+      border: "border-purple-400/25",
+      href: "/members",
+    },
+  ];
+
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Header */}
       <div>
         <h1 className="text-3xl font-display font-bold text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground mt-2 text-lg">Welcome back, {user?.name}. Here's what's happening at Dodge Club.</p>
+        <p className="text-muted-foreground mt-1">Welcome back, {user?.name}. Here's what's happening.</p>
       </div>
 
-      {/* Live Now banner */}
+      {/* ── QUICK ACTIONS ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {quickActions.map((action) => {
+          const inner = (
+            <button
+              key={action.label}
+              onClick={action.onClick}
+              className={`w-full text-left rounded-2xl border ${action.border} ${action.bg} p-4 cursor-pointer hover:brightness-110 transition-all duration-150 group`}
+            >
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${action.bg} mb-3 group-hover:scale-110 transition-transform`}>
+                <action.icon className={`w-4 h-4 ${action.color}`} />
+              </div>
+              <div className={`text-sm font-bold ${action.color} mb-0.5`}>{action.label}</div>
+              <div className="text-xs text-muted-foreground">{action.desc}</div>
+            </button>
+          );
+          if (action.href) {
+            return (
+              <Link key={action.label} href={action.href} className="block">
+                {inner}
+              </Link>
+            );
+          }
+          return <div key={action.label}>{inner}</div>;
+        })}
+      </div>
+
+      {/* ── LIVE NOW BANNER ── */}
       <Card className={`border ${liveCount > 0 ? "border-green-500/40 bg-green-500/5" : "border-border/50 bg-card"} shadow-lg shadow-black/20 transition-colors duration-500`}>
         <CardContent className="py-4 px-5">
           <div className="flex items-center gap-3 flex-wrap">
@@ -228,195 +303,290 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, i) => (
-          <Link key={i} href={stat.href} className="block group">
-            <Card className="bg-card border-border/50 shadow-lg shadow-black/20 hover:border-primary/50 hover:shadow-primary/5 transition-all duration-300 overflow-hidden relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${stat.bg} transition-transform group-hover:scale-110`}>
-                  <stat.icon className={`w-5 h-5 ${stat.color}`} />
+      {/* ── MAIN 2-COLUMN GRID ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
+
+        {/* LEFT: KPI cards + Leaderboards */}
+        <div className="space-y-6">
+
+          {/* KPI stat cards with explicit "View all →" affordance */}
+          <div className="grid grid-cols-2 gap-4">
+            {stats.map((stat) => (
+              <Link key={stat.title} href={stat.href} className="block group">
+                <Card className="bg-card border-border/50 shadow-lg shadow-black/20 hover:border-primary/40 transition-all duration-300 overflow-hidden relative h-full">
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${stat.bg} transition-transform group-hover:scale-110`}>
+                      <stat.icon className={`w-5 h-5 ${stat.color}`} />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-4xl font-display font-bold text-foreground mb-1">{stat.value}</div>
+                    <p className="text-xs text-muted-foreground mb-3">{stat.subtext}</p>
+                    {/* Explicit CTA badge — visible affordance even before hover */}
+                    <div className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg ${stat.badgeColor}`}>
+                      View all <ArrowRight className="w-3 h-3" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+
+          {/* Leaderboards — 3 columns */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+            {/* XP Leaderboard */}
+            <Card className="bg-card border-border/50 shadow-lg shadow-black/20">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-sm">
+                    <Zap className="w-4 h-4 text-accent" />
+                    XP Leaderboard
+                  </CardTitle>
+                  <Link href="/members">
+                    <span className="text-xs font-semibold text-accent bg-accent/10 px-2 py-1 rounded-lg hover:bg-accent/20 transition-colors cursor-pointer">
+                      View →
+                    </span>
+                  </Link>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="text-4xl font-display font-bold text-foreground">{stat.value}</div>
-                <p className="text-xs text-muted-foreground mt-2">{stat.subtext}</p>
+              <CardContent className="space-y-1 pt-0">
+                {membersLoading ? loadingState : topByXp.length === 0 ? emptyState : topByXp.map((member, idx) => {
+                  const maxVal = topByXp[0]?.xp ?? 1;
+                  const pct = maxVal > 0 ? Math.max(((member.xp ?? 0) / maxVal) * 100, 2) : 2;
+                  return (
+                    <Link key={member.id} href="/members">
+                      <div className="flex items-center gap-2 p-2 rounded-xl hover:bg-secondary/40 transition-colors cursor-pointer">
+                        <RankBadge idx={idx} />
+                        <MemberAvatar member={member} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="font-semibold text-xs text-foreground truncate">{member.name}</span>
+                            <span className="text-xs text-accent font-bold shrink-0">{(member.xp ?? 0).toLocaleString()}</span>
+                          </div>
+                          <div className="h-1 bg-secondary rounded-full overflow-hidden mt-1">
+                            <div className="h-full bg-accent rounded-full" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
               </CardContent>
             </Card>
-          </Link>
-        ))}
-      </div>
 
-      {/* Leaderboards */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* XP Leaderboard */}
-        <Card className="bg-card border-border/50 shadow-lg shadow-black/20">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Zap className="w-5 h-5 text-accent" />
-              XP Leaderboard
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1">
-            {membersLoading ? loadingState : topByXp.length === 0 ? emptyState : topByXp.map((member, idx) => {
-              const maxVal = topByXp[0]?.xp ?? 1;
-              const pct = maxVal > 0 ? Math.max(((member.xp ?? 0) / maxVal) * 100, 2) : 2;
-              return (
-                <Link key={member.id} href="/members">
-                  <div className="flex items-center gap-2 p-2 rounded-xl hover:bg-secondary/40 transition-colors cursor-pointer">
-                    <RankBadge idx={idx} />
-                    <MemberAvatar member={member} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="font-semibold text-xs text-foreground truncate">{member.name}</span>
-                        <span className="text-xs text-accent font-bold shrink-0">{(member.xp ?? 0).toLocaleString()}</span>
-                      </div>
-                      <div className="h-1 bg-secondary rounded-full overflow-hidden mt-1">
-                        <div className="h-full bg-accent rounded-full" style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </CardContent>
-        </Card>
-
-        {/* Medal Leaderboard */}
-        <Card className="bg-card border-border/50 shadow-lg shadow-black/20">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Trophy className="w-5 h-5 text-yellow-500" />
-              Medal Leaderboard
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1">
-            {membersLoading ? loadingState : topByMedals.length === 0 ? emptyState : topByMedals.map((member, idx) => {
-              const maxVal = topByMedals[0]?.medalsEarned ?? 1;
-              const pct = maxVal > 0 ? Math.max((member.medalsEarned / maxVal) * 100, 2) : 2;
-              return (
-                <Link key={member.id} href="/members">
-                  <div className="flex items-center gap-2 p-2 rounded-xl hover:bg-secondary/40 transition-colors cursor-pointer">
-                    <RankBadge idx={idx} />
-                    <MemberAvatar member={member} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="font-semibold text-xs text-foreground truncate">{member.name}</span>
-                        <span className="text-xs text-yellow-500 font-bold shrink-0">{member.medalsEarned} 🏅</span>
-                      </div>
-                      <div className="h-1 bg-secondary rounded-full overflow-hidden mt-1">
-                        <div className="h-full bg-yellow-500 rounded-full" style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </CardContent>
-        </Card>
-
-        {/* Ring Leaderboard */}
-        <Card className="bg-card border-border/50 shadow-lg shadow-black/20">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CircleDot className="w-5 h-5 text-purple-400" />
-              Ring Leaderboard
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1">
-            {membersLoading ? loadingState : topByRings.length === 0 ? emptyState : topByRings.map((member, idx) => {
-              const maxVal = topByRings[0]?.ringsEarned ?? 1;
-              const pct = maxVal > 0 ? Math.max((member.ringsEarned / maxVal) * 100, 2) : 2;
-              return (
-                <Link key={member.id} href="/members">
-                  <div className="flex items-center gap-2 p-2 rounded-xl hover:bg-secondary/40 transition-colors cursor-pointer">
-                    <RankBadge idx={idx} />
-                    <MemberAvatar member={member} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="font-semibold text-xs text-foreground truncate">{member.name}</span>
-                        <span className="text-xs text-purple-400 font-bold shrink-0">{member.ringsEarned} 💍</span>
-                      </div>
-                      <div className="h-1 bg-secondary rounded-full overflow-hidden mt-1">
-                        <div className="h-full bg-purple-400 rounded-full" style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Session Analytics */}
-      <div>
-        <h2 className="text-xl font-display font-bold text-foreground mb-4 flex items-center gap-2">
-          <Activity className="w-5 h-5 text-primary" />
-          App Engagement
-        </h2>
-
-        {/* Summary stat cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-          {[
-            {
-              label: "Avg Session",
-              value: sessionLoading ? "…" : fmtDuration(sessionStats?.avgDuration ?? 0),
-              sub: "All-time per session",
-              icon: Clock,
-              color: "text-primary",
-              bg: "bg-primary/10",
-            },
-            {
-              label: "Sessions Today",
-              value: sessionLoading ? "…" : sessionStats?.todaySessions ?? 0,
-              sub: sessionLoading ? "" : `Avg ${fmtDuration(sessionStats?.todayAvgDuration ?? 0)}`,
-              icon: TrendingUp,
-              color: "text-green-400",
-              bg: "bg-green-400/10",
-            },
-            {
-              label: "Sessions This Week",
-              value: sessionLoading ? "…" : sessionStats?.weekSessions ?? 0,
-              sub: sessionLoading ? "" : `Avg ${fmtDuration(sessionStats?.weekAvgDuration ?? 0)}`,
-              icon: BarChart2,
-              color: "text-blue-400",
-              bg: "bg-blue-400/10",
-            },
-            {
-              label: "Total Time in App",
-              value: sessionLoading ? "…" : fmtDuration(sessionStats?.totalSeconds ?? 0),
-              sub: `Across ${sessionStats?.totalSessions ?? 0} sessions`,
-              icon: Activity,
-              color: "text-accent",
-              bg: "bg-accent/10",
-            },
-          ].map((s) => (
-            <Card key={s.label} className="bg-card border-border/50 shadow-lg shadow-black/20">
-              <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                <CardTitle className="text-sm font-medium text-muted-foreground">{s.label}</CardTitle>
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${s.bg}`}>
-                  <s.icon className={`w-4 h-4 ${s.color}`} />
+            {/* Medal Leaderboard */}
+            <Card className="bg-card border-border/50 shadow-lg shadow-black/20">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-sm">
+                    <Trophy className="w-4 h-4 text-yellow-500" />
+                    Medals
+                  </CardTitle>
+                  <Link href="/members">
+                    <span className="text-xs font-semibold text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded-lg hover:bg-yellow-500/20 transition-colors cursor-pointer">
+                      View →
+                    </span>
+                  </Link>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-display font-bold text-foreground">{s.value}</div>
-                <p className="text-xs text-muted-foreground mt-1">{s.sub}</p>
+              <CardContent className="space-y-1 pt-0">
+                {membersLoading ? loadingState : topByMedals.length === 0 ? emptyState : topByMedals.map((member, idx) => {
+                  const maxVal = topByMedals[0]?.medalsEarned ?? 1;
+                  const pct = maxVal > 0 ? Math.max((member.medalsEarned / maxVal) * 100, 2) : 2;
+                  return (
+                    <Link key={member.id} href="/members">
+                      <div className="flex items-center gap-2 p-2 rounded-xl hover:bg-secondary/40 transition-colors cursor-pointer">
+                        <RankBadge idx={idx} />
+                        <MemberAvatar member={member} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="font-semibold text-xs text-foreground truncate">{member.name}</span>
+                            <span className="text-xs text-yellow-500 font-bold shrink-0">{member.medalsEarned} 🏅</span>
+                          </div>
+                          <div className="h-1 bg-secondary rounded-full overflow-hidden mt-1">
+                            <div className="h-full bg-yellow-500 rounded-full" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
               </CardContent>
             </Card>
-          ))}
+
+            {/* Ring Leaderboard */}
+            <Card className="bg-card border-border/50 shadow-lg shadow-black/20">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-sm">
+                    <CircleDot className="w-4 h-4 text-purple-400" />
+                    Rings
+                  </CardTitle>
+                  <Link href="/members">
+                    <span className="text-xs font-semibold text-purple-400 bg-purple-400/10 px-2 py-1 rounded-lg hover:bg-purple-400/20 transition-colors cursor-pointer">
+                      View →
+                    </span>
+                  </Link>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-1 pt-0">
+                {membersLoading ? loadingState : topByRings.length === 0 ? emptyState : topByRings.map((member, idx) => {
+                  const maxVal = topByRings[0]?.ringsEarned ?? 1;
+                  const pct = maxVal > 0 ? Math.max((member.ringsEarned / maxVal) * 100, 2) : 2;
+                  return (
+                    <Link key={member.id} href="/members">
+                      <div className="flex items-center gap-2 p-2 rounded-xl hover:bg-secondary/40 transition-colors cursor-pointer">
+                        <RankBadge idx={idx} />
+                        <MemberAvatar member={member} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="font-semibold text-xs text-foreground truncate">{member.name}</span>
+                            <span className="text-xs text-purple-400 font-bold shrink-0">{member.ringsEarned} 💍</span>
+                          </div>
+                          <div className="h-1 bg-secondary rounded-full overflow-hidden mt-1">
+                            <div className="h-full bg-purple-400 rounded-full" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
+        {/* RIGHT: Push notification + Engagement stats */}
+        <div className="space-y-4">
+
+          {/* Push Notification — promoted above fold, not buried at bottom */}
+          <div ref={notifRef}>
+            <Card className="bg-card border-accent/20 shadow-lg shadow-black/20">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
+                    <Bell className="w-4 h-4 text-accent" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base">Push Notification</CardTitle>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Broadcast to all {members?.length ?? "..."} members
+                    </p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {notifResult && (
+                  <div className={`flex items-center gap-2 p-3 rounded-xl text-sm font-medium ${notifResult.sent > 0 ? "bg-green-500/10 text-green-400 border border-green-500/20" : "bg-destructive/10 text-destructive border border-destructive/20"}`}>
+                    <CheckCircle className="w-4 h-4 shrink-0" />
+                    {notifResult.sent > 0
+                      ? `Sent to ${notifResult.sent} member${notifResult.sent !== 1 ? "s" : ""}${notifResult.failed > 0 ? ` (${notifResult.failed} failed)` : ""}`
+                      : "Failed to send — please try again"}
+                  </div>
+                )}
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground tracking-widest uppercase mb-1.5 block">Title</label>
+                  <Input
+                    placeholder="e.g. New event this Friday!"
+                    value={notifTitle}
+                    onChange={(e) => setNotifTitle(e.target.value)}
+                    className="bg-background border-border/60 focus:border-accent/50"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground tracking-widest uppercase mb-1.5 block">Message</label>
+                  <Textarea
+                    placeholder="e.g. Join us at the sports hall on Friday at 7pm…"
+                    value={notifBody}
+                    onChange={(e) => setNotifBody(e.target.value)}
+                    rows={3}
+                    className="bg-background border-border/60 focus:border-accent/50 resize-none"
+                  />
+                </div>
+                <Button
+                  className="w-full bg-accent text-accent-foreground hover:bg-accent/90 font-bold gap-2"
+                  onClick={handleSendNotification}
+                  disabled={notifSending || !notifTitle.trim() || !notifBody.trim()}
+                >
+                  {notifSending ? (
+                    <>Sending…</>
+                  ) : (
+                    <><Send className="w-4 h-4" /> Send to All Members</>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Engagement stats — compact 2x2 mini cards */}
+          <Card className="bg-card border-border/50 shadow-lg shadow-black/20">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Activity className="w-4 h-4 text-primary" />
+                App Engagement
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  {
+                    label: "Sessions Today",
+                    value: sessionLoading ? "…" : sessionStats?.todaySessions ?? 0,
+                    sub: sessionLoading ? "" : `Avg ${fmtDuration(sessionStats?.todayAvgDuration ?? 0)}`,
+                    color: "text-green-400",
+                    bg: "bg-green-400/10",
+                  },
+                  {
+                    label: "Avg Session",
+                    value: sessionLoading ? "…" : fmtDuration(sessionStats?.avgDuration ?? 0),
+                    sub: "All-time per session",
+                    color: "text-blue-400",
+                    bg: "bg-blue-400/10",
+                  },
+                  {
+                    label: "This Week",
+                    value: sessionLoading ? "…" : sessionStats?.weekSessions ?? 0,
+                    sub: sessionLoading ? "" : `Avg ${fmtDuration(sessionStats?.weekAvgDuration ?? 0)}`,
+                    color: "text-purple-400",
+                    bg: "bg-purple-400/10",
+                  },
+                  {
+                    label: "Total Time",
+                    value: sessionLoading ? "…" : fmtDuration(sessionStats?.totalSeconds ?? 0),
+                    sub: `${sessionStats?.totalSessions ?? 0} sessions`,
+                    color: "text-accent",
+                    bg: "bg-accent/10",
+                  },
+                ].map((s) => (
+                  <div key={s.label} className={`rounded-xl p-3 ${s.bg} border border-border/30`}>
+                    <div className="text-xs text-muted-foreground mb-1.5">{s.label}</div>
+                    <div className={`text-xl font-display font-bold ${s.color}`}>{s.value}</div>
+                    {s.sub && <div className="text-xs text-muted-foreground mt-0.5">{s.sub}</div>}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* ── SESSION ANALYTICS — full width below ── */}
+      <div>
+        <h2 className="text-lg font-display font-bold text-foreground mb-4 flex items-center gap-2">
+          <BarChart2 className="w-5 h-5 text-primary" />
+          Sessions — Last 7 Days &amp; Top Users
+        </h2>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
           {/* Daily breakdown bar chart */}
           <Card className="bg-card border-border/50 shadow-lg shadow-black/20">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm">
                 <BarChart2 className="w-4 h-4 text-primary" />
-                Sessions — Last 7 Days
+                Daily Session Count
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -436,10 +606,7 @@ export default function Dashboard() {
                         <div key={d.day} className="flex items-center gap-3">
                           <span className="text-xs text-muted-foreground w-24 shrink-0">{label}</span>
                           <div className="flex-1 h-5 bg-secondary rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-primary rounded-full transition-all"
-                              style={{ width: `${pct}%` }}
-                            />
+                            <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pct}%` }} />
                           </div>
                           <span className="text-xs font-medium text-foreground w-16 text-right shrink-0">
                             {d.sessions} · {fmtDuration(d.avgDuration)}
@@ -455,8 +622,8 @@ export default function Dashboard() {
 
           {/* Top users by time */}
           <Card className="bg-card border-border/50 shadow-lg shadow-black/20">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm">
                 <Clock className="w-4 h-4 text-primary" />
                 Most Time in App
               </CardTitle>
@@ -492,81 +659,6 @@ export default function Dashboard() {
           </Card>
         </div>
       </div>
-
-      {/* Push Notification Broadcaster */}
-      <Card className="bg-card border-border/50 shadow-lg shadow-black/20">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bell className="w-5 h-5 text-accent" />
-            Push Notification Broadcast
-          </CardTitle>
-          <p className="text-sm text-muted-foreground">Send an instant alert to all members who have enabled push notifications.</p>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {notifResult && (
-            <div className={`flex items-center gap-2 text-sm rounded-lg px-4 py-3 ${notifResult.failed > 0 && notifResult.sent === 0 ? "bg-destructive/10 text-destructive border border-destructive/20" : "bg-primary/10 text-primary border border-primary/20"}`}>
-              <CheckCircle className="w-4 h-4 shrink-0" />
-              <span>
-                {notifResult.sent > 0
-                  ? `Sent to ${notifResult.sent} member${notifResult.sent !== 1 ? "s" : ""}${notifResult.failed > 0 ? ` · ${notifResult.failed} failed` : ""}`
-                  : "No opted-in members found or delivery failed."}
-              </span>
-            </div>
-          )}
-          <Input
-            placeholder="Notification title (e.g. New event announced!)"
-            value={notifTitle}
-            onChange={(e) => { setNotifTitle(e.target.value); setNotifResult(null); }}
-            className="bg-secondary/30 border-border/50 focus:border-primary/50"
-          />
-          <Textarea
-            placeholder="Message body (e.g. Join us this Saturday at Dodgeclub Park…)"
-            value={notifBody}
-            onChange={(e) => { setNotifBody(e.target.value); setNotifResult(null); }}
-            rows={3}
-            className="bg-secondary/30 border-border/50 focus:border-primary/50 resize-none"
-          />
-          <div className="flex justify-end">
-            <Button
-              onClick={handleSendNotification}
-              disabled={notifSending || !notifTitle.trim() || !notifBody.trim()}
-              className="bg-primary hover:bg-primary/80 text-white gap-2"
-            >
-              <Send className="w-4 h-4" />
-              {notifSending ? "Sending…" : "Send to All Members"}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Quick Actions */}
-      <Card className="bg-card border-border/50 shadow-lg shadow-black/20">
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Link href="/events">
-            <Button variant="outline" className="w-full justify-start h-12 bg-secondary/20 hover:bg-primary/10 hover:text-primary hover:border-primary/30 border-border/50 rounded-xl">
-              <CalendarDays className="w-4 h-4 mr-2" /> New event
-            </Button>
-          </Link>
-          <Link href="/posts">
-            <Button variant="outline" className="w-full justify-start h-12 bg-secondary/20 hover:bg-primary/10 hover:text-primary hover:border-primary/30 border-border/50 rounded-xl">
-              <MessageSquare className="w-4 h-4 mr-2" /> Post update
-            </Button>
-          </Link>
-          <Link href="/members">
-            <Button variant="outline" className="w-full justify-start h-12 bg-secondary/20 hover:bg-primary/10 hover:text-primary hover:border-primary/30 border-border/50 rounded-xl">
-              <Users className="w-4 h-4 mr-2" /> Attendance
-            </Button>
-          </Link>
-          <Link href="/members">
-            <Button variant="outline" className="w-full justify-start h-12 bg-secondary/20 hover:bg-accent/10 hover:text-accent hover:border-accent/30 border-border/50 rounded-xl">
-              <Trophy className="w-4 h-4 mr-2" /> Award medal
-            </Button>
-          </Link>
-        </CardContent>
-      </Card>
     </div>
   );
 }
