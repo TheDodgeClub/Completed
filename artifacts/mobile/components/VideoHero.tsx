@@ -2,15 +2,17 @@ import React, { useState } from "react";
 import { View, Pressable, StyleSheet, Text } from "react-native";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { Feather } from "@expo/vector-icons";
+import { resolveImageUrl } from "@/constants/api";
 
 type Props = {
   uri: string;
 };
 
 export function VideoHero({ uri }: Props) {
+  const resolvedUri = resolveImageUrl(uri) ?? uri;
   const [muted, setMuted] = useState(true);
 
-  const player = useVideoPlayer(uri, (p) => {
+  const player = useVideoPlayer(resolvedUri, (p) => {
     p.loop = true;
     p.muted = true;
     p.play();

@@ -9,7 +9,7 @@ import {
   Poppins_800ExtraBold,
 } from "@expo-google-fonts/poppins";
 import { useFonts } from "expo-font";
-import { Stack, useRouter, useSegments } from "expo-router";
+import { Stack, useRouter, useSegments, useRootNavigationState } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, ReactNode } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -29,16 +29,17 @@ function AuthGate({ children }: { children: ReactNode }) {
   const { isLoading, isAuthenticated } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const navState = useRootNavigationState();
 
   useEffect(() => {
-    if (isLoading) return;
+    if (!navState?.key || isLoading) return;
     const inAuthGroup = segments[0] === "(auth)";
     if (!isAuthenticated && !inAuthGroup) {
       router.replace("/(auth)/register");
     } else if (isAuthenticated && inAuthGroup) {
       router.replace("/(tabs)");
     }
-  }, [isAuthenticated, isLoading, segments]);
+  }, [isAuthenticated, isLoading, segments, navState?.key]);
 
   return <>{children}</>;
 }

@@ -87,21 +87,47 @@ export class ObjectStorageService {
     return null;
   }
 
-  async downloadObject(file: File, cacheTtlSec: number = 3600): Promise<Response> {
+  async downloadObject(
+    file: File,
+    cacheTtlSec: number = 3600,
+    rangeHeader?: string,
+  ): Promise<Response> {
     const [metadata] = await file.getMetadata();
     const aclPolicy = await getObjectAclPolicy(file);
     const isPublic = aclPolicy?.visibility === "public";
 
-    const nodeStream = file.createReadStream();
-    const webStream = Readable.toWeb(nodeStream) as ReadableStream;
+    const totalSize = Number(metadata.size) || 0;
+    const contentType = (metadata.contentType as string) || "application/octet-stream";
+    const cacheControl = `${isPublic ? "public" : "private"}, max-age=${cacheTtlSec}`;
 
     const headers: Record<string, string> = {
-      "Content-Type": (metadata.contentType as string) || "application/octet-stream",
-      "Cache-Control": `${isPublic ? "public" : "private"}, max-age=${cacheTtlSec}`,
+      "Content-Type": contentType,
+      "Cache-Control": cacheControl,
+      "Accept-Ranges": "bytes",
     };
-    if (metadata.size) {
-      headers["Content-Length"] = String(metadata.size);
+
+    /* ── Range request (required for iOS video streaming) ── */
+    if (rangeHeader && totalSize > 0) {
+      const match = rangeHeader.match(/bytes=(\d*)-(\d*)/);
+      if (match) {
+        const start = match[1] ? Number(match[1]) : 0;
+        const end = match[2] ? Math.min(Number(match[2]), totalSize - 1) : totalSize - 1;
+        const chunkSize = end - start + 1;
+
+        const nodeStream = file.createReadStream({ start, end });
+        const webStream = Readable.toWeb(nodeStream) as ReadableStream;
+
+        headers["Content-Range"] = `bytes ${start}-${end}/${totalSize}`;
+        headers["Content-Length"] = String(chunkSize);
+
+        return new Response(webStream, { status: 206, headers });
+      }
     }
+
+    /* ── Full file ── */
+    const nodeStream = file.createReadStream();
+    const webStream = Readable.toWeb(nodeStream) as ReadableStream;
+    if (totalSize) headers["Content-Length"] = String(totalSize);
 
     return new Response(webStream, { headers });
   }
