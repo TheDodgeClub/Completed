@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -17,7 +17,7 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import Colors from "@/constants/colors";
+import { useColors } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import {
   adminListPosts,
@@ -45,6 +45,8 @@ function PostCard({
   onEdit: (p: Post) => void;
   onDelete: (p: Post) => void;
 }) {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   return (
     <View style={styles.card}>
       <View style={styles.cardLeft}>
@@ -83,6 +85,8 @@ function FormModal({
   onSave: (f: FormState) => void;
   saving: boolean;
 }) {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const [form, setForm] = useState<FormState>(initial);
   const insets = useSafeAreaInsets();
 
@@ -142,6 +146,8 @@ function FormModal({
 
 export default function AdminPostsScreen() {
   const insets = useSafeAreaInsets();
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const qc = useQueryClient();
   const { user } = useAuth();
   const [modalVisible, setModalVisible] = useState(false);
@@ -255,32 +261,34 @@ export default function AdminPostsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: Colors.background },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  topBar: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  backBtn: { padding: 8 },
-  screenTitle: { flex: 1, fontSize: 20, fontWeight: "700", color: Colors.text, marginLeft: 8 },
-  newBtn: { flexDirection: "row", alignItems: "center", backgroundColor: Colors.primary, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7, gap: 5 },
-  newBtnText: { color: Colors.background, fontSize: 14, fontWeight: "700" },
-  list: { padding: 16, gap: 10 },
-  empty: { color: Colors.textSecondary, textAlign: "center", marginTop: 60, fontSize: 15 },
-  card: { backgroundColor: Colors.surface, borderRadius: 14, borderWidth: 1, borderColor: Colors.border, padding: 14, flexDirection: "row", alignItems: "center", gap: 10 },
-  cardLeft: { flex: 1, flexDirection: "row", alignItems: "flex-start", gap: 8 },
-  lockBadge: { backgroundColor: Colors.accent + "22", borderRadius: 10, padding: 4, marginTop: 2 },
-  cardTitle: { fontSize: 15, fontWeight: "600", color: Colors.text, marginBottom: 2 },
-  cardMeta: { fontSize: 12, color: Colors.textSecondary },
-  cardActions: { flexDirection: "row", gap: 8 },
-  actionBtn: { padding: 8 },
-  modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  modalTitle: { fontSize: 17, fontWeight: "700", color: Colors.text },
-  cancelBtn: { fontSize: 16, color: Colors.textSecondary },
-  saveBtn: { fontSize: 16, fontWeight: "700", color: Colors.primary },
-  modalBody: { padding: 20, gap: 4 },
-  fieldLabel: { fontSize: 12, color: Colors.textSecondary, fontWeight: "600", marginTop: 12, marginBottom: 4, letterSpacing: 0.5 },
-  input: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, color: Colors.text, fontSize: 15 },
-  multilineInput: { minHeight: 130 },
-  switchRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 20, backgroundColor: Colors.surface, borderRadius: 14, borderWidth: 1, borderColor: Colors.border, padding: 16 },
-  switchLabel: { fontSize: 15, fontWeight: "600", color: Colors.text, marginBottom: 2 },
-  switchHint: { fontSize: 12, color: Colors.textSecondary },
-});
+function makeStyles(Colors: ReturnType<typeof useColors>) {
+  return StyleSheet.create({
+    screen: { flex: 1, backgroundColor: Colors.background },
+    center: { flex: 1, justifyContent: "center", alignItems: "center" },
+    topBar: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: Colors.border },
+    backBtn: { padding: 8 },
+    screenTitle: { flex: 1, fontSize: 20, fontWeight: "700", color: Colors.text, marginLeft: 8 },
+    newBtn: { flexDirection: "row", alignItems: "center", backgroundColor: Colors.primary, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7, gap: 5 },
+    newBtnText: { color: Colors.background, fontSize: 14, fontWeight: "700" },
+    list: { padding: 16, gap: 10 },
+    empty: { color: Colors.textSecondary, textAlign: "center", marginTop: 60, fontSize: 15 },
+    card: { backgroundColor: Colors.surface, borderRadius: 14, borderWidth: 1, borderColor: Colors.border, padding: 14, flexDirection: "row", alignItems: "center", gap: 10 },
+    cardLeft: { flex: 1, flexDirection: "row", alignItems: "flex-start", gap: 8 },
+    lockBadge: { backgroundColor: Colors.accent + "22", borderRadius: 10, padding: 4, marginTop: 2 },
+    cardTitle: { fontSize: 15, fontWeight: "600", color: Colors.text, marginBottom: 2 },
+    cardMeta: { fontSize: 12, color: Colors.textSecondary },
+    cardActions: { flexDirection: "row", gap: 8 },
+    actionBtn: { padding: 8 },
+    modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: Colors.border },
+    modalTitle: { fontSize: 17, fontWeight: "700", color: Colors.text },
+    cancelBtn: { fontSize: 16, color: Colors.textSecondary },
+    saveBtn: { fontSize: 16, fontWeight: "700", color: Colors.primary },
+    modalBody: { padding: 20, gap: 4 },
+    fieldLabel: { fontSize: 12, color: Colors.textSecondary, fontWeight: "600", marginTop: 12, marginBottom: 4, letterSpacing: 0.5 },
+    input: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, color: Colors.text, fontSize: 15 },
+    multilineInput: { minHeight: 130 },
+    switchRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 20, backgroundColor: Colors.surface, borderRadius: 14, borderWidth: 1, borderColor: Colors.border, padding: 16 },
+    switchLabel: { fontSize: 15, fontWeight: "600", color: Colors.text, marginBottom: 2 },
+    switchHint: { fontSize: 12, color: Colors.textSecondary },
+  });
+}

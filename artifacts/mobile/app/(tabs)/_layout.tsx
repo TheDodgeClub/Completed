@@ -7,7 +7,7 @@ import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Colors from "@/constants/colors";
+import { useColors } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 
 function NativeTabLayout({ isAdmin }: { isAdmin: boolean }) {
@@ -47,6 +47,7 @@ function ClassicTabLayout({ isAdmin }: { isAdmin: boolean }) {
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
   const safeAreaInsets = useSafeAreaInsets();
+  const Colors = useColors();
 
   return (
     <Tabs

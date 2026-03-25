@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -14,13 +14,16 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
-import Colors from "@/constants/colors";
+import { useColors } from "@/context/ThemeContext";
 import { resolveImageUrl } from "@/constants/api";
 import { useAuth } from "@/context/AuthContext";
 import { listPosts, listVideos, VideoClip } from "@/lib/api";
 import { PostCard } from "@/components/PostCard";
 
 function VideoCard({ video }: { video: VideoClip }) {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
+
   const handlePress = () => {
     Linking.openURL(video.url).catch(() => {});
   };
@@ -58,6 +61,8 @@ function VideoCard({ video }: { video: VideoClip }) {
 
 export default function UpdatesScreen() {
   const insets = useSafeAreaInsets();
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const { isAuthenticated } = useAuth();
   const [refreshing, setRefreshing] = React.useState(false);
 
@@ -103,7 +108,6 @@ export default function UpdatesScreen() {
         <ActivityIndicator color={Colors.primary} style={{ marginTop: 40 }} />
       ) : (
         <>
-          {/* Videos section */}
           {videos && videos.length > 0 && (
             <View style={styles.videosSection}>
               <View style={styles.sectionHeader}>
@@ -120,7 +124,6 @@ export default function UpdatesScreen() {
             </View>
           )}
 
-          {/* Posts section */}
           <View style={styles.body}>
             {visiblePosts.length > 0 ? (
               visiblePosts.map(post => <PostCard key={post.id} post={post} />)
@@ -132,7 +135,6 @@ export default function UpdatesScreen() {
               </View>
             )}
 
-            {/* Locked posts for guests */}
             {!isAuthenticated && lockedPosts.length > 0 && (
               <>
                 <View style={styles.lockBanner}>
@@ -160,142 +162,144 @@ export default function UpdatesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    paddingHorizontal: 24,
-    paddingBottom: 24,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  headerTitle: {
-    fontFamily: "Poppins_800ExtraBold",
-    fontSize: 36,
-    color: Colors.text,
-  },
-  headerSubtitle: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  videosSection: {
-    paddingTop: 20,
-    paddingBottom: 4,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 20,
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 16,
-    color: Colors.text,
-  },
-  videoList: {
-    paddingHorizontal: 20,
-    gap: 12,
-  },
-  videoCard: {
-    width: 220,
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    overflow: "hidden",
-  },
-  videoThumb: {
-    width: 220,
-    height: 124,
-    backgroundColor: Colors.border,
-    overflow: "hidden",
-  },
-  videoThumbPlaceholder: {
-    backgroundColor: `${Colors.primary}20`,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  playOverlay: {
-    position: "absolute",
-    inset: 0,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(0,0,0,0.35)",
-  },
-  videoInfo: {
-    padding: 12,
-    gap: 4,
-  },
-  videoTitle: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 13,
-    color: Colors.text,
-    lineHeight: 18,
-  },
-  videoDesc: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    color: Colors.textSecondary,
-  },
-  body: { padding: 20 },
-  empty: {
-    alignItems: "center",
-    paddingVertical: 48,
-    gap: 10,
-  },
-  emptyTitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 16,
-    color: Colors.textSecondary,
-  },
-  emptyText: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    color: Colors.textMuted,
-    textAlign: "center",
-    paddingHorizontal: 20,
-  },
-  lockBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: `${Colors.accent}15`,
-    borderWidth: 1,
-    borderColor: `${Colors.accent}40`,
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 14,
-  },
-  lockBannerText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
-    color: Colors.accent,
-  },
-  joinBtn: {
-    backgroundColor: Colors.primary,
-    borderRadius: 14,
-    paddingVertical: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    marginTop: 8,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  joinBtnText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 15,
-    color: "#fff",
-  },
-});
+function makeStyles(Colors: ReturnType<typeof useColors>) {
+  return StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: Colors.background,
+    },
+    header: {
+      paddingHorizontal: 24,
+      paddingBottom: 24,
+      backgroundColor: Colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: Colors.border,
+    },
+    headerTitle: {
+      fontFamily: "Poppins_800ExtraBold",
+      fontSize: 36,
+      color: Colors.text,
+    },
+    headerSubtitle: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 14,
+      color: Colors.textSecondary,
+      marginTop: 2,
+    },
+    videosSection: {
+      paddingTop: 20,
+      paddingBottom: 4,
+    },
+    sectionHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      paddingHorizontal: 20,
+      marginBottom: 12,
+    },
+    sectionTitle: {
+      fontFamily: "Inter_700Bold",
+      fontSize: 16,
+      color: Colors.text,
+    },
+    videoList: {
+      paddingHorizontal: 20,
+      gap: 12,
+    },
+    videoCard: {
+      width: 220,
+      backgroundColor: Colors.surface,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: Colors.border,
+      overflow: "hidden",
+    },
+    videoThumb: {
+      width: 220,
+      height: 124,
+      backgroundColor: Colors.border,
+      overflow: "hidden",
+    },
+    videoThumbPlaceholder: {
+      backgroundColor: `${Colors.primary}20`,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    playOverlay: {
+      position: "absolute",
+      inset: 0,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "rgba(0,0,0,0.35)",
+    },
+    videoInfo: {
+      padding: 12,
+      gap: 4,
+    },
+    videoTitle: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 13,
+      color: Colors.text,
+      lineHeight: 18,
+    },
+    videoDesc: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 12,
+      color: Colors.textSecondary,
+    },
+    body: { padding: 20 },
+    empty: {
+      alignItems: "center",
+      paddingVertical: 48,
+      gap: 10,
+    },
+    emptyTitle: {
+      fontFamily: "Inter_700Bold",
+      fontSize: 16,
+      color: Colors.textSecondary,
+    },
+    emptyText: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 14,
+      color: Colors.textMuted,
+      textAlign: "center",
+      paddingHorizontal: 20,
+    },
+    lockBanner: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      backgroundColor: `${Colors.accent}15`,
+      borderWidth: 1,
+      borderColor: `${Colors.accent}40`,
+      borderRadius: 14,
+      padding: 14,
+      marginBottom: 14,
+    },
+    lockBannerText: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 14,
+      color: Colors.accent,
+    },
+    joinBtn: {
+      backgroundColor: Colors.primary,
+      borderRadius: 14,
+      paddingVertical: 16,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      marginTop: 8,
+      shadowColor: Colors.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    joinBtnText: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 15,
+      color: "#fff",
+    },
+  });
+}

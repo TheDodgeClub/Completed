@@ -18,6 +18,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider } from "@/context/AuthContext";
+import { ThemeProvider } from "@/context/ThemeContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -44,23 +45,25 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <ErrorBoundary>
-        <QueryClientProvider client={queryClient}>
-          <GestureHandlerRootView style={{ flex: 1 }}>
-            <AuthProvider>
-              <Stack>
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen
-                  name="(auth)"
-                  options={{ presentation: "modal", headerShown: false }}
-                />
-                <Stack.Screen name="admin/events" options={{ headerShown: false }} />
-                <Stack.Screen name="admin/posts" options={{ headerShown: false }} />
-                <Stack.Screen name="admin/merch" options={{ headerShown: false }} />
-                <Stack.Screen name="admin/members" options={{ headerShown: false }} />
-              </Stack>
-            </AuthProvider>
-          </GestureHandlerRootView>
-        </QueryClientProvider>
+        <ThemeProvider>
+          <QueryClientProvider client={queryClient}>
+            <GestureHandlerRootView style={{ flex: 1 }}>
+              <AuthProvider>
+                <Stack>
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen
+                    name="(auth)"
+                    options={{ presentation: "modal", headerShown: false }}
+                  />
+                  <Stack.Screen name="admin/events" options={{ headerShown: false }} />
+                  <Stack.Screen name="admin/posts" options={{ headerShown: false }} />
+                  <Stack.Screen name="admin/merch" options={{ headerShown: false }} />
+                  <Stack.Screen name="admin/members" options={{ headerShown: false }} />
+                </Stack>
+              </AuthProvider>
+            </GestureHandlerRootView>
+          </QueryClientProvider>
+        </ThemeProvider>
       </ErrorBoundary>
     </SafeAreaProvider>
   );

@@ -53,38 +53,82 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* ── Light Mode (default) ───────────────────────────────── */
 :root {
-  /* Forced Dark Mode for Admin Panel */
+  --background: 100 10% 96%;
+  --foreground: 0 0% 10%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 10%;
+  --card-border: 0 0% 87%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 10%;
+  --popover-border: 0 0% 87%;
+
+  --primary: 355 78% 46%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 0 0% 92%;
+  --secondary-foreground: 0 0% 20%;
+
+  --muted: 0 0% 92%;
+  --muted-foreground: 0 0% 45%;
+
+  --accent: 51 100% 42%;
+  --accent-foreground: 0 0% 10%;
+
+  --destructive: 0 84% 55%;
+  --destructive-foreground: 0 0% 98%;
+
+  --border: 0 0% 85%;
+  --input: 0 0% 85%;
+  --ring: 355 78% 46%;
+
+  --sidebar: 100 8% 93%;
+  --sidebar-foreground: 0 0% 10%;
+  --sidebar-border: 0 0% 85%;
+  --sidebar-primary: 355 78% 46%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 0 0% 88%;
+  --sidebar-accent-foreground: 0 0% 10%;
+  --sidebar-ring: 355 78% 46%;
+
+  --radius: 0.75rem;
+}
+
+/* ── Dark Mode ──────────────────────────────────────────── */
+.dark {
   --background: 0 0% 4%;
   --foreground: 0 0% 98%;
-  
+
   --card: 0 0% 7%;
   --card-foreground: 0 0% 98%;
   --card-border: 0 0% 12%;
-  
+
   --popover: 0 0% 7%;
   --popover-foreground: 0 0% 98%;
   --popover-border: 0 0% 12%;
-  
-  --primary: 355 78% 56%; /* Dodge Club Red */
+
+  --primary: 355 78% 56%;
   --primary-foreground: 0 0% 100%;
-  
+
   --secondary: 0 0% 12%;
   --secondary-foreground: 0 0% 98%;
-  
+
   --muted: 0 0% 12%;
   --muted-foreground: 0 0% 60%;
-  
-  --accent: 51 100% 50%; /* Dodge Club Gold */
+
+  --accent: 51 100% 50%;
   --accent-foreground: 0 0% 10%;
-  
+
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 98%;
-  
+
   --border: 0 0% 15%;
   --input: 0 0% 15%;
   --ring: 355 78% 56%;
-  
+
   --sidebar: 0 0% 3%;
   --sidebar-foreground: 0 0% 98%;
   --sidebar-border: 0 0% 12%;
@@ -93,8 +137,6 @@
   --sidebar-accent: 0 0% 10%;
   --sidebar-accent-foreground: 0 0% 98%;
   --sidebar-ring: 355 78% 56%;
-
-  --radius: 0.75rem;
 }
 
 @layer base {
@@ -112,26 +154,26 @@
   }
 }
 
-/* Custom Scrollbar for sleek dark look */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: hsl(var(--background)); 
+  background: hsl(var(--background));
 }
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--border)); 
+  background: hsl(var(--border));
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground)); 
+  background: hsl(var(--muted-foreground));
 }
 
 /* Glassmorphism utility */
 .glass {
-  background: rgba(10, 10, 10, 0.6);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid hsl(var(--border) / 0.3);
+  background: hsl(var(--card) / 0.7);
 }

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -15,7 +15,7 @@ import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
-import Colors from "@/constants/colors";
+import { useColors } from "@/context/ThemeContext";
 import { resolveImageUrl } from "@/constants/api";
 import { useAuth } from "@/context/AuthContext";
 import { listUpcomingEvents, listPosts } from "@/lib/api";
@@ -24,6 +24,8 @@ import { PostCard } from "@/components/PostCard";
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const { user, isAuthenticated } = useAuth();
 
   const { data: events, isLoading: eventsLoading, refetch: refetchEvents } = useQuery({
@@ -208,142 +210,144 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  hero: {
-    paddingHorizontal: 24,
-    paddingBottom: 32,
-  },
-  heroTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 16,
-  },
-  notifBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  heroTagline: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 15,
-    color: "rgba(255,255,255,0.85)",
-    marginBottom: 24,
-    lineHeight: 22,
-    maxWidth: 260,
-  },
-  heroCTARow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  heroBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  heroBtnPrimary: {
-    backgroundColor: "rgba(255,255,255,0.2)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.4)",
-  },
-  heroBtnPrimaryText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
-    color: "#fff",
-  },
-  heroBtnSecondary: {
-    backgroundColor: "rgba(255,255,255,0.1)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.25)",
-  },
-  heroBtnSecondaryText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
-    color: "#fff",
-  },
-  body: { padding: 20, gap: 8 },
-  section: { marginBottom: 28 },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 14,
-  },
-  sectionTitle: {
-    fontFamily: "Poppins_800ExtraBold",
-    fontSize: 20,
-    color: Colors.text,
-  },
-  seeAll: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 13,
-    color: Colors.primary,
-  },
-  eventBanner: {
-    borderRadius: 16,
-    overflow: "hidden",
-    marginBottom: 20,
-    height: 200,
-  },
-  eventBannerImage: {
-    width: "100%",
-    height: "100%",
-  },
-  eventBannerOverlay: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    padding: 16,
-    paddingTop: 40,
-  },
-  eventBannerTitle: {
-    fontFamily: "Poppins_800ExtraBold",
-    fontSize: 18,
-    color: "#fff",
-    lineHeight: 24,
-  },
-  eventBannerDate: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 13,
-    color: "rgba(255,255,255,0.85)",
-    marginTop: 4,
-  },
-  empty: {
-    alignItems: "center",
-    padding: 32,
-    gap: 10,
-  },
-  emptyText: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    color: Colors.textMuted,
-  },
-  merchCTA: { marginBottom: 32, borderRadius: 18, overflow: "hidden" },
-  merchCTAGradient: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 20,
-    gap: 14,
-  },
-  merchCTATitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 16,
-    color: "#fff",
-  },
-  merchCTASubtitle: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 13,
-    color: "rgba(255,255,255,0.8)",
-  },
-});
+function makeStyles(Colors: ReturnType<typeof useColors>) {
+  return StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: Colors.background,
+    },
+    hero: {
+      paddingHorizontal: 24,
+      paddingBottom: 32,
+    },
+    heroTopRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      marginBottom: 16,
+    },
+    notifBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: "rgba(255,255,255,0.15)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    heroTagline: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 15,
+      color: "rgba(255,255,255,0.85)",
+      marginBottom: 24,
+      lineHeight: 22,
+      maxWidth: 260,
+    },
+    heroCTARow: {
+      flexDirection: "row",
+      gap: 12,
+    },
+    heroBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      paddingHorizontal: 18,
+      paddingVertical: 12,
+      borderRadius: 12,
+    },
+    heroBtnPrimary: {
+      backgroundColor: "rgba(255,255,255,0.2)",
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.4)",
+    },
+    heroBtnPrimaryText: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 14,
+      color: "#fff",
+    },
+    heroBtnSecondary: {
+      backgroundColor: "rgba(255,255,255,0.1)",
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.25)",
+    },
+    heroBtnSecondaryText: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 14,
+      color: "#fff",
+    },
+    body: { padding: 20, gap: 8 },
+    section: { marginBottom: 28 },
+    sectionHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 14,
+    },
+    sectionTitle: {
+      fontFamily: "Poppins_800ExtraBold",
+      fontSize: 20,
+      color: Colors.text,
+    },
+    seeAll: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 13,
+      color: Colors.primary,
+    },
+    eventBanner: {
+      borderRadius: 16,
+      overflow: "hidden",
+      marginBottom: 20,
+      height: 200,
+    },
+    eventBannerImage: {
+      width: "100%",
+      height: "100%",
+    },
+    eventBannerOverlay: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: 0,
+      padding: 16,
+      paddingTop: 40,
+    },
+    eventBannerTitle: {
+      fontFamily: "Poppins_800ExtraBold",
+      fontSize: 18,
+      color: "#fff",
+      lineHeight: 24,
+    },
+    eventBannerDate: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 13,
+      color: "rgba(255,255,255,0.85)",
+      marginTop: 4,
+    },
+    empty: {
+      alignItems: "center",
+      padding: 32,
+      gap: 10,
+    },
+    emptyText: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 14,
+      color: Colors.textMuted,
+    },
+    merchCTA: { marginBottom: 32, borderRadius: 18, overflow: "hidden" },
+    merchCTAGradient: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 20,
+      gap: 14,
+    },
+    merchCTATitle: {
+      fontFamily: "Inter_700Bold",
+      fontSize: 16,
+      color: "#fff",
+    },
+    merchCTASubtitle: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 13,
+      color: "rgba(255,255,255,0.8)",
+    },
+  });
+}

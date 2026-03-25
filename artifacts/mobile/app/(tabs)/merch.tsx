@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -15,11 +15,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
-import Colors from "@/constants/colors";
+import { useColors } from "@/context/ThemeContext";
 import { resolveImageUrl } from "@/constants/api";
 import { listMerch, MerchProduct } from "@/lib/api";
 
 function MerchCard({ item }: { item: MerchProduct }) {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const imageUri = resolveImageUrl(item.imageUrl);
 
   const handleBuy = async () => {
@@ -30,7 +32,6 @@ function MerchCard({ item }: { item: MerchProduct }) {
 
   return (
     <View style={styles.card}>
-      {/* Product image */}
       <View style={styles.imageContainer}>
         {imageUri ? (
           <Image source={{ uri: imageUri }} style={styles.productImage} resizeMode="cover" />
@@ -41,7 +42,6 @@ function MerchCard({ item }: { item: MerchProduct }) {
         )}
       </View>
 
-      {/* Category badge */}
       <View style={styles.categoryBadge}>
         <Text style={styles.categoryText}>{item.category.toUpperCase()}</Text>
       </View>
@@ -74,6 +74,8 @@ function MerchCard({ item }: { item: MerchProduct }) {
 
 export default function MerchScreen() {
   const insets = useSafeAreaInsets();
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const [refreshing, setRefreshing] = React.useState(false);
 
   const { data: products, isLoading, refetch } = useQuery({
@@ -121,122 +123,124 @@ export default function MerchScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1 },
-  header: {
-    paddingHorizontal: 24,
-    paddingBottom: 24,
-    backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  headerTitle: {
-    fontFamily: "Poppins_800ExtraBold",
-    fontSize: 36,
-    color: Colors.text,
-  },
-  headerSubtitle: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  listContent: { padding: 16, paddingBottom: 32 },
-  row: { gap: 12, marginBottom: 12 },
-  card: {
-    flex: 1,
-    backgroundColor: Colors.surface,
-    borderRadius: 18,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  imageContainer: {
-    height: 140,
-    backgroundColor: Colors.surface2,
-    overflow: "hidden",
-  },
-  productImage: {
-    width: "100%",
-    height: 140,
-  },
-  imagePlaceholder: {
-    height: 140,
-    backgroundColor: Colors.surface2,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  categoryBadge: {
-    position: "absolute",
-    top: 10,
-    left: 10,
-    backgroundColor: `${Colors.primary}CC`,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  categoryText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 9,
-    color: "#fff",
-    letterSpacing: 0.5,
-  },
-  cardBody: { padding: 12, gap: 6 },
-  productName: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 14,
-    color: Colors.text,
-  },
-  productDesc: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    color: Colors.textMuted,
-    lineHeight: 17,
-  },
-  cardFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 8,
-  },
-  price: {
-    fontFamily: "Poppins_800ExtraBold",
-    fontSize: 16,
-    color: Colors.text,
-  },
-  buyBtn: {
-    backgroundColor: Colors.primary,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  buyBtnDisabled: {
-    backgroundColor: Colors.border,
-  },
-  buyBtnText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 12,
-    color: "#fff",
-  },
-  empty: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-    paddingHorizontal: 40,
-  },
-  emptyTitle: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 18,
-    color: Colors.textSecondary,
-  },
-  emptyText: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    color: Colors.textMuted,
-    textAlign: "center",
-  },
-});
+function makeStyles(Colors: ReturnType<typeof useColors>) {
+  return StyleSheet.create({
+    screen: { flex: 1 },
+    header: {
+      paddingHorizontal: 24,
+      paddingBottom: 24,
+      backgroundColor: Colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: Colors.border,
+    },
+    headerTitle: {
+      fontFamily: "Poppins_800ExtraBold",
+      fontSize: 36,
+      color: Colors.text,
+    },
+    headerSubtitle: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 14,
+      color: Colors.textSecondary,
+      marginTop: 2,
+    },
+    listContent: { padding: 16, paddingBottom: 32 },
+    row: { gap: 12, marginBottom: 12 },
+    card: {
+      flex: 1,
+      backgroundColor: Colors.surface,
+      borderRadius: 18,
+      overflow: "hidden",
+      borderWidth: 1,
+      borderColor: Colors.border,
+    },
+    imageContainer: {
+      height: 140,
+      backgroundColor: Colors.surface2,
+      overflow: "hidden",
+    },
+    productImage: {
+      width: "100%",
+      height: 140,
+    },
+    imagePlaceholder: {
+      height: 140,
+      backgroundColor: Colors.surface2,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    categoryBadge: {
+      position: "absolute",
+      top: 10,
+      left: 10,
+      backgroundColor: `${Colors.primary}CC`,
+      borderRadius: 8,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+    },
+    categoryText: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 9,
+      color: "#fff",
+      letterSpacing: 0.5,
+    },
+    cardBody: { padding: 12, gap: 6 },
+    productName: {
+      fontFamily: "Inter_700Bold",
+      fontSize: 14,
+      color: Colors.text,
+    },
+    productDesc: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 12,
+      color: Colors.textMuted,
+      lineHeight: 17,
+    },
+    cardFooter: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginTop: 8,
+    },
+    price: {
+      fontFamily: "Poppins_800ExtraBold",
+      fontSize: 16,
+      color: Colors.text,
+    },
+    buyBtn: {
+      backgroundColor: Colors.primary,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
+    buyBtnDisabled: {
+      backgroundColor: Colors.border,
+    },
+    buyBtnText: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 12,
+      color: "#fff",
+    },
+    empty: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 12,
+      paddingHorizontal: 40,
+    },
+    emptyTitle: {
+      fontFamily: "Inter_700Bold",
+      fontSize: 18,
+      color: Colors.textSecondary,
+    },
+    emptyText: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 14,
+      color: Colors.textMuted,
+      textAlign: "center",
+    },
+  });
+}

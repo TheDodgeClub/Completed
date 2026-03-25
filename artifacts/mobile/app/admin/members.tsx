@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -15,7 +15,7 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import Colors from "@/constants/colors";
+import { useColors } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import {
   adminListMembers,
@@ -29,6 +29,8 @@ import {
 } from "@/lib/api";
 
 function MemberCard({ member, onPress }: { member: AdminMember; onPress: () => void }) {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   return (
     <Pressable style={({ pressed }) => [styles.card, pressed && styles.cardPressed]} onPress={onPress}>
       <View style={styles.avatar}>
@@ -61,6 +63,8 @@ function AttendanceRow({
   record: AdminAttendanceRecord;
   onDelete: () => void;
 }) {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   return (
     <View style={styles.attRow}>
       <View style={{ flex: 1 }}>
@@ -94,6 +98,8 @@ function MarkAttendanceModal({
   onMark: (eventId: number, earnedMedal: boolean) => void;
   marking: boolean;
 }) {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
   const [earnedMedal, setEarnedMedal] = useState(false);
   const insets = useSafeAreaInsets();
@@ -103,7 +109,6 @@ function MarkAttendanceModal({
   }, [visible]);
 
   const alreadyAttended = new Set(existingAttendance.map(r => r.eventId));
-
   const eligibleEvents = events.filter(e => !alreadyAttended.has(e.id));
 
   return (
@@ -184,6 +189,8 @@ function MemberDetailModal({
   events: Event[];
   onClose: () => void;
 }) {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
   const [markingModal, setMarkingModal] = useState(false);
@@ -237,7 +244,6 @@ function MemberDetailModal({
           </Pressable>
         </View>
 
-        {/* Member info strip */}
         <View style={styles.memberInfo}>
           <View style={styles.bigAvatar}>
             <Text style={styles.bigAvatarText}>{member.name.charAt(0).toUpperCase()}</Text>
@@ -288,6 +294,8 @@ function MemberDetailModal({
 
 export default function AdminMembersScreen() {
   const insets = useSafeAreaInsets();
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const { user } = useAuth();
   const [selectedMember, setSelectedMember] = useState<AdminMember | null>(null);
   const [detailVisible, setDetailVisible] = useState(false);
@@ -356,61 +364,61 @@ export default function AdminMembersScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: Colors.background },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  topBar: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  backBtn: { padding: 8 },
-  screenTitle: { flex: 1, fontSize: 20, fontWeight: "700", color: Colors.text, marginLeft: 8 },
-  countBadge: { backgroundColor: Colors.surface, borderRadius: 20, borderWidth: 1, borderColor: Colors.border, paddingHorizontal: 12, paddingVertical: 4 },
-  countText: { color: Colors.textSecondary, fontSize: 14, fontWeight: "600" },
-  list: { padding: 16, gap: 10 },
-  empty: { color: Colors.textSecondary, textAlign: "center", marginTop: 60, fontSize: 15 },
-  card: { backgroundColor: Colors.surface, borderRadius: 14, borderWidth: 1, borderColor: Colors.border, padding: 14, flexDirection: "row", alignItems: "center", gap: 12 },
-  cardPressed: { opacity: 0.7 },
-  avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: Colors.primary + "33", alignItems: "center", justifyContent: "center" },
-  avatarText: { fontSize: 18, fontWeight: "700", color: Colors.primary },
-  cardBody: { flex: 1 },
-  memberName: { fontSize: 15, fontWeight: "600", color: Colors.text },
-  memberEmail: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
-  adminPill: { backgroundColor: Colors.accent + "22", borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1, borderColor: Colors.accent + "44" },
-  adminPillText: { color: Colors.accent, fontSize: 10, fontWeight: "700" },
-  cardRight: { alignItems: "center", marginRight: 4 },
-  statNum: { fontSize: 16, fontWeight: "700", color: Colors.text },
-  statLbl: { fontSize: 10, color: Colors.textMuted },
-  /* Detail modal */
-  detailContainer: { flex: 1, backgroundColor: Colors.background, paddingHorizontal: 20 },
-  modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  modalTitle: { fontSize: 17, fontWeight: "700", color: Colors.text, flex: 1, textAlign: "center" },
-  cancelBtn: { fontSize: 16, color: Colors.textSecondary },
-  saveBtn: { fontSize: 16, fontWeight: "700", color: Colors.primary },
-  markBtn: { flexDirection: "row", alignItems: "center", backgroundColor: Colors.primary, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, gap: 5 },
-  markBtnText: { color: Colors.background, fontSize: 13, fontWeight: "700" },
-  memberInfo: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: Colors.border, marginBottom: 16 },
-  bigAvatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: Colors.primary + "33", alignItems: "center", justifyContent: "center" },
-  bigAvatarText: { fontSize: 22, fontWeight: "700", color: Colors.primary },
-  memberSince: { fontSize: 11, color: Colors.textMuted, marginTop: 2 },
-  miniStats: { flexDirection: "row", gap: 12 },
-  miniStat: { alignItems: "center" },
-  miniStatNum: { fontSize: 16, fontWeight: "700", color: Colors.text },
-  miniStatLbl: { fontSize: 10, color: Colors.textMuted },
-  sectionLabel: { fontSize: 11, color: Colors.textMuted, fontWeight: "700", letterSpacing: 1.5, marginBottom: 8 },
-  attRow: { flexDirection: "row", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border + "88" },
-  attEvent: { fontSize: 14, fontWeight: "600", color: Colors.text },
-  attDate: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
-  deleteAttBtn: { padding: 8 },
-  /* Mark attendance modal */
-  markModalContainer: { flex: 1, backgroundColor: Colors.background, paddingHorizontal: 20 },
-  markingFor: { fontSize: 14, color: Colors.textSecondary, paddingVertical: 12 },
-  fieldLabel: { fontSize: 12, color: Colors.textSecondary, fontWeight: "600", marginBottom: 8, letterSpacing: 0.5 },
-  eventPickerList: { flex: 1, marginBottom: 16 },
-  eventPickerRow: { flexDirection: "row", alignItems: "center", paddingVertical: 12, paddingHorizontal: 14, backgroundColor: Colors.surface, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, marginBottom: 8 },
-  eventPickerRowActive: { borderColor: Colors.primary, backgroundColor: Colors.primary + "11" },
-  eventPickerName: { fontSize: 14, fontWeight: "600", color: Colors.text },
-  eventPickerDate: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
-  emptyEvents: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
-  emptyEventsText: { color: Colors.textSecondary, textAlign: "center", fontSize: 15 },
-  medalRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: Colors.surface, borderRadius: 14, borderWidth: 1, borderColor: Colors.border, padding: 16, marginBottom: 24 },
-  switchLabel: { fontSize: 15, fontWeight: "600", color: Colors.text, marginBottom: 2 },
-  switchHint: { fontSize: 12, color: Colors.textSecondary },
-});
+function makeStyles(Colors: ReturnType<typeof useColors>) {
+  return StyleSheet.create({
+    screen: { flex: 1, backgroundColor: Colors.background },
+    center: { flex: 1, justifyContent: "center", alignItems: "center" },
+    topBar: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: Colors.border },
+    backBtn: { padding: 8 },
+    screenTitle: { flex: 1, fontSize: 20, fontWeight: "700", color: Colors.text, marginLeft: 8 },
+    countBadge: { backgroundColor: Colors.surface, borderRadius: 20, borderWidth: 1, borderColor: Colors.border, paddingHorizontal: 12, paddingVertical: 4 },
+    countText: { color: Colors.textSecondary, fontSize: 14, fontWeight: "600" },
+    list: { padding: 16, gap: 10 },
+    empty: { color: Colors.textSecondary, textAlign: "center", marginTop: 60, fontSize: 15 },
+    card: { backgroundColor: Colors.surface, borderRadius: 14, borderWidth: 1, borderColor: Colors.border, padding: 14, flexDirection: "row", alignItems: "center", gap: 12 },
+    cardPressed: { opacity: 0.7 },
+    avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: Colors.primary + "33", alignItems: "center", justifyContent: "center" },
+    avatarText: { fontSize: 18, fontWeight: "700", color: Colors.primary },
+    cardBody: { flex: 1 },
+    memberName: { fontSize: 15, fontWeight: "600", color: Colors.text },
+    memberEmail: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+    adminPill: { backgroundColor: Colors.accent + "22", borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1, borderColor: Colors.accent + "44" },
+    adminPillText: { color: Colors.accent, fontSize: 10, fontWeight: "700" },
+    cardRight: { alignItems: "center", marginRight: 4 },
+    statNum: { fontSize: 16, fontWeight: "700", color: Colors.text },
+    statLbl: { fontSize: 10, color: Colors.textMuted },
+    detailContainer: { flex: 1, backgroundColor: Colors.background, paddingHorizontal: 20 },
+    modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: Colors.border },
+    modalTitle: { fontSize: 17, fontWeight: "700", color: Colors.text, flex: 1, textAlign: "center" },
+    cancelBtn: { fontSize: 16, color: Colors.textSecondary },
+    saveBtn: { fontSize: 16, fontWeight: "700", color: Colors.primary },
+    markBtn: { flexDirection: "row", alignItems: "center", backgroundColor: Colors.primary, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, gap: 5 },
+    markBtnText: { color: Colors.background, fontSize: 13, fontWeight: "700" },
+    memberInfo: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: Colors.border, marginBottom: 16 },
+    bigAvatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: Colors.primary + "33", alignItems: "center", justifyContent: "center" },
+    bigAvatarText: { fontSize: 22, fontWeight: "700", color: Colors.primary },
+    memberSince: { fontSize: 11, color: Colors.textMuted, marginTop: 2 },
+    miniStats: { flexDirection: "row", gap: 12 },
+    miniStat: { alignItems: "center" },
+    miniStatNum: { fontSize: 16, fontWeight: "700", color: Colors.text },
+    miniStatLbl: { fontSize: 10, color: Colors.textMuted },
+    sectionLabel: { fontSize: 11, color: Colors.textMuted, fontWeight: "700", letterSpacing: 1.5, marginBottom: 8 },
+    attRow: { flexDirection: "row", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border + "88" },
+    attEvent: { fontSize: 14, fontWeight: "600", color: Colors.text },
+    attDate: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+    deleteAttBtn: { padding: 8 },
+    markModalContainer: { flex: 1, backgroundColor: Colors.background, paddingHorizontal: 20 },
+    markingFor: { fontSize: 14, color: Colors.textSecondary, paddingVertical: 12 },
+    fieldLabel: { fontSize: 12, color: Colors.textSecondary, fontWeight: "600", marginBottom: 8, letterSpacing: 0.5 },
+    eventPickerList: { flex: 1, marginBottom: 16 },
+    eventPickerRow: { flexDirection: "row", alignItems: "center", paddingVertical: 12, paddingHorizontal: 14, backgroundColor: Colors.surface, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, marginBottom: 8 },
+    eventPickerRowActive: { borderColor: Colors.primary, backgroundColor: Colors.primary + "11" },
+    eventPickerName: { fontSize: 14, fontWeight: "600", color: Colors.text },
+    eventPickerDate: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+    emptyEvents: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
+    emptyEventsText: { color: Colors.textSecondary, textAlign: "center", fontSize: 15 },
+    medalRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: Colors.surface, borderRadius: 14, borderWidth: 1, borderColor: Colors.border, padding: 16, marginBottom: 24 },
+    switchLabel: { fontSize: 15, fontWeight: "600", color: Colors.text, marginBottom: 2 },
+    switchHint: { fontSize: 12, color: Colors.textSecondary },
+  });
+}

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -21,7 +21,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
-import Colors from "@/constants/colors";
+import { useColors, useTheme } from "@/context/ThemeContext";
 import { resolveImageUrl, API_BASE } from "@/constants/api";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -51,6 +51,8 @@ function getLevelProgress(xp: number, level: number) {
 }
 
 function LevelBadge({ level }: { level: number }) {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   return (
     <View style={styles.levelBadge}>
       <Text style={styles.levelBadgeText}>LV {level}</Text>
@@ -59,6 +61,8 @@ function LevelBadge({ level }: { level: number }) {
 }
 
 function RoleBadge({ role }: { role: string }) {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const icons: Record<string, string> = {
     "Thrower": "target",
     "Catcher": "hands",
@@ -74,6 +78,8 @@ function RoleBadge({ role }: { role: string }) {
 }
 
 function AchievementBadge({ achievement }: { achievement: Achievement }) {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const iconMap: Record<string, string> = {
     star: "star", award: "award", shield: "shield", zap: "zap", medal: "award", trophy: "award",
   };
@@ -95,6 +101,8 @@ function AchievementBadge({ achievement }: { achievement: Achievement }) {
 }
 
 function AttendanceRow({ record }: { record: AttendanceRecord }) {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const date = new Date(record.event.date);
   return (
     <View style={styles.attendRow}>
@@ -116,6 +124,8 @@ function AttendanceRow({ record }: { record: AttendanceRecord }) {
 }
 
 function UpcomingEventRow({ event }: { event: UpcomingEvent }) {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const date = new Date(event.date);
   const daysUntil = Math.ceil((date.getTime() - Date.now()) / 86400000);
   return (
@@ -136,6 +146,8 @@ function UpcomingEventRow({ event }: { event: UpcomingEvent }) {
 }
 
 function TeamHistoryRow({ entry }: { entry: TeamHistory }) {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   return (
     <View style={styles.teamRow}>
       <View style={styles.teamDot} />
@@ -151,6 +163,10 @@ function TeamHistoryRow({ entry }: { entry: TeamHistory }) {
 }
 
 function ProgressSection({ attendance }: { attendance: AttendanceRecord[] | undefined }) {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
+  const progressStyles = useMemo(() => makeProgressStyles(Colors), [Colors]);
+
   if (!attendance) return null;
 
   const now = new Date();
@@ -191,7 +207,6 @@ function ProgressSection({ attendance }: { attendance: AttendanceRecord[] | unde
         <Text style={styles.sectionTitle}>Progress</Text>
       </View>
 
-      {/* Summary row */}
       <View style={progressStyles.summaryRow}>
         <View style={progressStyles.summaryCard}>
           <Text style={[progressStyles.summaryVal, { color: Colors.primary }]}>{totalEvents}</Text>
@@ -207,7 +222,6 @@ function ProgressSection({ attendance }: { attendance: AttendanceRecord[] | unde
         </View>
       </View>
 
-      {/* Bar chart */}
       {hasActivity ? (
         <View style={progressStyles.chartWrap}>
           <View style={progressStyles.chart}>
@@ -251,47 +265,9 @@ function ProgressSection({ attendance }: { attendance: AttendanceRecord[] | unde
   );
 }
 
-const progressStyles = StyleSheet.create({
-  wrap: { marginBottom: 28 },
-  summaryRow: { flexDirection: "row", gap: 8, marginBottom: 14 },
-  summaryCard: {
-    flex: 1, backgroundColor: Colors.surface, borderRadius: 12,
-    padding: 12, alignItems: "center", borderWidth: 1, borderColor: Colors.border,
-  },
-  summaryVal: { fontFamily: "Poppins_800ExtraBold", fontSize: 18, lineHeight: 22 },
-  summaryLab: { fontFamily: "Inter_400Regular", fontSize: 10, color: Colors.textMuted, marginTop: 2, textAlign: "center" },
-
-  chartWrap: {
-    backgroundColor: Colors.surface, borderRadius: 16,
-    borderWidth: 1, borderColor: Colors.border, padding: 16,
-  },
-  chart: { flexDirection: "row", alignItems: "flex-end", gap: 6, marginBottom: 6 },
-  barCol: { flex: 1, alignItems: "center", gap: 4 },
-  barTrack: {
-    width: "80%", backgroundColor: Colors.surface2,
-    borderRadius: 6, overflow: "hidden", justifyContent: "flex-end",
-  },
-  barFill: {
-    width: "100%", backgroundColor: Colors.primary,
-    borderRadius: 6, position: "relative", overflow: "hidden",
-  },
-  medalStripe: {
-    position: "absolute", top: 0, left: 0, right: 0, height: 4,
-    backgroundColor: Colors.accent,
-  },
-  barLabel: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: Colors.textMuted },
-  barCount: { fontFamily: "Inter_700Bold", fontSize: 10, color: Colors.primary },
-
-  legend: { flexDirection: "row", gap: 16, marginTop: 10, justifyContent: "center" },
-  legendItem: { flexDirection: "row", alignItems: "center", gap: 5 },
-  legendDot: { width: 8, height: 8, borderRadius: 4 },
-  legendText: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.textMuted },
-
-  noActivity: { alignItems: "center", paddingVertical: 24, gap: 8 },
-  noActivityText: { fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.textMuted, textAlign: "center" },
-});
-
 function GuestView() {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   return (
     <ScrollView style={styles.screen} contentInsetAdjustmentBehavior="automatic">
       <LinearGradient colors={[Colors.primary, "#052A15"]} style={styles.guestHero}>
@@ -346,6 +322,8 @@ function EditProfileModal({
   user: any;
   onSave: (data: any) => void;
 }) {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const [name, setName] = React.useState(user?.name ?? "");
   const [username, setUsername] = React.useState(user?.username ?? "");
   const [bio, setBio] = React.useState(user?.bio ?? "");
@@ -453,6 +431,9 @@ function EditProfileModal({
 /* ======= Main Screen ======= */
 export default function MemberScreen() {
   const insets = useSafeAreaInsets();
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
+  const { isDark, toggleTheme } = useTheme();
   const { user, isAuthenticated, isLoading, logout, refreshUser } = useAuth();
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = React.useState(false);
@@ -607,10 +588,19 @@ export default function MemberScreen() {
 
           <View style={styles.heroActions}>
             <Pressable
+              style={({ pressed }) => [styles.themeToggleBtn, { opacity: pressed ? 0.7 : 1 }]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                toggleTheme();
+              }}
+            >
+              <Feather name={isDark ? "sun" : "moon"} size={16} color="rgba(255,255,255,0.8)" />
+            </Pressable>
+            <Pressable
               style={({ pressed }) => [styles.editBtn, { opacity: pressed ? 0.8 : 1 }]}
               onPress={() => setEditVisible(true)}
             >
-              <Feather name="edit-2" size={14} color={Colors.text} />
+              <Feather name="edit-2" size={14} color="#fff" />
               <Text style={styles.editBtnText}>Edit</Text>
             </Pressable>
             <Pressable onPress={handleLogout} style={styles.logoutBtn}>
@@ -738,6 +728,9 @@ export default function MemberScreen() {
           </View>
         )}
 
+        {/* ── Progress ── */}
+        <ProgressSection attendance={attendance} />
+
         {/* ── Event History ── */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -772,243 +765,293 @@ export default function MemberScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: Colors.background },
+function makeStyles(Colors: ReturnType<typeof useColors>) {
+  return StyleSheet.create({
+    screen: { flex: 1, backgroundColor: Colors.background },
 
-  /* Hero */
-  profileHero: { paddingHorizontal: 24, paddingBottom: 28 },
-  heroTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 },
-  avatarWrap: { position: "relative" },
-  avatarCircle: {
-    width: 80, height: 80, borderRadius: 40,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    alignItems: "center", justifyContent: "center",
-    borderWidth: 3, borderColor: "rgba(255,255,255,0.4)",
-    overflow: "hidden",
-  },
-  avatarInitial: { fontFamily: "Poppins_800ExtraBold", fontSize: 32, color: "#fff" },
-  avatarEditBadge: {
-    position: "absolute", bottom: 2, right: 2,
-    width: 22, height: 22, borderRadius: 11,
-    backgroundColor: Colors.primary,
-    alignItems: "center", justifyContent: "center",
-    borderWidth: 2, borderColor: "#0D0D0D",
-  },
-  avatarChangeLabel: {
-    fontFamily: "Inter_600SemiBold", fontSize: 10,
-    color: "rgba(255,255,255,0.7)", textAlign: "center", marginTop: 4,
-  },
-  heroActions: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 4 },
-  editBtn: {
-    flexDirection: "row", alignItems: "center", gap: 5,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    paddingHorizontal: 12, paddingVertical: 6,
-    borderRadius: 20, borderWidth: 1, borderColor: "rgba(255,255,255,0.2)",
-  },
-  editBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#fff" },
-  logoutBtn: { padding: 8 },
+    /* Hero */
+    profileHero: { paddingHorizontal: 24, paddingBottom: 28 },
+    heroTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 },
+    avatarWrap: { position: "relative" },
+    avatarCircle: {
+      width: 80, height: 80, borderRadius: 40,
+      backgroundColor: "rgba(255,255,255,0.2)",
+      alignItems: "center", justifyContent: "center",
+      borderWidth: 3, borderColor: "rgba(255,255,255,0.4)",
+      overflow: "hidden",
+    },
+    avatarInitial: { fontFamily: "Poppins_800ExtraBold", fontSize: 32, color: "#fff" },
+    avatarEditBadge: {
+      position: "absolute", bottom: 2, right: 2,
+      width: 22, height: 22, borderRadius: 11,
+      backgroundColor: Colors.primary,
+      alignItems: "center", justifyContent: "center",
+      borderWidth: 2, borderColor: Colors.background,
+    },
+    avatarChangeLabel: {
+      fontFamily: "Inter_600SemiBold", fontSize: 10,
+      color: "rgba(255,255,255,0.7)", textAlign: "center", marginTop: 4,
+    },
+    heroActions: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 },
+    themeToggleBtn: {
+      width: 34, height: 34, borderRadius: 17,
+      backgroundColor: "rgba(255,255,255,0.12)",
+      alignItems: "center", justifyContent: "center",
+      borderWidth: 1, borderColor: "rgba(255,255,255,0.2)",
+    },
+    editBtn: {
+      flexDirection: "row", alignItems: "center", gap: 5,
+      backgroundColor: "rgba(255,255,255,0.15)",
+      paddingHorizontal: 12, paddingVertical: 6,
+      borderRadius: 20, borderWidth: 1, borderColor: "rgba(255,255,255,0.2)",
+    },
+    editBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#fff" },
+    logoutBtn: { padding: 8 },
 
-  memberName: { fontFamily: "Poppins_800ExtraBold", fontSize: 26, color: "#fff", marginBottom: 2 },
-  memberUsername: { fontFamily: "Inter_400Regular", fontSize: 14, color: "rgba(255,255,255,0.65)", marginBottom: 8 },
-  badgeRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 },
-  levelBadge: {
-    backgroundColor: Colors.accent, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
-  },
-  levelBadgeText: { fontFamily: "Inter_700Bold", fontSize: 11, color: "#000" },
-  levelNameText: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: "rgba(255,255,255,0.8)" },
-  roleBadge: {
-    flexDirection: "row", alignItems: "center", gap: 4,
-    backgroundColor: `${Colors.accent}20`,
-    paddingHorizontal: 8, paddingVertical: 3,
-    borderRadius: 8, borderWidth: 1, borderColor: `${Colors.accent}40`,
-  },
-  roleBadgeText: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: Colors.accent },
+    memberName: { fontFamily: "Poppins_800ExtraBold", fontSize: 26, color: "#fff", marginBottom: 2 },
+    memberUsername: { fontFamily: "Inter_400Regular", fontSize: 14, color: "rgba(255,255,255,0.65)", marginBottom: 8 },
+    badgeRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 10 },
+    levelBadge: {
+      backgroundColor: Colors.accent, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
+    },
+    levelBadgeText: { fontFamily: "Inter_700Bold", fontSize: 11, color: "#000" },
+    levelNameText: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: "rgba(255,255,255,0.8)" },
+    roleBadge: {
+      flexDirection: "row", alignItems: "center", gap: 4,
+      backgroundColor: `${Colors.accent}20`,
+      paddingHorizontal: 8, paddingVertical: 3,
+      borderRadius: 8, borderWidth: 1, borderColor: `${Colors.accent}40`,
+    },
+    roleBadgeText: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: Colors.accent },
 
-  memberBio: {
-    fontFamily: "Inter_400Regular", fontSize: 13,
-    color: "rgba(255,255,255,0.75)", lineHeight: 19, marginBottom: 8,
-  },
-  memberSince: { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.55)", marginBottom: 16 },
+    memberBio: {
+      fontFamily: "Inter_400Regular", fontSize: 13,
+      color: "rgba(255,255,255,0.75)", lineHeight: 19, marginBottom: 8,
+    },
+    memberSince: { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.55)", marginBottom: 16 },
 
-  /* XP Bar */
-  xpSection: { marginTop: 4 },
-  xpLabelRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 6 },
-  xpLabel: { fontFamily: "Inter_700Bold", fontSize: 12, color: "rgba(255,255,255,0.9)" },
-  xpNextLevel: { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.5)" },
-  xpTrack: { height: 6, backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 3, overflow: "hidden" },
-  xpFill: { height: "100%", backgroundColor: Colors.accent, borderRadius: 3 },
+    /* XP Bar */
+    xpSection: { marginTop: 4 },
+    xpLabelRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 6 },
+    xpLabel: { fontFamily: "Inter_700Bold", fontSize: 12, color: "rgba(255,255,255,0.9)" },
+    xpNextLevel: { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.5)" },
+    xpTrack: { height: 6, backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 3, overflow: "hidden" },
+    xpFill: { height: "100%", backgroundColor: Colors.accent, borderRadius: 3 },
 
-  /* Stats */
-  statsSection: {
-    flexDirection: "row", backgroundColor: Colors.surface,
-    borderBottomWidth: 1, borderBottomColor: Colors.border, paddingVertical: 18,
-  },
-  statBlock: { flex: 1, alignItems: "center", gap: 3 },
-  statDivider: { width: 1, backgroundColor: Colors.border, marginVertical: 4 },
-  statValue: { fontFamily: "Poppins_800ExtraBold", fontSize: 24, lineHeight: 28 },
-  statLabel: { fontFamily: "Inter_400Regular", fontSize: 10, color: Colors.textMuted, textTransform: "uppercase", letterSpacing: 0.3 },
+    /* Stats */
+    statsSection: {
+      flexDirection: "row", backgroundColor: Colors.surface,
+      borderBottomWidth: 1, borderBottomColor: Colors.border, paddingVertical: 18,
+    },
+    statBlock: { flex: 1, alignItems: "center", gap: 3 },
+    statDivider: { width: 1, backgroundColor: Colors.border, marginVertical: 4 },
+    statValue: { fontFamily: "Poppins_800ExtraBold", fontSize: 24, lineHeight: 28 },
+    statLabel: { fontFamily: "Inter_400Regular", fontSize: 10, color: Colors.textMuted, textTransform: "uppercase", letterSpacing: 0.3 },
 
-  /* Body */
-  body: { padding: 20 },
-  quickActions: { flexDirection: "row", gap: 10, marginBottom: 28 },
-  quickBtn: {
-    flex: 1, backgroundColor: Colors.surface, borderRadius: 14, padding: 14,
-    alignItems: "center", gap: 8, borderWidth: 1, borderColor: Colors.border,
-  },
-  quickBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.text, textAlign: "center" },
+    /* Body */
+    body: { padding: 20 },
+    quickActions: { flexDirection: "row", gap: 10, marginBottom: 28 },
+    quickBtn: {
+      flex: 1, backgroundColor: Colors.surface, borderRadius: 14, padding: 14,
+      alignItems: "center", gap: 8, borderWidth: 1, borderColor: Colors.border,
+    },
+    quickBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.text, textAlign: "center" },
 
-  /* Sections */
-  section: { marginBottom: 28 },
-  sectionHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 14 },
-  sectionTitle: { fontFamily: "Poppins_800ExtraBold", fontSize: 20, color: Colors.text },
+    /* Sections */
+    section: { marginBottom: 28 },
+    sectionHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 14 },
+    sectionTitle: { fontFamily: "Poppins_800ExtraBold", fontSize: 20, color: Colors.text },
 
-  /* Upcoming events */
-  upcomingRow: {
-    flexDirection: "row", alignItems: "center", gap: 12,
-    backgroundColor: `${Colors.primary}10`,
-    borderRadius: 14, padding: 14, marginBottom: 8,
-    borderWidth: 1, borderColor: `${Colors.primary}30`,
-  },
-  upcomingDate: {
-    width: 44, height: 50, backgroundColor: Colors.primary,
-    borderRadius: 10, alignItems: "center", justifyContent: "center",
-  },
-  upcomingDay: { fontFamily: "Poppins_800ExtraBold", fontSize: 16, color: "#fff", lineHeight: 20 },
-  upcomingMonth: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: "rgba(255,255,255,0.8)", letterSpacing: 0.3 },
-  daysChip: {
-    backgroundColor: Colors.primary, paddingHorizontal: 8, paddingVertical: 4,
-    borderRadius: 8, minWidth: 36, alignItems: "center",
-  },
-  daysChipText: { fontFamily: "Inter_700Bold", fontSize: 11, color: "#fff" },
+    /* Upcoming events */
+    upcomingRow: {
+      flexDirection: "row", alignItems: "center", gap: 12,
+      backgroundColor: `${Colors.primary}10`,
+      borderRadius: 14, padding: 14, marginBottom: 8,
+      borderWidth: 1, borderColor: `${Colors.primary}30`,
+    },
+    upcomingDate: {
+      width: 44, height: 50, backgroundColor: Colors.primary,
+      borderRadius: 10, alignItems: "center", justifyContent: "center",
+    },
+    upcomingDay: { fontFamily: "Poppins_800ExtraBold", fontSize: 16, color: "#fff", lineHeight: 20 },
+    upcomingMonth: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: "rgba(255,255,255,0.8)", letterSpacing: 0.3 },
+    daysChip: {
+      backgroundColor: Colors.primary, paddingHorizontal: 8, paddingVertical: 4,
+      borderRadius: 8, minWidth: 36, alignItems: "center",
+    },
+    daysChipText: { fontFamily: "Inter_700Bold", fontSize: 11, color: "#fff" },
 
-  /* Achievements */
-  achieveScroll: { marginHorizontal: -20 },
-  achieveRow: { flexDirection: "row", gap: 10, paddingHorizontal: 20, paddingBottom: 4 },
-  achieveBadge: {
-    width: 120, backgroundColor: Colors.surface, borderRadius: 16, padding: 14,
-    alignItems: "center", gap: 6, borderWidth: 1, borderColor: Colors.border, position: "relative",
-  },
-  achieveLocked: { opacity: 0.45 },
-  achieveIcon: {
-    width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.surface2,
-    alignItems: "center", justifyContent: "center",
-  },
-  achieveIconUnlocked: { backgroundColor: `${Colors.accent}20`, borderWidth: 1, borderColor: `${Colors.accent}40` },
-  achieveTitle: { fontFamily: "Inter_700Bold", fontSize: 12, color: Colors.text, textAlign: "center" },
-  achieveDesc: { fontFamily: "Inter_400Regular", fontSize: 10, color: Colors.textSecondary, textAlign: "center", lineHeight: 14 },
-  unlockedDot: {
-    position: "absolute", top: 10, right: 10, width: 8, height: 8,
-    borderRadius: 4, backgroundColor: Colors.success,
-  },
+    /* Achievements */
+    achieveScroll: { marginHorizontal: -20 },
+    achieveRow: { flexDirection: "row", gap: 10, paddingHorizontal: 20, paddingBottom: 4 },
+    achieveBadge: {
+      width: 120, backgroundColor: Colors.surface, borderRadius: 16, padding: 14,
+      alignItems: "center", gap: 6, borderWidth: 1, borderColor: Colors.border, position: "relative",
+    },
+    achieveLocked: { opacity: 0.45 },
+    achieveIcon: {
+      width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.surface2,
+      alignItems: "center", justifyContent: "center",
+    },
+    achieveIconUnlocked: { backgroundColor: `${Colors.accent}20`, borderWidth: 1, borderColor: `${Colors.accent}40` },
+    achieveTitle: { fontFamily: "Inter_700Bold", fontSize: 12, color: Colors.text, textAlign: "center" },
+    achieveDesc: { fontFamily: "Inter_400Regular", fontSize: 10, color: Colors.textSecondary, textAlign: "center", lineHeight: 14 },
+    unlockedDot: {
+      position: "absolute", top: 10, right: 10, width: 8, height: 8,
+      borderRadius: 4, backgroundColor: Colors.success,
+    },
 
-  /* Team history */
-  teamList: {
-    backgroundColor: Colors.surface, borderRadius: 16,
-    borderWidth: 1, borderColor: Colors.border, overflow: "hidden",
-  },
-  teamRow: {
-    flexDirection: "row", gap: 14, padding: 14,
-    borderBottomWidth: 1, borderBottomColor: Colors.border,
-  },
-  teamDot: {
-    width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.primary,
-    marginTop: 5, flexShrink: 0,
-  },
-  teamName: { fontFamily: "Inter_700Bold", fontSize: 14, color: Colors.text, marginBottom: 2 },
-  teamMeta: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.textSecondary },
-  teamNotes: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textMuted, marginTop: 4 },
+    /* Team history */
+    teamList: {
+      backgroundColor: Colors.surface, borderRadius: 16,
+      borderWidth: 1, borderColor: Colors.border, overflow: "hidden",
+    },
+    teamRow: {
+      flexDirection: "row", gap: 14, padding: 14,
+      borderBottomWidth: 1, borderBottomColor: Colors.border,
+    },
+    teamDot: {
+      width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.primary,
+      marginTop: 5, flexShrink: 0,
+    },
+    teamName: { fontFamily: "Inter_700Bold", fontSize: 14, color: Colors.text, marginBottom: 2 },
+    teamMeta: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.textSecondary },
+    teamNotes: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textMuted, marginTop: 4 },
 
-  /* Attendance */
-  attendRow: {
-    flexDirection: "row", alignItems: "center", gap: 12,
-    backgroundColor: Colors.surface, borderRadius: 14, padding: 14,
-    marginBottom: 8, borderWidth: 1, borderColor: Colors.border,
-  },
-  attendDate: {
-    width: 44, height: 50, backgroundColor: Colors.surface2,
-    borderRadius: 10, alignItems: "center", justifyContent: "center",
-  },
-  attendDay: { fontFamily: "Poppins_800ExtraBold", fontSize: 16, color: Colors.primary, lineHeight: 20 },
-  attendMonth: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: Colors.textMuted, letterSpacing: 0.3 },
-  attendInfo: { flex: 1 },
-  attendTitle: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.text },
-  attendLocation: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textMuted, marginTop: 2 },
-  medalBadge: {
-    width: 32, height: 32, borderRadius: 16,
-    backgroundColor: `${Colors.accent}20`,
-    alignItems: "center", justifyContent: "center",
-    borderWidth: 1, borderColor: `${Colors.accent}40`,
-  },
+    /* Attendance */
+    attendRow: {
+      flexDirection: "row", alignItems: "center", gap: 12,
+      backgroundColor: Colors.surface, borderRadius: 14, padding: 14,
+      marginBottom: 8, borderWidth: 1, borderColor: Colors.border,
+    },
+    attendDate: {
+      width: 44, height: 50, backgroundColor: Colors.surface2,
+      borderRadius: 10, alignItems: "center", justifyContent: "center",
+    },
+    attendDay: { fontFamily: "Poppins_800ExtraBold", fontSize: 16, color: Colors.primary, lineHeight: 20 },
+    attendMonth: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: Colors.textMuted, letterSpacing: 0.3 },
+    attendInfo: { flex: 1 },
+    attendTitle: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.text },
+    attendLocation: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textMuted, marginTop: 2 },
+    medalBadge: {
+      width: 32, height: 32, borderRadius: 16,
+      backgroundColor: `${Colors.accent}20`,
+      alignItems: "center", justifyContent: "center",
+      borderWidth: 1, borderColor: `${Colors.accent}40`,
+    },
 
-  /* Empty */
-  empty: { alignItems: "center", paddingVertical: 32, gap: 10 },
-  emptyText: { fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.textMuted },
-  exploreBtn: {
-    backgroundColor: Colors.primary, borderRadius: 12,
-    paddingHorizontal: 20, paddingVertical: 10, marginTop: 6,
-  },
-  exploreBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#fff" },
+    /* Empty */
+    empty: { alignItems: "center", paddingVertical: 32, gap: 10 },
+    emptyText: { fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.textMuted },
+    exploreBtn: {
+      backgroundColor: Colors.primary, borderRadius: 12,
+      paddingHorizontal: 20, paddingVertical: 10, marginTop: 6,
+    },
+    exploreBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: "#fff" },
 
-  /* Guest */
-  guestHero: { padding: 32, paddingTop: 60, alignItems: "center", gap: 12 },
-  guestIconWrap: {
-    width: 88, height: 88, borderRadius: 44,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    alignItems: "center", justifyContent: "center", marginBottom: 8,
-  },
-  guestTitle: { fontFamily: "Poppins_800ExtraBold", fontSize: 30, color: "#fff", textAlign: "center" },
-  guestSubtitle: {
-    fontFamily: "Inter_400Regular", fontSize: 15,
-    color: "rgba(255,255,255,0.8)", textAlign: "center", lineHeight: 22, paddingHorizontal: 10,
-  },
-  guestBody: { padding: 24, gap: 16 },
-  guestFeature: {
-    flexDirection: "row", alignItems: "center", gap: 14,
-    backgroundColor: Colors.surface, borderRadius: 14,
-    padding: 16, borderWidth: 1, borderColor: Colors.border,
-  },
-  guestFeatureIcon: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: `${Colors.primary}20`,
-    alignItems: "center", justifyContent: "center",
-  },
-  guestFeatureText: { fontFamily: "Inter_500Medium", fontSize: 14, color: Colors.text, flex: 1 },
-  signInBtn: {
-    backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 17, alignItems: "center",
-    shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 6, marginTop: 8,
-  },
-  signInBtnText: { fontFamily: "Inter_700Bold", fontSize: 16, color: "#fff" },
-  loginLink: { alignItems: "center", paddingVertical: 8 },
-  loginLinkText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.primary },
+    /* Guest */
+    guestHero: { padding: 32, paddingTop: 60, alignItems: "center", gap: 12 },
+    guestIconWrap: {
+      width: 88, height: 88, borderRadius: 44,
+      backgroundColor: "rgba(255,255,255,0.15)",
+      alignItems: "center", justifyContent: "center", marginBottom: 8,
+    },
+    guestTitle: { fontFamily: "Poppins_800ExtraBold", fontSize: 30, color: "#fff", textAlign: "center" },
+    guestSubtitle: {
+      fontFamily: "Inter_400Regular", fontSize: 15,
+      color: "rgba(255,255,255,0.8)", textAlign: "center", lineHeight: 22, paddingHorizontal: 10,
+    },
+    guestBody: { padding: 24, gap: 16 },
+    guestFeature: {
+      flexDirection: "row", alignItems: "center", gap: 14,
+      backgroundColor: Colors.surface, borderRadius: 14,
+      padding: 16, borderWidth: 1, borderColor: Colors.border,
+    },
+    guestFeatureIcon: {
+      width: 40, height: 40, borderRadius: 20,
+      backgroundColor: `${Colors.primary}20`,
+      alignItems: "center", justifyContent: "center",
+    },
+    guestFeatureText: { fontFamily: "Inter_500Medium", fontSize: 14, color: Colors.text, flex: 1 },
+    signInBtn: {
+      backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 17, alignItems: "center",
+      shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 6, marginTop: 8,
+    },
+    signInBtnText: { fontFamily: "Inter_700Bold", fontSize: 16, color: "#fff" },
+    loginLink: { alignItems: "center", paddingVertical: 8 },
+    loginLinkText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.primary },
 
-  /* Edit Modal */
-  modalContainer: { flex: 1, backgroundColor: Colors.background },
-  modalHeader: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    padding: 16, paddingTop: 20, borderBottomWidth: 1, borderBottomColor: Colors.border,
-  },
-  modalCloseBtn: { padding: 4 },
-  modalCancelText: { fontFamily: "Inter_400Regular", fontSize: 16, color: Colors.textSecondary },
-  modalTitle: { fontFamily: "Poppins_800ExtraBold", fontSize: 17, color: Colors.text },
-  modalSaveBtn: { padding: 4 },
-  modalSaveText: { fontFamily: "Inter_700Bold", fontSize: 16, color: Colors.primary },
-  modalBody: { padding: 20 },
-  fieldGroup: { marginBottom: 22 },
-  fieldLabel: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.textMuted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 },
-  fieldInput: {
-    backgroundColor: Colors.surface, borderRadius: 14, padding: 14,
-    color: Colors.text, fontFamily: "Inter_400Regular", fontSize: 15,
-    borderWidth: 1, borderColor: Colors.border,
-  },
-  fieldInputMultiline: { minHeight: 100, textAlignVertical: "top" },
-  roleGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  roleOption: {
-    paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12,
-    borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.surface,
-  },
-  roleOptionSelected: {
-    backgroundColor: `${Colors.primary}20`, borderColor: Colors.primary,
-  },
-  roleOptionText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.textSecondary },
-  roleOptionTextSelected: { color: Colors.primary },
-});
+    /* Edit Modal */
+    modalContainer: { flex: 1, backgroundColor: Colors.background },
+    modalHeader: {
+      flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+      padding: 16, paddingTop: 20, borderBottomWidth: 1, borderBottomColor: Colors.border,
+    },
+    modalCloseBtn: { padding: 4 },
+    modalCancelText: { fontFamily: "Inter_400Regular", fontSize: 16, color: Colors.textSecondary },
+    modalTitle: { fontFamily: "Poppins_800ExtraBold", fontSize: 17, color: Colors.text },
+    modalSaveBtn: { padding: 4 },
+    modalSaveText: { fontFamily: "Inter_700Bold", fontSize: 16, color: Colors.primary },
+    modalBody: { padding: 20 },
+    fieldGroup: { marginBottom: 22 },
+    fieldLabel: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.textMuted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 },
+    fieldInput: {
+      backgroundColor: Colors.surface, borderRadius: 14, padding: 14,
+      color: Colors.text, fontFamily: "Inter_400Regular", fontSize: 15,
+      borderWidth: 1, borderColor: Colors.border,
+    },
+    fieldInputMultiline: { minHeight: 100, textAlignVertical: "top" },
+    roleGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+    roleOption: {
+      paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12,
+      borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.surface,
+    },
+    roleOptionSelected: {
+      backgroundColor: `${Colors.primary}20`, borderColor: Colors.primary,
+    },
+    roleOptionText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.textSecondary },
+    roleOptionTextSelected: { color: Colors.primary },
+  });
+}
+
+function makeProgressStyles(Colors: ReturnType<typeof useColors>) {
+  return StyleSheet.create({
+    wrap: { marginBottom: 28 },
+    summaryRow: { flexDirection: "row", gap: 8, marginBottom: 14 },
+    summaryCard: {
+      flex: 1, backgroundColor: Colors.surface, borderRadius: 12,
+      padding: 12, alignItems: "center", borderWidth: 1, borderColor: Colors.border,
+    },
+    summaryVal: { fontFamily: "Poppins_800ExtraBold", fontSize: 18, lineHeight: 22 },
+    summaryLab: { fontFamily: "Inter_400Regular", fontSize: 10, color: Colors.textMuted, marginTop: 2, textAlign: "center" },
+
+    chartWrap: {
+      backgroundColor: Colors.surface, borderRadius: 16,
+      borderWidth: 1, borderColor: Colors.border, padding: 16,
+    },
+    chart: { flexDirection: "row", alignItems: "flex-end", gap: 6, marginBottom: 6 },
+    barCol: { flex: 1, alignItems: "center", gap: 4 },
+    barTrack: {
+      width: "80%", backgroundColor: Colors.surface2,
+      borderRadius: 6, overflow: "hidden", justifyContent: "flex-end",
+    },
+    barFill: {
+      width: "100%", backgroundColor: Colors.primary,
+      borderRadius: 6, position: "relative", overflow: "hidden",
+    },
+    medalStripe: {
+      position: "absolute", top: 0, left: 0, right: 0, height: 4,
+      backgroundColor: Colors.accent,
+    },
+    barLabel: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: Colors.textMuted },
+    barCount: { fontFamily: "Inter_700Bold", fontSize: 10, color: Colors.primary },
+
+    legend: { flexDirection: "row", gap: 16, marginTop: 10, justifyContent: "center" },
+    legendItem: { flexDirection: "row", alignItems: "center", gap: 5 },
+    legendDot: { width: 8, height: 8, borderRadius: 4 },
+    legendText: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.textMuted },
+
+    noActivity: { alignItems: "center", paddingVertical: 24, gap: 8 },
+    noActivityText: { fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.textMuted, textAlign: "center" },
+  });
+}

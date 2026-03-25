@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -15,11 +15,13 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import Colors from "@/constants/colors";
+import { useColors } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 
 export default function RegisterScreen() {
   const insets = useSafeAreaInsets();
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const { register } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -143,110 +145,112 @@ export default function RegisterScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    padding: 24,
-    backgroundColor: Colors.background,
-    flexGrow: 1,
-  },
-  logoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 40,
-    marginTop: 8,
-  },
-  logoIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
-    backgroundColor: Colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  logoEmoji: { fontSize: 26 },
-  logoText: {
-    fontFamily: "Poppins_700Bold",
-    fontSize: 14,
-    color: Colors.textSecondary,
-    letterSpacing: 2,
-  },
-  logoTextBold: {
-    fontFamily: "Poppins_800ExtraBold",
-    fontSize: 22,
-    color: Colors.text,
-    lineHeight: 24,
-  },
-  title: {
-    fontFamily: "Poppins_800ExtraBold",
-    fontSize: 32,
-    color: Colors.text,
-    marginBottom: 6,
-  },
-  subtitle: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 15,
-    color: Colors.textSecondary,
-    marginBottom: 36,
-  },
-  inputGroup: { marginBottom: 18 },
-  label: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 13,
-    color: Colors.textSecondary,
-    marginBottom: 8,
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
-  },
-  inputWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: Colors.surface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    paddingHorizontal: 14,
-  },
-  inputIcon: { marginRight: 10 },
-  input: {
-    flex: 1,
-    fontFamily: "Inter_400Regular",
-    fontSize: 16,
-    color: Colors.text,
-    paddingVertical: 16,
-  },
-  eyeBtn: { padding: 8 },
-  primaryBtn: {
-    backgroundColor: Colors.primary,
-    borderRadius: 14,
-    paddingVertical: 17,
-    alignItems: "center",
-    marginTop: 8,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  primaryBtnText: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 16,
-    color: "#fff",
-    letterSpacing: 0.3,
-  },
-  footer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginTop: 28,
-  },
-  footerText: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    color: Colors.textSecondary,
-  },
-  link: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
-    color: Colors.primary,
-  },
-});
+function makeStyles(Colors: ReturnType<typeof useColors>) {
+  return StyleSheet.create({
+    container: {
+      padding: 24,
+      backgroundColor: Colors.background,
+      flexGrow: 1,
+    },
+    logoRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      marginBottom: 40,
+      marginTop: 8,
+    },
+    logoIcon: {
+      width: 52,
+      height: 52,
+      borderRadius: 16,
+      backgroundColor: Colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    logoEmoji: { fontSize: 26 },
+    logoText: {
+      fontFamily: "Poppins_700Bold",
+      fontSize: 14,
+      color: Colors.textSecondary,
+      letterSpacing: 2,
+    },
+    logoTextBold: {
+      fontFamily: "Poppins_800ExtraBold",
+      fontSize: 22,
+      color: Colors.text,
+      lineHeight: 24,
+    },
+    title: {
+      fontFamily: "Poppins_800ExtraBold",
+      fontSize: 32,
+      color: Colors.text,
+      marginBottom: 6,
+    },
+    subtitle: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 15,
+      color: Colors.textSecondary,
+      marginBottom: 36,
+    },
+    inputGroup: { marginBottom: 18 },
+    label: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 13,
+      color: Colors.textSecondary,
+      marginBottom: 8,
+      letterSpacing: 0.5,
+      textTransform: "uppercase",
+    },
+    inputWrap: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: Colors.surface,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: Colors.border,
+      paddingHorizontal: 14,
+    },
+    inputIcon: { marginRight: 10 },
+    input: {
+      flex: 1,
+      fontFamily: "Inter_400Regular",
+      fontSize: 16,
+      color: Colors.text,
+      paddingVertical: 16,
+    },
+    eyeBtn: { padding: 8 },
+    primaryBtn: {
+      backgroundColor: Colors.primary,
+      borderRadius: 14,
+      paddingVertical: 17,
+      alignItems: "center",
+      marginTop: 8,
+      shadowColor: Colors.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.35,
+      shadowRadius: 10,
+      elevation: 6,
+    },
+    primaryBtnText: {
+      fontFamily: "Inter_700Bold",
+      fontSize: 16,
+      color: "#fff",
+      letterSpacing: 0.3,
+    },
+    footer: {
+      flexDirection: "row",
+      justifyContent: "center",
+      marginTop: 28,
+    },
+    footerText: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 14,
+      color: Colors.textSecondary,
+    },
+    link: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 14,
+      color: Colors.primary,
+    },
+  });
+}

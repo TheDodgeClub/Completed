@@ -7,9 +7,10 @@ import { useMembers } from "@/hooks/use-members";
 import { useVideos } from "@/hooks/use-videos";
 import {
   LayoutDashboard, CalendarDays, MessageSquare,
-  ShoppingBag, Users, LogOut, Loader2, Video
+  ShoppingBag, Users, LogOut, Loader2, Video, Sun, Moon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTheme } from "@/context/theme";
 
 function NavItem({ href, icon: Icon, label, count }: { href: string, icon: any, label: string, count?: number }) {
   const [location] = useLocation();
@@ -72,6 +73,7 @@ function SidebarNav() {
 export function Layout({ children }: { children: React.ReactNode }) {
   const { data: user, isLoading } = useAuth();
   const { mutate: logout, isPending: isLoggingOut } = useLogout();
+  const { theme, toggleTheme } = useTheme();
   const [location] = useLocation();
 
   const hasToken = !!localStorage.getItem("dc_admin_token");
@@ -166,15 +168,26 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <span className="text-xs text-muted-foreground truncate">{user?.email}</span>
             </div>
           </div>
-          <Button
-            variant="outline"
-            className="w-full justify-start text-muted-foreground hover:text-red-400 hover:bg-red-400/10 hover:border-red-400/20 transition-all"
-            onClick={() => logout()}
-            disabled={isLoggingOut}
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            Sign Out
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              className="shrink-0 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all"
+              onClick={toggleTheme}
+              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </Button>
+            <Button
+              variant="outline"
+              className="flex-1 justify-start text-muted-foreground hover:text-red-400 hover:bg-red-400/10 hover:border-red-400/20 transition-all"
+              onClick={() => logout()}
+              disabled={isLoggingOut}
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </Button>
+          </div>
         </div>
       </aside>
 
