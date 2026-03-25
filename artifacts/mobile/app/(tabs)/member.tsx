@@ -489,15 +489,6 @@ export default function MemberScreen() {
 
           <View style={styles.heroActions}>
             <Pressable
-              style={({ pressed }) => [styles.themeToggleBtn, { opacity: pressed ? 0.7 : 1 }]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                toggleTheme();
-              }}
-            >
-              <Feather name={isDark ? "sun" : "moon"} size={16} color="rgba(255,255,255,0.8)" />
-            </Pressable>
-            <Pressable
               style={({ pressed }) => [styles.editBtn, { opacity: pressed ? 0.8 : 1 }]}
               onPress={() => setEditVisible(true)}
             >
@@ -685,10 +676,10 @@ export default function MemberScreen() {
           )}
         </View>
 
-        {/* ── Preferences ── */}
+        {/* ── Settings ── */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Preferences</Text>
+            <Text style={styles.sectionTitle}>Settings</Text>
           </View>
           <View style={styles.prefCard}>
             <View style={styles.prefRow}>
