@@ -9,6 +9,7 @@ export interface AdminMember {
   memberSince: string;
   eventsAttended: number;
   medalsEarned: number;
+  ringsEarned: number;
   avatarUrl: string | null;
 }
 
@@ -26,6 +27,14 @@ export interface AdminAttendanceRecord {
   };
 }
 
+export interface AdminAward {
+  id: number;
+  userId: number;
+  type: "medal" | "ring";
+  note: string | null;
+  awardedAt: string;
+}
+
 export function useMembers() {
   return useQuery({
     queryKey: ["members"],
@@ -37,6 +46,14 @@ export function useMemberAttendance(userId: number | null) {
   return useQuery({
     queryKey: ["attendance", userId],
     queryFn: () => fetchApi<AdminAttendanceRecord[]>(`/api/admin/members/${userId}/attendance`),
+    enabled: !!userId,
+  });
+}
+
+export function useMemberAwards(userId: number | null) {
+  return useQuery({
+    queryKey: ["awards", userId],
+    queryFn: () => fetchApi<AdminAward[]>(`/api/admin/members/${userId}/awards`),
     enabled: !!userId,
   });
 }
@@ -63,10 +80,36 @@ export function useDeleteAttendance() {
     mutationFn: (id: number) =>
       fetchApi(`/api/admin/attendance/${id}`, { method: "DELETE" }),
     onSuccess: () => {
-      // Invalidate all attendance arrays to be safe, plus members list
       queryClient.invalidateQueries({ queryKey: ["attendance"] });
       queryClient.invalidateQueries({ queryKey: ["members"] });
       queryClient.invalidateQueries({ queryKey: ["events"] });
+    },
+  });
+}
+
+export function useGrantAward() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { userId: number; type: "medal" | "ring"; note?: string }) =>
+      fetchApi<AdminAward>("/api/admin/awards", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["awards", data.userId] });
+      queryClient.invalidateQueries({ queryKey: ["members"] });
+    },
+  });
+}
+
+export function useRevokeAward() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id }: { id: number; userId: number }) =>
+      fetchApi(`/api/admin/awards/${id}`, { method: "DELETE" }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["awards", variables.userId] });
+      queryClient.invalidateQueries({ queryKey: ["members"] });
     },
   });
 }

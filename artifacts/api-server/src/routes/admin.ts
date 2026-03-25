@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, eventsTable, postsTable, merchTable, usersTable, attendanceTable } from "@workspace/db";
+import { db, eventsTable, postsTable, merchTable, usersTable, attendanceTable, awardsTable } from "@workspace/db";
 import { eq, desc, and } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/requireAdmin";
 
@@ -203,6 +203,7 @@ router.get("/members", async (_req, res) => {
   const users = await db.select().from(usersTable).orderBy(usersTable.name);
   const result = await Promise.all(users.map(async (u) => {
     const records = await db.select().from(attendanceTable).where(eq(attendanceTable.userId, u.id));
+    const awards = await db.select().from(awardsTable).where(eq(awardsTable.userId, u.id));
     return {
       id: u.id,
       name: u.name,
@@ -210,7 +211,8 @@ router.get("/members", async (_req, res) => {
       isAdmin: u.isAdmin,
       memberSince: u.createdAt.toISOString(),
       eventsAttended: records.length,
-      medalsEarned: records.filter(r => r.earnedMedal).length,
+      medalsEarned: records.filter(r => r.earnedMedal).length + awards.filter(a => a.type === "medal").length,
+      ringsEarned: awards.filter(a => a.type === "ring").length,
       avatarUrl: u.avatarUrl ?? null,
     };
   }));
@@ -279,6 +281,49 @@ router.delete("/attendance/:id", async (req, res) => {
     await db.update(eventsTable).set({ attendeeCount: event.attendeeCount - 1 }).where(eq(eventsTable.id, record.eventId));
   }
 
+  res.json({ ok: true });
+});
+
+/* ========== AWARDS ========== */
+
+/* GET /api/admin/members/:id/awards — list all direct awards for a member */
+router.get("/members/:id/awards", async (req, res) => {
+  const awards = await db.select().from(awardsTable)
+    .where(eq(awardsTable.userId, Number(req.params.id)))
+    .orderBy(desc(awardsTable.awardedAt));
+  res.json(awards.map(a => ({
+    id: a.id,
+    userId: a.userId,
+    type: a.type,
+    note: a.note ?? null,
+    awardedAt: a.awardedAt.toISOString(),
+  })));
+});
+
+/* POST /api/admin/awards — award a medal or ring to a member */
+router.post("/awards", async (req, res) => {
+  const { userId, type, note } = req.body;
+  if (!userId || !["medal", "ring"].includes(type)) {
+    res.status(400).json({ error: "userId and type ('medal'|'ring') required" });
+    return;
+  }
+  const [award] = await db.insert(awardsTable)
+    .values({ userId: Number(userId), type, note: note || null })
+    .returning();
+  res.status(201).json({
+    id: award.id,
+    userId: award.userId,
+    type: award.type,
+    note: award.note ?? null,
+    awardedAt: award.awardedAt.toISOString(),
+  });
+});
+
+/* DELETE /api/admin/awards/:id — revoke an award */
+router.delete("/awards/:id", async (req, res) => {
+  const award = await db.query.awardsTable.findFirst({ where: eq(awardsTable.id, Number(req.params.id)) });
+  if (!award) { res.status(404).json({ error: "Not found" }); return; }
+  await db.delete(awardsTable).where(eq(awardsTable.id, Number(req.params.id)));
   res.json({ ok: true });
 });
 

@@ -12,6 +12,7 @@ export type UserProfile = {
   memberSince: string;
   eventsAttended: number;
   medalsEarned: number;
+  ringsEarned: number;
   avatarUrl: string | null;
 };
 

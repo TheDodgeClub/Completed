@@ -231,8 +231,8 @@ export default function MemberScreen() {
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statBlock}>
-          <Text style={[styles.statValue, { color: Colors.secondary }]}>{unlockedAchievements}</Text>
-          <Text style={styles.statLabel}>Achievements{"\n"}Unlocked</Text>
+          <Text style={[styles.statValue, { color: "#A78BFA" }]}>{user.ringsEarned ?? 0}</Text>
+          <Text style={styles.statLabel}>Rings{"\n"}Earned</Text>
         </View>
       </View>
 

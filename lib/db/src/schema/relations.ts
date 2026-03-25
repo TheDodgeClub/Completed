@@ -2,11 +2,17 @@ import { relations } from "drizzle-orm";
 import { usersTable } from "./users";
 import { eventsTable } from "./events";
 import { attendanceTable } from "./attendance";
+import { awardsTable } from "./awards";
 import { postsTable } from "./posts";
 
 export const usersRelations = relations(usersTable, ({ many }) => ({
   attendance: many(attendanceTable),
+  awards: many(awardsTable),
   posts: many(postsTable),
+}));
+
+export const awardsRelations = relations(awardsTable, ({ one }) => ({
+  user: one(usersTable, { fields: [awardsTable.userId], references: [usersTable.id] }),
 }));
 
 export const eventsRelations = relations(eventsTable, ({ many }) => ({

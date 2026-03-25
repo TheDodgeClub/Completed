@@ -1,12 +1,12 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
-import { db, usersTable, attendanceTable } from "@workspace/db";
+import { db, usersTable, attendanceTable, awardsTable } from "@workspace/db";
 import { eq, count } from "drizzle-orm";
 
 const router: IRouter = Router();
 
 /* ---------- helpers ---------- */
-function toProfile(user: typeof usersTable.$inferSelect, eventsAttended: number, medalsEarned: number) {
+function toProfile(user: typeof usersTable.$inferSelect, eventsAttended: number, medalsEarned: number, ringsEarned: number) {
   return {
     id: user.id,
     email: user.email,
@@ -15,6 +15,7 @@ function toProfile(user: typeof usersTable.$inferSelect, eventsAttended: number,
     memberSince: user.createdAt.toISOString(),
     eventsAttended,
     medalsEarned,
+    ringsEarned,
     avatarUrl: user.avatarUrl ?? null,
   };
 }
@@ -31,7 +32,11 @@ async function getUserStats(userId: number) {
     where: (t, { eq, and }) => and(eq(t.userId, userId), eq(t.earnedMedal, true)),
   });
 
-  return { eventsAttended, medalsEarned: medalRows.length };
+  const awards = await db.select().from(awardsTable).where(eq(awardsTable.userId, userId));
+  const directMedals = awards.filter(a => a.type === "medal").length;
+  const ringsEarned = awards.filter(a => a.type === "ring").length;
+
+  return { eventsAttended, medalsEarned: medalRows.length + directMedals, ringsEarned };
 }
 
 /* ---------- GET /api/auth/me ---------- */
@@ -48,8 +53,8 @@ router.get("/me", async (req, res) => {
     return;
   }
 
-  const { eventsAttended, medalsEarned } = await getUserStats(user.id);
-  res.json(toProfile(user, eventsAttended, medalsEarned));
+  const { eventsAttended, medalsEarned, ringsEarned } = await getUserStats(user.id);
+  res.json(toProfile(user, eventsAttended, medalsEarned, ringsEarned));
 });
 
 /* ---------- POST /api/auth/register ---------- */
@@ -74,7 +79,7 @@ router.post("/register", async (req, res) => {
   const [user] = await db.insert(usersTable).values({ email, passwordHash, name }).returning();
 
   req.session = { userId: user.id };
-  res.json({ user: toProfile(user, 0, 0), token: String(user.id) });
+  res.json({ user: toProfile(user, 0, 0, 0), token: String(user.id) });
 });
 
 /* ---------- POST /api/auth/login ---------- */
@@ -97,9 +102,9 @@ router.post("/login", async (req, res) => {
     return;
   }
 
-  const { eventsAttended, medalsEarned } = await getUserStats(user.id);
+  const { eventsAttended, medalsEarned, ringsEarned } = await getUserStats(user.id);
   req.session = { userId: user.id };
-  res.json({ user: toProfile(user, eventsAttended, medalsEarned), token: String(user.id) });
+  res.json({ user: toProfile(user, eventsAttended, medalsEarned, ringsEarned), token: String(user.id) });
 });
 
 /* ---------- POST /api/auth/logout ---------- */
