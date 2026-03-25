@@ -4,8 +4,8 @@ import { useEvents } from "@/hooks/use-events";
 import { usePosts } from "@/hooks/use-posts";
 import { useMerch } from "@/hooks/use-merch";
 import { useMembers } from "@/hooks/use-members";
-import { 
-  LayoutDashboard, CalendarDays, MessageSquare, 
+import {
+  LayoutDashboard, CalendarDays, MessageSquare,
   ShoppingBag, Users, LogOut, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,12 +15,12 @@ function NavItem({ href, icon: Icon, label, count }: { href: string, icon: any, 
   const isActive = location === href;
 
   return (
-    <Link 
+    <Link
       href={href}
       className={`
         flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group
-        ${isActive 
-          ? "bg-primary/10 text-primary font-semibold shadow-[inset_2px_0_0_0_hsl(var(--primary))]" 
+        ${isActive
+          ? "bg-primary/10 text-primary font-semibold shadow-[inset_2px_0_0_0_hsl(var(--primary))]"
           : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
         }
       `}
@@ -36,15 +36,27 @@ function NavItem({ href, icon: Icon, label, count }: { href: string, icon: any, 
   );
 }
 
-export function Layout({ children }: { children: React.ReactNode }) {
-  const { data: user, isLoading } = useAuth();
-  const { mutate: logout, isPending: isLoggingOut } = useLogout();
-  const [location] = useLocation();
-
+function SidebarNav() {
   const { data: events } = useEvents();
   const { data: posts } = usePosts();
   const { data: merch } = useMerch();
   const { data: members } = useMembers();
+
+  return (
+    <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
+      <NavItem href="/" icon={LayoutDashboard} label="Dashboard" />
+      <NavItem href="/events" icon={CalendarDays} label="Events" count={events?.length} />
+      <NavItem href="/posts" icon={MessageSquare} label="Posts" count={posts?.length} />
+      <NavItem href="/merch" icon={ShoppingBag} label="Merch" count={merch?.length} />
+      <NavItem href="/members" icon={Users} label="Members" count={members?.length} />
+    </nav>
+  );
+}
+
+export function Layout({ children }: { children: React.ReactNode }) {
+  const { data: user, isLoading } = useAuth();
+  const { mutate: logout, isPending: isLoggingOut } = useLogout();
+  const [location] = useLocation();
 
   if (isLoading) {
     return (
@@ -54,7 +66,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // If we are on login, don't show the layout
   if (location === "/login") {
     return <>{children}</>;
   }
@@ -65,7 +76,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <aside className="w-64 border-r border-border bg-card flex flex-col hidden md:flex shrink-0 z-20 shadow-2xl relative">
         <div className="p-6">
           <Link href="/" className="flex items-center gap-3 transition-opacity hover:opacity-80">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center shadow-lg shadow-primary/20">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-lg shadow-primary/20">
               <span className="font-display font-bold text-white text-xl leading-none tracking-tighter">DC</span>
             </div>
             <div className="flex flex-col">
@@ -79,13 +90,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           Management
         </div>
 
-        <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
-          <NavItem href="/" icon={LayoutDashboard} label="Dashboard" />
-          <NavItem href="/events" icon={CalendarDays} label="Events" count={events?.length} />
-          <NavItem href="/posts" icon={MessageSquare} label="Posts" count={posts?.length} />
-          <NavItem href="/merch" icon={ShoppingBag} label="Merch" count={merch?.length} />
-          <NavItem href="/members" icon={Users} label="Members" count={members?.length} />
-        </nav>
+        {user && <SidebarNav />}
 
         <div className="p-4 mt-auto border-t border-border bg-white/5">
           <div className="flex items-center gap-3 mb-4 px-2">
@@ -101,8 +106,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <span className="text-xs text-muted-foreground truncate">{user?.email}</span>
             </div>
           </div>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="w-full justify-start text-muted-foreground hover:text-red-400 hover:bg-red-400/10 hover:border-red-400/20 transition-all"
             onClick={() => logout()}
             disabled={isLoggingOut}

@@ -11,6 +11,7 @@ export const UserSchema = z.object({
   memberSince: z.string(),
   eventsAttended: z.number(),
   medalsEarned: z.number(),
+  ringsEarned: z.number(),
   avatarUrl: z.string().nullable(),
 });
 
