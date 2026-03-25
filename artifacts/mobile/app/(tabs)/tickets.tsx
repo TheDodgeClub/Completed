@@ -72,32 +72,6 @@ export default function TicketsScreen() {
   const needsForm = (event: Event) =>
     (event.checkoutFields?.length ?? 0) > 0 || !!event.waiverText;
 
-  const handleBuyTicket = useCallback(async (event: Event) => {
-    if (!user) {
-      Alert.alert("Sign in required", "Please sign in to purchase tickets.");
-      return;
-    }
-
-    // Check if already has ticket
-    const existing = myTickets?.find(t => t.eventId === event.id);
-    if (existing) {
-      setSelectedTicket(existing);
-      setActiveTab("my");
-      return;
-    }
-
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-    // If event has checkout form or waiver, show modal first
-    if (needsForm(event)) {
-      setCheckoutFormEvent(event);
-      return;
-    }
-
-    // No form — proceed directly
-    await doBuyTicket(event, undefined);
-  }, [user, myTickets, registerFree, refetchTickets]);
-
   const doBuyTicket = useCallback(async (event: Event, checkoutData?: Record<string, string>) => {
     // Free event
     if (!event.stripePriceId) {
@@ -136,6 +110,32 @@ export default function TicketsScreen() {
       setBuyingEventId(null);
     }
   }, [registerFree, refetchTickets]);
+
+  const handleBuyTicket = useCallback(async (event: Event) => {
+    if (!user) {
+      Alert.alert("Sign in required", "Please sign in to purchase tickets.");
+      return;
+    }
+
+    // Check if already has ticket
+    const existing = myTickets?.find(t => t.eventId === event.id);
+    if (existing) {
+      setSelectedTicket(existing);
+      setActiveTab("my");
+      return;
+    }
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    // If event has checkout form or waiver, show modal first
+    if (needsForm(event)) {
+      setCheckoutFormEvent(event);
+      return;
+    }
+
+    // No form — proceed directly
+    await doBuyTicket(event, undefined);
+  }, [user, myTickets, doBuyTicket]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -486,7 +486,7 @@ function CheckoutFormModal({
   const SCREEN_HEIGHT = Dimensions.get("window").height;
 
   const cfStyles = StyleSheet.create({
-    backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" },
+    backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.6)", flexDirection: "column", zIndex: 999 },
     kav: { justifyContent: "flex-end" },
     sheet: {
       backgroundColor: Colors.surface,
@@ -583,67 +583,67 @@ function CheckoutFormModal({
   const hitSlop = { top: 12, bottom: 12, left: 12, right: 12 };
 
   return (
-    <Modal visible animationType="slide" transparent onRequestClose={onClose} statusBarTranslucent>
-      <View style={cfStyles.backdrop}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={cfStyles.kav}
-          keyboardVerticalOffset={0}
-        >
-          <View style={cfStyles.sheet}>
-            <View style={cfStyles.sheetInner}>
-              {/* Handle + header — never scroll */}
-              <View style={cfStyles.sheetHandle} />
-              <View style={cfStyles.sheetHeader}>
-                <View style={{ flex: 1 }}>
-                  <Text style={cfStyles.sheetTitle}>Buyer Details</Text>
-                  <Text style={cfStyles.sheetSubtitle}>{event.title}</Text>
+    <View style={cfStyles.backdrop}>
+      {/* Tapping the dark area dismisses the sheet */}
+      <Pressable style={{ flex: 1 }} onPress={onClose} />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ width: "100%" }}
+        keyboardVerticalOffset={0}
+      >
+        <View style={cfStyles.sheet}>
+          <View style={cfStyles.sheetInner}>
+            {/* Handle + header — never scroll */}
+            <View style={cfStyles.sheetHandle} />
+            <View style={cfStyles.sheetHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={cfStyles.sheetTitle}>Buyer Details</Text>
+                <Text style={cfStyles.sheetSubtitle}>{event.title}</Text>
+              </View>
+              <TouchableOpacity onPress={onClose} hitSlop={hitSlop}>
+                <Feather name="x" size={22} color={Colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Scrollable form */}
+            <ScrollView
+              contentContainerStyle={cfStyles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              {fields.map(renderField)}
+
+              {hasWaiver && (
+                <View style={cfStyles.waiverBox}>
+                  <Text style={cfStyles.waiverTitle}>Waiver & Agreement</Text>
+                  <Text style={cfStyles.waiverText}>{event.waiverText}</Text>
+                  <TouchableOpacity
+                    style={cfStyles.waiverCheck}
+                    onPress={() => setWaiverAgreed((v) => !v)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[cfStyles.waiverCheckBox, waiverAgreed && cfStyles.waiverCheckBoxChecked]}>
+                      {waiverAgreed && <Feather name="check" size={14} color="#fff" />}
+                    </View>
+                    <Text style={cfStyles.waiverCheckLabel}>I have read and agree to the waiver above</Text>
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity onPress={onClose} hitSlop={hitSlop}>
-                  <Feather name="x" size={22} color={Colors.textMuted} />
-                </TouchableOpacity>
-              </View>
+              )}
+            </ScrollView>
 
-              {/* Scrollable form */}
-              <ScrollView
-                contentContainerStyle={cfStyles.scrollContent}
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator={false}
-              >
-                {fields.map(renderField)}
-
-                {hasWaiver && (
-                  <View style={cfStyles.waiverBox}>
-                    <Text style={cfStyles.waiverTitle}>Waiver & Agreement</Text>
-                    <Text style={cfStyles.waiverText}>{event.waiverText}</Text>
-                    <TouchableOpacity
-                      style={cfStyles.waiverCheck}
-                      onPress={() => setWaiverAgreed((v) => !v)}
-                      activeOpacity={0.7}
-                    >
-                      <View style={[cfStyles.waiverCheckBox, waiverAgreed && cfStyles.waiverCheckBoxChecked]}>
-                        {waiverAgreed && <Feather name="check" size={14} color="#fff" />}
-                      </View>
-                      <Text style={cfStyles.waiverCheckLabel}>I have read and agree to the waiver above</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </ScrollView>
-
-              {/* Sticky footer buttons */}
-              <View style={cfStyles.footer}>
-                <TouchableOpacity style={cfStyles.proceedBtn} onPress={handleSubmit} activeOpacity={0.85}>
-                  <Text style={cfStyles.proceedBtnText}>Proceed to Checkout</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={cfStyles.cancelBtn} onPress={onClose}>
-                  <Text style={cfStyles.cancelBtnText}>Cancel</Text>
-                </TouchableOpacity>
-              </View>
+            {/* Sticky footer buttons */}
+            <View style={cfStyles.footer}>
+              <TouchableOpacity style={cfStyles.proceedBtn} onPress={handleSubmit} activeOpacity={0.85}>
+                <Text style={cfStyles.proceedBtnText}>Proceed to Checkout</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={cfStyles.cancelBtn} onPress={onClose}>
+                <Text style={cfStyles.cancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
             </View>
           </View>
-        </KeyboardAvoidingView>
-      </View>
-    </Modal>
+        </View>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
