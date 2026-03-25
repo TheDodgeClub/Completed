@@ -188,7 +188,6 @@ function ProgressSection({ attendance }: { attendance: AttendanceRecord[] | unde
   return (
     <View style={progressStyles.wrap}>
       <View style={styles.sectionHeader}>
-        <Feather name="trending-up" size={16} color="#60A5FA" />
         <Text style={styles.sectionTitle}>Progress</Text>
       </View>
 
@@ -704,7 +703,6 @@ export default function MemberScreen() {
         {upcomingEvents && upcomingEvents.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Feather name="calendar" size={16} color={Colors.primary} />
               <Text style={styles.sectionTitle}>Upcoming Events</Text>
             </View>
             {upcomingEvents.map(event => (
@@ -717,7 +715,6 @@ export default function MemberScreen() {
         {achievements && achievements.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Feather name="award" size={16} color={Colors.accent} />
               <Text style={styles.sectionTitle}>Achievements</Text>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.achieveScroll}>
@@ -734,7 +731,6 @@ export default function MemberScreen() {
         {teamHistory && teamHistory.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Feather name="users" size={16} color={Colors.secondary} />
               <Text style={styles.sectionTitle}>Team History</Text>
             </View>
             <View style={styles.teamList}>
@@ -748,7 +744,6 @@ export default function MemberScreen() {
         {/* ── Event History ── */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Feather name="clock" size={16} color={Colors.textMuted} />
             <Text style={styles.sectionTitle}>Event History</Text>
           </View>
           {attendance && attendance.length > 0 ? (
