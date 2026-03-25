@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   RefreshControl,
   Image,
-  useWindowDimensions,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -28,12 +27,9 @@ import { EliteBanner } from "@/components/EliteBanner";
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const { width: screenWidth } = useWindowDimensions();
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const { user, isAuthenticated } = useAuth();
-  const logoWidth = screenWidth * 0.77;
-  const logoHeight = logoWidth * 0.3;
 
   const { data: events, isLoading: eventsLoading, refetch: refetchEvents } = useQuery({
     queryKey: ["upcoming-events"],
@@ -84,7 +80,7 @@ export default function HomeScreen() {
           <View style={styles.notifBtn} />
           <Image
             source={require("@/assets/images/tdc-logo.png")}
-            style={{ width: logoWidth, height: logoHeight }}
+            style={styles.heroLogo}
             resizeMode="contain"
           />
           <Pressable
@@ -248,6 +244,10 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       justifyContent: "space-between",
       alignItems: "center",
       marginBottom: 20,
+    },
+    heroLogo: {
+      width: 160,
+      height: 48,
     },
     notifBtn: {
       width: 40,
