@@ -5,19 +5,49 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit2, Trash2, MapPin, Users, Ticket, Image as ImageIcon } from "lucide-react";
+import { Plus, Edit2, Trash2, MapPin, Users, Ticket, CalendarDays, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { useForm } from "react-hook-form";
+
+type SortKey = "date" | "title" | "attendeeCount";
+type SortDir = "asc" | "desc";
 
 export default function Events() {
   const { data: events, isLoading } = useEvents();
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [sortKey, setSortKey] = useState<SortKey>("date");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir(d => d === "asc" ? "desc" : "asc");
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  };
+
+  const sorted = events ? [...events].sort((a, b) => {
+    if (a.isUpcoming !== b.isUpcoming) return a.isUpcoming ? -1 : 1;
+    let cmp = 0;
+    if (sortKey === "date") cmp = new Date(a.date).getTime() - new Date(b.date).getTime();
+    else if (sortKey === "title") cmp = a.title.localeCompare(b.title);
+    else if (sortKey === "attendeeCount") cmp = a.attendeeCount - b.attendeeCount;
+    return sortDir === "asc" ? cmp : -cmp;
+  }) : [];
+
+  const SortIcon = ({ col }: { col: SortKey }) => {
+    if (sortKey !== col) return <ArrowUpDown className="w-3.5 h-3.5 ml-1 opacity-40" />;
+    return sortDir === "asc"
+      ? <ArrowUp className="w-3.5 h-3.5 ml-1 text-primary" />
+      : <ArrowDown className="w-3.5 h-3.5 ml-1 text-primary" />;
+  };
 
   if (isLoading) return <div className="p-8 text-muted-foreground animate-pulse">Loading events...</div>;
 
@@ -26,78 +56,126 @@ export default function Events() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-display font-bold text-foreground">Events</h1>
-          <p className="text-muted-foreground mt-1">Manage dodgeball sessions, tournaments, and socials.</p>
+          <p className="text-muted-foreground mt-1">Manage dodgeball sessions, tournaments, and socials. Upcoming events shown first.</p>
         </div>
         <Button onClick={() => setIsCreateOpen(true)} className="bg-primary hover:bg-primary/90 text-white rounded-xl shadow-lg shadow-primary/20">
           <Plus className="w-4 h-4 mr-2" /> New Event
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        {events?.map((event) => (
-          <Card key={event.id} className="bg-card border-border/50 hover:border-border transition-colors overflow-hidden flex flex-col sm:flex-row shadow-lg shadow-black/10">
-            {event.imageUrl ? (
-              <div className="w-full sm:w-48 h-48 sm:h-auto shrink-0 relative bg-secondary">
-                <img src={event.imageUrl} alt={event.title} className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent sm:hidden" />
-              </div>
-            ) : (
-              <div className="w-full sm:w-48 h-48 sm:h-auto shrink-0 bg-secondary/50 flex items-center justify-center border-r border-border/50">
-                <ImageIcon className="w-8 h-8 text-muted-foreground/30" />
-              </div>
-            )}
-            
-            <div className="p-5 flex-1 flex flex-col relative">
-              <div className="absolute top-4 right-4 flex gap-1">
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg bg-background/50 backdrop-blur border-border/50 hover:bg-primary/10 hover:text-primary" onClick={() => setEditingEvent(event)}>
-                  <Edit2 className="w-4 h-4" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg bg-background/50 backdrop-blur border-border/50 hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeleteId(event.id)}>
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
-
-              <div className="flex gap-2 items-center mb-2">
-                <Badge variant="outline" className={event.isUpcoming ? "border-primary text-primary bg-primary/5" : "border-muted-foreground text-muted-foreground"}>
-                  {event.isUpcoming ? "Upcoming" : "Past"}
-                </Badge>
-                <span className="text-xs font-semibold text-muted-foreground">{formatDateTime(event.date)}</span>
-              </div>
-              
-              <h3 className="font-display font-bold text-xl text-foreground pr-20">{event.title}</h3>
-              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{event.description}</p>
-              
-              <div className="mt-auto pt-4 flex flex-wrap gap-4 text-sm font-medium text-muted-foreground">
-                <div className="flex items-center gap-1.5">
-                  <MapPin className="w-4 h-4 text-primary" /> {event.location}
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Users className="w-4 h-4 text-accent" /> {event.attendeeCount} Attendees
-                </div>
-                {event.ticketUrl && (
-                  <a href={event.ticketUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-blue-400 hover:text-blue-300">
-                    <Ticket className="w-4 h-4" /> Tickets
-                  </a>
-                )}
-              </div>
-            </div>
-          </Card>
-        ))}
-        {events?.length === 0 && (
-          <div className="col-span-full p-12 text-center border-2 border-dashed border-border/50 rounded-2xl">
-            <CalendarDays className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-foreground">No events found</h3>
-            <p className="text-muted-foreground">Create an event to get started.</p>
-          </div>
-        )}
+      <div className="bg-card border border-border/50 rounded-2xl overflow-hidden shadow-lg shadow-black/10">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader className="bg-secondary/50 border-b border-border/50">
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="text-muted-foreground py-4 px-6">Status</TableHead>
+                <TableHead
+                  className="text-muted-foreground py-4 cursor-pointer select-none hover:text-foreground transition-colors"
+                  onClick={() => handleSort("title")}
+                >
+                  <span className="flex items-center">Title <SortIcon col="title" /></span>
+                </TableHead>
+                <TableHead
+                  className="text-muted-foreground py-4 cursor-pointer select-none hover:text-foreground transition-colors"
+                  onClick={() => handleSort("date")}
+                >
+                  <span className="flex items-center">Date <SortIcon col="date" /></span>
+                </TableHead>
+                <TableHead className="text-muted-foreground py-4">Location</TableHead>
+                <TableHead
+                  className="text-muted-foreground py-4 text-center cursor-pointer select-none hover:text-foreground transition-colors"
+                  onClick={() => handleSort("attendeeCount")}
+                >
+                  <span className="flex items-center justify-center">Attendees <SortIcon col="attendeeCount" /></span>
+                </TableHead>
+                <TableHead className="text-muted-foreground py-4 px-6 text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sorted.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-40 text-center text-muted-foreground">
+                    <CalendarDays className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
+                    <p className="font-medium">No events yet</p>
+                    <p className="text-sm">Create your first event to get started.</p>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                sorted.map((event) => (
+                  <TableRow key={event.id} className="group border-border/50 hover:bg-white/[0.02] transition-colors">
+                    <TableCell className="px-6 py-4">
+                      <Badge variant="outline" className={event.isUpcoming
+                        ? "border-primary text-primary bg-primary/5"
+                        : "border-muted-foreground/30 text-muted-foreground bg-secondary/30"
+                      }>
+                        {event.isUpcoming ? "Upcoming" : "Past"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <div>
+                        <div className="font-semibold text-foreground group-hover:text-primary transition-colors">{event.title}</div>
+                        <div className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{event.description}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-4 text-sm text-foreground whitespace-nowrap">
+                      {formatDateTime(event.date)}
+                    </TableCell>
+                    <TableCell className="py-4">
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
+                        <span className="line-clamp-1">{event.location}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-4 text-center">
+                      <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-secondary text-foreground font-semibold text-sm">
+                        <Users className="w-3.5 h-3.5 text-accent" /> {event.attendeeCount}
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-4 px-6 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        {event.ticketUrl && (
+                          <a
+                            href={event.ticketUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="p-1.5 rounded-lg text-muted-foreground hover:text-blue-400 hover:bg-blue-400/10 transition-colors"
+                            title="View tickets"
+                          >
+                            <Ticket className="w-4 h-4" />
+                          </a>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary"
+                          onClick={() => setEditingEvent(event)}
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 rounded-lg hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => setDeleteId(event.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       {isCreateOpen && <EventFormModal onClose={() => setIsCreateOpen(false)} />}
       {editingEvent && <EventFormModal event={editingEvent} onClose={() => setEditingEvent(null)} />}
-      
-      <DeleteConfirmDialog 
-        id={deleteId} 
-        onClose={() => setDeleteId(null)} 
+
+      <DeleteConfirmDialog
+        id={deleteId}
+        onClose={() => setDeleteId(null)}
         useDeleteHook={useDeleteEvent}
         title="Delete Event"
         description="Are you sure? This will permanently delete the event and all associated attendance records."
@@ -110,7 +188,7 @@ function EventFormModal({ event, onClose }: { event?: Event; onClose: () => void
   const { mutate: create, isPending: creating } = useCreateEvent();
   const { mutate: update, isPending: updating } = useUpdateEvent();
   const { toast } = useToast();
-  
+
   const { register, handleSubmit } = useForm<EventInput>({
     defaultValues: event ? {
       title: event.title,
@@ -125,7 +203,6 @@ function EventFormModal({ event, onClose }: { event?: Event; onClose: () => void
   });
 
   const onSubmit = (data: EventInput) => {
-    // Clean up empty strings to undefined
     const payload = {
       ...data,
       date: new Date(data.date).toISOString(),
@@ -193,10 +270,10 @@ function EventFormModal({ event, onClose }: { event?: Event; onClose: () => void
   );
 }
 
-export function DeleteConfirmDialog({ 
-  id, onClose, useDeleteHook, title, description 
-}: { 
-  id: number | null, onClose: () => void, useDeleteHook: any, title: string, description: string 
+export function DeleteConfirmDialog({
+  id, onClose, useDeleteHook, title, description
+}: {
+  id: number | null, onClose: () => void, useDeleteHook: any, title: string, description: string
 }) {
   const { mutate, isPending } = useDeleteHook();
   const { toast } = useToast();

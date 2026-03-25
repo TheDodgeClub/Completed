@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { DeleteConfirmDialog } from "./events";
-import { Plus, Edit2, Trash2, Globe, LockKeyhole } from "lucide-react";
+import { Plus, Edit2, Trash2, Globe, LockKeyhole, MessageSquare } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { Checkbox } from "@/components/ui/checkbox";
 

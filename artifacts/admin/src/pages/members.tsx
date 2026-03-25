@@ -307,11 +307,11 @@ function MemberDetailSheet({ member, onClose }: { member: AdminMember | null; on
                       className="flex h-10 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 text-foreground"
                     >
                       <option value="" disabled>-- Choose an event --</option>
-                      {events?.filter(e => !e.isUpcoming).map(e => (
-                        <option key={e.id} value={e.id}>{e.title} ({e.date.split("T")[0]})</option>
+                      {events?.map(e => (
+                        <option key={e.id} value={e.id}>{e.title} ({e.date.split("T")[0]}) {e.isUpcoming ? "— Upcoming" : ""}</option>
                       ))}
                     </select>
-                    <p className="text-xs text-muted-foreground">Only past events are listed here.</p>
+                    <p className="text-xs text-muted-foreground">All events are listed. Select any event to record attendance.</p>
                   </div>
 
                   <div className="flex items-center space-x-2 pt-2">
