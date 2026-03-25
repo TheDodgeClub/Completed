@@ -32,7 +32,7 @@ export default function HomeScreen() {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const { user, isAuthenticated } = useAuth();
-  const logoWidth = screenWidth * 0.55;
+  const logoWidth = screenWidth * 0.77;
   const logoHeight = logoWidth * 0.3;
 
   const { data: events, isLoading: eventsLoading, refetch: refetchEvents } = useQuery({
