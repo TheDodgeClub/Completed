@@ -18,10 +18,11 @@ import * as Haptics from "expo-haptics";
 import { useColors } from "@/context/ThemeContext";
 import { resolveImageUrl } from "@/constants/api";
 import { useAuth } from "@/context/AuthContext";
-import { listUpcomingEvents, listPosts, Post } from "@/lib/api";
+import { listUpcomingEvents, listPosts, getAppSettings, Post } from "@/lib/api";
 import { EventCard } from "@/components/EventCard";
 import { PostCard } from "@/components/PostCard";
 import { PostDetailModal } from "@/components/PostDetailModal";
+import { VideoHero } from "@/components/VideoHero";
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -38,6 +39,14 @@ export default function HomeScreen() {
     queryKey: ["posts"],
     queryFn: listPosts,
   });
+
+  const { data: appSettings } = useQuery({
+    queryKey: ["app-settings"],
+    queryFn: getAppSettings,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const homeVideoUrl = appSettings?.homeVideoUrl ?? null;
 
   const [selectedPost, setSelectedPost] = React.useState<Post | null>(null);
   const [refreshing, setRefreshing] = React.useState(false);
@@ -118,6 +127,9 @@ export default function HomeScreen() {
           </Pressable>
         </View>
       </LinearGradient>
+
+      {/* Hero Video — shown when admin has configured a video URL */}
+      {homeVideoUrl ? <VideoHero uri={homeVideoUrl} /> : null}
 
       <View style={styles.body}>
         {/* Next Upcoming Event Banner */}

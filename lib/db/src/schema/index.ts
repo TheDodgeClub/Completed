@@ -11,4 +11,5 @@ export * from "./messages";
 export * from "./post_comments";
 export * from "./user_sessions";
 export * from "./tickets";
+export * from "./settings";
 export * from "./relations";

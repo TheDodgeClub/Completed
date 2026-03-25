@@ -240,6 +240,17 @@ export async function listPosts(): Promise<Post[]> {
   return apiFetch<Post[]>("/posts");
 }
 
+/* ---- app settings ---- */
+export type AppSettings = {
+  homeVideoUrl: string | null;
+  clubName: string | null;
+  clubTagline: string | null;
+};
+
+export async function getAppSettings(): Promise<AppSettings> {
+  return apiFetch<AppSettings>("/settings");
+}
+
 /* ---- videos ---- */
 export type VideoClip = {
   id: number;

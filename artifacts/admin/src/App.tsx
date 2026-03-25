@@ -12,6 +12,7 @@ import Posts from "@/pages/posts";
 import Merch from "@/pages/merch";
 import Members from "@/pages/members";
 import Videos from "@/pages/videos";
+import SettingsPage from "@/pages/settings";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const ProtectedPosts = makePR(Posts);
 const ProtectedMerch = makePR(Merch);
 const ProtectedMembers = makePR(Members);
 const ProtectedVideos = makePR(Videos);
+const ProtectedSettings = makePR(SettingsPage);
 
 function Router() {
   return (
@@ -42,6 +44,7 @@ function Router() {
         <Route path="/merch" component={ProtectedMerch} />
         <Route path="/members" component={ProtectedMembers} />
         <Route path="/videos" component={ProtectedVideos} />
+        <Route path="/settings" component={ProtectedSettings} />
         <Route component={NotFound} />
       </Switch>
     </Layout>
