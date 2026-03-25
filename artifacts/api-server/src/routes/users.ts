@@ -229,4 +229,48 @@ router.delete("/me/register/:eventId", async (req, res) => {
   res.json({ ok: true });
 });
 
+/* GET /api/users/me/notification-status */
+router.get("/me/notification-status", async (req, res) => {
+  const userId = req.session?.userId;
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const user = await db.query.usersTable.findFirst({ where: eq(usersTable.id, userId) });
+  if (!user) { res.status(404).json({ error: "Not found" }); return; }
+
+  res.json({ notificationsEnabled: user.notificationsEnabled ?? false });
+});
+
+/* POST /api/users/me/push-token — save/update Expo push token */
+router.post("/me/push-token", async (req, res) => {
+  const userId = req.session?.userId;
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const { pushToken } = req.body;
+  if (!pushToken || typeof pushToken !== "string") {
+    res.status(400).json({ error: "pushToken is required" });
+    return;
+  }
+
+  await db.update(usersTable).set({ pushToken }).where(eq(usersTable.id, userId));
+  res.json({ ok: true });
+});
+
+/* PUT /api/users/me/notifications — toggle notifications on/off */
+router.put("/me/notifications", async (req, res) => {
+  const userId = req.session?.userId;
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const { enabled } = req.body;
+  if (typeof enabled !== "boolean") {
+    res.status(400).json({ error: "enabled (boolean) is required" });
+    return;
+  }
+
+  await db.update(usersTable)
+    .set({ notificationsEnabled: enabled })
+    .where(eq(usersTable.id, userId));
+
+  res.json({ notificationsEnabled: enabled });
+});
+
 export default router;

@@ -486,4 +486,52 @@ router.delete("/videos/:id", async (req, res) => {
   res.json({ ok: true });
 });
 
+/* ========== PUSH NOTIFICATIONS ========== */
+
+/* POST /api/admin/notify — send push notification to all subscribed members */
+router.post("/notify", async (req, res) => {
+  const { title, body: notifBody, data } = req.body;
+  if (!title || !notifBody) {
+    res.status(400).json({ error: "title and body are required" });
+    return;
+  }
+
+  const subscribers = await db.query.usersTable.findMany({
+    where: (u, { and, eq, isNotNull }) =>
+      and(eq(u.notificationsEnabled, true), isNotNull(u.pushToken)) as ReturnType<typeof and>,
+  });
+
+  const tokens = subscribers
+    .map(u => u.pushToken)
+    .filter((t): t is string => !!t && t.startsWith("ExponentPushToken["));
+
+  if (tokens.length === 0) {
+    res.json({ sent: 0, message: "No subscribers with valid push tokens" });
+    return;
+  }
+
+  const messages = tokens.map(to => ({
+    to,
+    title,
+    body: notifBody,
+    data: data ?? {},
+    sound: "default" as const,
+    priority: "high" as const,
+  }));
+
+  const batchSize = 100;
+  let sent = 0;
+  for (let i = 0; i < messages.length; i += batchSize) {
+    const batch = messages.slice(i, i + batchSize);
+    await fetch("https://exp.host/--/api/v2/push/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify(batch),
+    }).catch(() => null);
+    sent += batch.length;
+  }
+
+  res.json({ sent });
+});
+
 export default router;

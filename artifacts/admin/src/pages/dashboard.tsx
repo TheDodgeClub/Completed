@@ -5,8 +5,12 @@ import { useMembers } from "@/hooks/use-members";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, MessageSquare, Users, Trophy, Zap, CircleDot } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { CalendarDays, MessageSquare, Users, Trophy, Zap, CircleDot, Bell, Send, CheckCircle } from "lucide-react";
 import { Link } from "wouter";
+import { useState } from "react";
+import { fetchApi } from "@/lib/api";
 
 const LEVEL_NAMES = ["Rookie", "Player", "Contender", "Competitor", "Veteran", "Elite", "Pro", "Champion", "Legend", "Icon"];
 
@@ -43,6 +47,30 @@ export default function Dashboard() {
   const { data: posts, isLoading: postsLoading } = usePosts();
   const { data: merch, isLoading: merchLoading } = useMerch();
   const { data: members, isLoading: membersLoading } = useMembers();
+
+  const [notifTitle, setNotifTitle] = useState("");
+  const [notifBody, setNotifBody] = useState("");
+  const [notifSending, setNotifSending] = useState(false);
+  const [notifResult, setNotifResult] = useState<{ sent: number; failed: number } | null>(null);
+
+  const handleSendNotification = async () => {
+    if (!notifTitle.trim() || !notifBody.trim()) return;
+    setNotifSending(true);
+    setNotifResult(null);
+    try {
+      const data = await fetchApi<{ sent: number; failed: number }>("/api/admin/notify", {
+        method: "POST",
+        body: JSON.stringify({ title: notifTitle, body: notifBody }),
+      });
+      setNotifResult({ sent: data.sent ?? 0, failed: data.failed ?? 0 });
+      setNotifTitle("");
+      setNotifBody("");
+    } catch {
+      setNotifResult({ sent: 0, failed: 1 });
+    } finally {
+      setNotifSending(false);
+    }
+  };
 
   const upcomingEvents = events?.filter(e => e.isUpcoming)?.length || 0;
   const totalMedals = members?.reduce((sum, m) => sum + m.medalsEarned, 0) || 0;
@@ -229,6 +257,52 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Push Notification Broadcaster */}
+      <Card className="bg-card border-border/50 shadow-lg shadow-black/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bell className="w-5 h-5 text-accent" />
+            Push Notification Broadcast
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">Send an instant alert to all members who have enabled push notifications.</p>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {notifResult && (
+            <div className={`flex items-center gap-2 text-sm rounded-lg px-4 py-3 ${notifResult.failed > 0 && notifResult.sent === 0 ? "bg-destructive/10 text-destructive border border-destructive/20" : "bg-primary/10 text-primary border border-primary/20"}`}>
+              <CheckCircle className="w-4 h-4 shrink-0" />
+              <span>
+                {notifResult.sent > 0
+                  ? `Sent to ${notifResult.sent} member${notifResult.sent !== 1 ? "s" : ""}${notifResult.failed > 0 ? ` · ${notifResult.failed} failed` : ""}`
+                  : "No opted-in members found or delivery failed."}
+              </span>
+            </div>
+          )}
+          <Input
+            placeholder="Notification title (e.g. New event announced!)"
+            value={notifTitle}
+            onChange={(e) => { setNotifTitle(e.target.value); setNotifResult(null); }}
+            className="bg-secondary/30 border-border/50 focus:border-primary/50"
+          />
+          <Textarea
+            placeholder="Message body (e.g. Join us this Saturday at Dodgeclub Park…)"
+            value={notifBody}
+            onChange={(e) => { setNotifBody(e.target.value); setNotifResult(null); }}
+            rows={3}
+            className="bg-secondary/30 border-border/50 focus:border-primary/50 resize-none"
+          />
+          <div className="flex justify-end">
+            <Button
+              onClick={handleSendNotification}
+              disabled={notifSending || !notifTitle.trim() || !notifBody.trim()}
+              className="bg-primary hover:bg-primary/80 text-white gap-2"
+            >
+              <Send className="w-4 h-4" />
+              {notifSending ? "Sending…" : "Send to All Members"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Quick Actions */}
       <Card className="bg-card border-border/50 shadow-lg shadow-black/20">

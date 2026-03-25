@@ -16,6 +16,8 @@ export const usersTable = pgTable("users", {
   preferredRole: text("preferred_role"),
   bio: text("bio"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  pushToken: text("push_token"),
+  notificationsEnabled: boolean("notifications_enabled").notNull().default(false),
 });
 
 export const insertUserSchema = createInsertSchema(usersTable).omit({

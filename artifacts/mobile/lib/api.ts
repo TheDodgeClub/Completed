@@ -376,3 +376,35 @@ export async function adminMarkAttendance(data: {
 export async function adminDeleteAttendance(id: number): Promise<void> {
   return apiFetch<void>(`/admin/attendance/${id}`, { method: "DELETE" });
 }
+
+/* ---- push notifications ---- */
+
+export async function savePushToken(token: string): Promise<void> {
+  return apiFetch<void>("/users/me/push-token", {
+    method: "POST",
+    body: JSON.stringify({ pushToken: token }),
+  });
+}
+
+export async function setNotificationsEnabled(enabled: boolean): Promise<void> {
+  return apiFetch<void>("/users/me/notifications", {
+    method: "PUT",
+    body: JSON.stringify({ enabled }),
+  });
+}
+
+export async function getNotificationStatus(): Promise<{ notificationsEnabled: boolean }> {
+  return apiFetch<{ notificationsEnabled: boolean }>("/users/me/notification-status");
+}
+
+/* ---- admin: send push notification ---- */
+export async function adminSendNotification(data: {
+  title: string;
+  body: string;
+  data?: Record<string, string>;
+}): Promise<{ sent: number }> {
+  return apiFetch<{ sent: number }>("/admin/notify", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}

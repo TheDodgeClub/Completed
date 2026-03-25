@@ -13,6 +13,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Switch,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -38,6 +39,7 @@ import {
   UpcomingEvent,
 } from "@/lib/api";
 import { getToken } from "@/lib/api";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 const PLAYER_ROLES = ["Thrower", "Catcher", "Dodger", "All-Rounder"] as const;
 const LEVEL_THRESHOLDS = [0, 300, 700, 1200, 1800, 2500, 3300, 4200, 5200, 6300];
@@ -435,6 +437,7 @@ export default function MemberScreen() {
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const { isDark, toggleTheme } = useTheme();
   const { user, isAuthenticated, isLoading, logout, refreshUser } = useAuth();
+  const { notificationsEnabled, toggleNotifications, loading: notifLoading } = usePushNotifications(isAuthenticated);
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = React.useState(false);
   const [editVisible, setEditVisible] = React.useState(false);
@@ -753,6 +756,70 @@ export default function MemberScreen() {
             </View>
           )}
         </View>
+
+        {/* ── Preferences ── */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Preferences</Text>
+          </View>
+          <View style={styles.prefCard}>
+            <View style={styles.prefRow}>
+              <View style={styles.prefIconWrap}>
+                <Feather name="bell" size={18} color={notificationsEnabled ? Colors.primary : Colors.textMuted} />
+              </View>
+              <View style={styles.prefInfo}>
+                <Text style={styles.prefLabel}>Push Notifications</Text>
+                <Text style={styles.prefHint}>
+                  {notificationsEnabled
+                    ? "You'll receive event alerts & club updates"
+                    : "Enable to get event reminders & club news"}
+                </Text>
+              </View>
+              {notifLoading ? (
+                <ActivityIndicator size="small" color={Colors.primary} />
+              ) : (
+                <Switch
+                  value={notificationsEnabled}
+                  onValueChange={async (val) => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    const ok = await toggleNotifications(val);
+                    if (val && !ok) {
+                      Alert.alert(
+                        "Permission Denied",
+                        "Please allow notifications in your device settings to receive Dodge Club alerts.",
+                      );
+                    }
+                  }}
+                  trackColor={{ false: Colors.border, true: Colors.primary + "88" }}
+                  thumbColor={notificationsEnabled ? Colors.primary : Colors.textMuted}
+                  ios_backgroundColor={Colors.border}
+                />
+              )}
+            </View>
+
+            <View style={styles.prefDivider} />
+
+            <View style={styles.prefRow}>
+              <View style={styles.prefIconWrap}>
+                <Feather name={isDark ? "sun" : "moon"} size={18} color={Colors.accent} />
+              </View>
+              <View style={styles.prefInfo}>
+                <Text style={styles.prefLabel}>{isDark ? "Dark Mode" : "Light Mode"}</Text>
+                <Text style={styles.prefHint}>Toggle the app appearance</Text>
+              </View>
+              <Switch
+                value={isDark}
+                onValueChange={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  toggleTheme();
+                }}
+                trackColor={{ false: Colors.border, true: Colors.accent + "66" }}
+                thumbColor={isDark ? Colors.accent : Colors.textMuted}
+                ios_backgroundColor={Colors.border}
+              />
+            </View>
+          </View>
+        </View>
       </View>
 
       <EditProfileModal
@@ -939,6 +1006,24 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       alignItems: "center", justifyContent: "center",
       borderWidth: 1, borderColor: `${Colors.accent}40`,
     },
+
+    /* Preferences */
+    prefCard: {
+      backgroundColor: Colors.surface, borderRadius: 18,
+      borderWidth: 1, borderColor: Colors.border, overflow: "hidden",
+    },
+    prefRow: {
+      flexDirection: "row", alignItems: "center", gap: 14, padding: 16,
+    },
+    prefIconWrap: {
+      width: 38, height: 38, borderRadius: 12,
+      backgroundColor: Colors.surface2,
+      alignItems: "center", justifyContent: "center", flexShrink: 0,
+    },
+    prefInfo: { flex: 1 },
+    prefLabel: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: Colors.text },
+    prefHint: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textMuted, marginTop: 2 },
+    prefDivider: { height: 1, backgroundColor: Colors.border, marginLeft: 68 },
 
     /* Empty */
     empty: { alignItems: "center", paddingVertical: 32, gap: 10 },

@@ -102,10 +102,18 @@ All routes under `/api`:
 - `GET /api/merch` — all merch
 - `GET /api/stats` — community stats
 
+## Push Notifications
+
+- `expo-notifications@0.32.x` installed in `artifacts/mobile`
+- DB columns: `push_token TEXT`, `notifications_enabled BOOLEAN DEFAULT false` on `users`
+- Hook: `artifacts/mobile/hooks/usePushNotifications.ts` — registers Expo push token, syncs status with API
+- Mobile Preferences section (member.tsx): toggle for notifications + dark/light mode in a unified card
+- API: `GET /users/me/notification-status`, `POST /users/me/push-token`, `PUT /users/me/notifications`
+- Admin broadcast: `POST /api/admin/notify` — sends to all opted-in members via Expo Push API (batches of 100)
+- Admin dashboard: "Push Notification Broadcast" card with title + body form and send result feedback
+
 ## Expanding Later
 
 - **Ticketing**: Replace external URLs with internal Stripe checkout
 - **Merch**: Connect Shopify storefront API or Stripe
-- **Admin Panel**: Add an admin screen in the app or a web admin dashboard
 - **Event Attendance**: Admin endpoint to mark users as attended
-- **Push Notifications**: Add Expo Push for member alerts
