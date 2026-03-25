@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -56,13 +57,11 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.logoRow}>
-          <View style={styles.logoIcon}>
-            <Text style={styles.logoEmoji}>🏐</Text>
-          </View>
-          <View>
-            <Text style={styles.logoText}>THE DODGE</Text>
-            <Text style={styles.logoTextBold}>CLUB</Text>
-          </View>
+          <Image
+            source={require("@/assets/images/tdc-logo.png")}
+            style={styles.logoImg}
+            resizeMode="contain"
+          />
         </View>
 
         <Text style={styles.title}>Welcome back</Text>
@@ -156,26 +155,9 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       marginBottom: 40,
       marginTop: 8,
     },
-    logoIcon: {
-      width: 52,
-      height: 52,
-      borderRadius: 16,
-      backgroundColor: Colors.primary,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    logoEmoji: { fontSize: 26 },
-    logoText: {
-      fontFamily: "Poppins_700Bold",
-      fontSize: 14,
-      color: Colors.textSecondary,
-      letterSpacing: 2,
-    },
-    logoTextBold: {
-      fontFamily: "Poppins_800ExtraBold",
-      fontSize: 22,
-      color: Colors.text,
-      lineHeight: 24,
+    logoImg: {
+      width: 180,
+      height: 54,
     },
     title: {
       fontFamily: "Poppins_800ExtraBold",
