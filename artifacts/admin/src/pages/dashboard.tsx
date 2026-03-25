@@ -4,6 +4,7 @@ import { useMerch } from "@/hooks/use-merch";
 import { useMembers } from "@/hooks/use-members";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { CalendarDays, MessageSquare, ShoppingBag, Users, Trophy } from "lucide-react";
 import { Link } from "wouter";
 
