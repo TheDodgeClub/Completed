@@ -9,7 +9,7 @@ const router: IRouter = Router();
 const LEVEL_THRESHOLDS = [0, 300, 700, 1200, 1800, 2500, 3300, 4200, 5200, 6300];
 
 function computeXP(eventsAttended: number, medalsEarned: number, ringsEarned: number): number {
-  return eventsAttended * 100 + medalsEarned * 150 + ringsEarned * 50;
+  return eventsAttended * 50 + medalsEarned * 100 + ringsEarned * 200;
 }
 
 function computeLevel(xp: number): number {
