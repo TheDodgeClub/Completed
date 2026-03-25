@@ -7,7 +7,6 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
@@ -28,20 +27,22 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
   const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
   const handleRegister = async () => {
+    setErrorMsg("");
     if (!name.trim() || !email.trim() || !password.trim()) {
-      Alert.alert("Missing Info", "Please fill in all fields.");
+      setErrorMsg("Please fill in all fields.");
       return;
     }
     if (!isValidEmail(email.trim())) {
-      Alert.alert("Invalid Email", "Please enter a valid email address (e.g. you@example.com).");
+      setErrorMsg("Please enter a valid email address.");
       return;
     }
     if (password.length < 6) {
-      Alert.alert("Password Too Short", "Password must be at least 6 characters.");
+      setErrorMsg("Password must be at least 6 characters.");
       return;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -50,7 +51,7 @@ export default function RegisterScreen() {
       await register(email.trim().toLowerCase(), password, name.trim());
       router.dismissAll();
     } catch (err: any) {
-      Alert.alert("Registration Failed", err.message || "Something went wrong.");
+      setErrorMsg(err.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -127,6 +128,13 @@ export default function RegisterScreen() {
             </Pressable>
           </View>
         </View>
+
+        {!!errorMsg && (
+          <View style={styles.errorBox}>
+            <Feather name="alert-circle" size={15} color="#FF6B6B" style={{ marginRight: 7 }} />
+            <Text style={styles.errorText}>{errorMsg}</Text>
+          </View>
+        )}
 
         <Pressable
           style={({ pressed }) => [styles.primaryBtn, { opacity: pressed ? 0.85 : 1 }]}
@@ -225,6 +233,23 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       paddingVertical: 16,
     },
     eyeBtn: { padding: 8 },
+    errorBox: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: "rgba(255,107,107,0.12)",
+      borderWidth: 1,
+      borderColor: "rgba(255,107,107,0.35)",
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      marginBottom: 14,
+    },
+    errorText: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 13,
+      color: "#FF6B6B",
+      flex: 1,
+    },
     primaryBtn: {
       backgroundColor: Colors.primary,
       borderRadius: 14,

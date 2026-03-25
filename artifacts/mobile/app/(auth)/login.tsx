@@ -7,7 +7,6 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
@@ -27,10 +26,12 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
   const handleLogin = async () => {
+    setErrorMsg("");
     if (!email.trim() || !password.trim()) {
-      Alert.alert("Missing Info", "Please enter your email and password.");
+      setErrorMsg("Please enter your email and password.");
       return;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -39,7 +40,7 @@ export default function LoginScreen() {
       await login(email.trim().toLowerCase(), password);
       router.dismissAll();
     } catch (err: any) {
-      Alert.alert("Login Failed", err.message || "Invalid credentials.");
+      setErrorMsg(err.message || "Invalid email or password.");
     } finally {
       setLoading(false);
     }
@@ -102,6 +103,13 @@ export default function LoginScreen() {
             </Pressable>
           </View>
         </View>
+
+        {!!errorMsg && (
+          <View style={styles.errorBox}>
+            <Feather name="alert-circle" size={15} color="#FF6B6B" style={{ marginRight: 7 }} />
+            <Text style={styles.errorText}>{errorMsg}</Text>
+          </View>
+        )}
 
         <Pressable
           style={({ pressed }) => [styles.primaryBtn, { opacity: pressed ? 0.85 : 1 }]}
@@ -201,6 +209,23 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       paddingVertical: 16,
     },
     eyeBtn: { padding: 8 },
+    errorBox: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: "rgba(255,107,107,0.12)",
+      borderWidth: 1,
+      borderColor: "rgba(255,107,107,0.35)",
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      marginBottom: 14,
+    },
+    errorText: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 13,
+      color: "#FF6B6B",
+      flex: 1,
+    },
     primaryBtn: {
       backgroundColor: Colors.primary,
       borderRadius: 14,
