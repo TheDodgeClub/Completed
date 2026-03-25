@@ -25,10 +25,6 @@ function NativeTabLayout({ isAdmin }: { isAdmin: boolean }) {
         <Icon sf={{ default: "bag", selected: "bag.fill" }} />
         <Label>Merch</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="updates">
-        <Icon sf={{ default: "megaphone", selected: "megaphone.fill" }} />
-        <Label>Updates</Label>
-      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="community">
         <Icon sf={{ default: "person.2", selected: "person.2.fill" }} />
         <Label>Club</Label>
@@ -101,14 +97,7 @@ function ClassicTabLayout({ isAdmin }: { isAdmin: boolean }) {
             isIOS ? <SymbolView name="bag" tintColor={color} size={22} /> : <Feather name="shopping-bag" size={21} color={color} />,
         }}
       />
-      <Tabs.Screen
-        name="updates"
-        options={{
-          title: "Updates",
-          tabBarIcon: ({ color }) =>
-            isIOS ? <SymbolView name="megaphone" tintColor={color} size={22} /> : <Feather name="bell" size={21} color={color} />,
-        }}
-      />
+      <Tabs.Screen name="updates" options={{ href: null }} />
       <Tabs.Screen
         name="community"
         options={{

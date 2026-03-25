@@ -576,13 +576,6 @@ export default function MemberScreen() {
             <Text style={styles.quickBtnText}>Merch</Text>
           </Pressable>
           <Pressable
-            style={({ pressed }) => [styles.quickBtn, { opacity: pressed ? 0.8 : 1 }]}
-            onPress={() => router.push("/(tabs)/updates")}
-          >
-            <Feather name="bell" size={20} color={Colors.accent} />
-            <Text style={styles.quickBtnText}>Updates</Text>
-          </Pressable>
-          <Pressable
             style={({ pressed }) => [styles.quickBtn, user.isElite ? styles.quickBtnElite : {}, { opacity: pressed ? 0.8 : 1 }]}
             onPress={() => router.push("/elite")}
           >
