@@ -16,6 +16,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
+import { resolveImageUrl } from "@/constants/api";
 import { useAuth } from "@/context/AuthContext";
 import { listUpcomingEvents, listPosts } from "@/lib/api";
 import { EventCard } from "@/components/EventCard";
@@ -123,7 +124,7 @@ export default function HomeScreen() {
               router.push("/(tabs)/tickets");
             }}
           >
-            <Image source={{ uri: events[0].imageUrl }} style={styles.eventBannerImage} resizeMode="cover" />
+            <Image source={{ uri: resolveImageUrl(events[0].imageUrl) ?? events[0].imageUrl }} style={styles.eventBannerImage} resizeMode="cover" />
             <LinearGradient
               colors={["transparent", "rgba(0,0,0,0.72)"]}
               style={styles.eventBannerOverlay}

@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import Colors from "@/constants/colors";
+import { resolveImageUrl } from "@/constants/api";
 import { useAuth } from "@/context/AuthContext";
 import { listPosts, listVideos, VideoClip } from "@/lib/api";
 import { PostCard } from "@/components/PostCard";
@@ -32,7 +33,7 @@ function VideoCard({ video }: { video: VideoClip }) {
       <View style={styles.videoThumb}>
         {video.thumbnailUrl ? (
           <Image
-            source={{ uri: video.thumbnailUrl }}
+            source={{ uri: resolveImageUrl(video.thumbnailUrl) ?? undefined }}
             style={StyleSheet.absoluteFill}
             resizeMode="cover"
           />
