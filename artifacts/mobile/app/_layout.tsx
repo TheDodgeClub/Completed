@@ -12,6 +12,7 @@ import { useFonts } from "expo-font";
 import { Stack, useRouter, useSegments, useRootNavigationState } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, ReactNode } from "react";
+import { Image, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -60,7 +61,17 @@ export default function RootLayout() {
     }
   }, [fontsLoaded, fontError]);
 
-  if (!fontsLoaded && !fontError) return null;
+  if (!fontsLoaded && !fontError) {
+    return (
+      <View style={{ flex: 1, backgroundColor: "#0B5E2F", alignItems: "center", justifyContent: "center" }}>
+        <Image
+          source={require("@/assets/images/tdc-logo.png")}
+          style={{ width: 160, height: 160 }}
+          resizeMode="contain"
+        />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaProvider>
