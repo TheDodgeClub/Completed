@@ -123,6 +123,13 @@ export default function LoginScreen() {
           )}
         </Pressable>
 
+        <Pressable
+          style={styles.forgotRow}
+          onPress={() => router.push("/(auth)/forgot-password")}
+        >
+          <Text style={styles.forgotLink}>Forgot your password?</Text>
+        </Pressable>
+
         <View style={styles.footer}>
           <Text style={styles.footerText}>Don't have an account? </Text>
           <Pressable onPress={() => router.replace("/(auth)/register")}>
@@ -244,10 +251,20 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       color: "#fff",
       letterSpacing: 0.3,
     },
+    forgotRow: {
+      alignItems: "center",
+      marginTop: 16,
+    },
+    forgotLink: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 14,
+      color: Colors.textSecondary,
+      textDecorationLine: "underline",
+    },
     footer: {
       flexDirection: "row",
       justifyContent: "center",
-      marginTop: 28,
+      marginTop: 20,
     },
     footerText: {
       fontFamily: "Inter_400Regular",

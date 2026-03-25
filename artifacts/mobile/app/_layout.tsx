@@ -9,21 +9,39 @@ import {
   Poppins_800ExtraBold,
 } from "@expo-google-fonts/poppins";
 import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
+import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect } from "react";
+import React, { useEffect, ReactNode } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { AuthProvider } from "@/context/AuthContext";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { SessionTracker } from "@/components/SessionTracker";
 
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
+
+function AuthGate({ children }: { children: ReactNode }) {
+  const { isLoading, isAuthenticated } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoading) return;
+    const inAuthGroup = segments[0] === "(auth)";
+    if (!isAuthenticated && !inAuthGroup) {
+      router.replace("/(auth)/register");
+    } else if (isAuthenticated && inAuthGroup) {
+      router.replace("/(tabs)");
+    }
+  }, [isAuthenticated, isLoading, segments]);
+
+  return <>{children}</>;
+}
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -51,18 +69,20 @@ export default function RootLayout() {
             <GestureHandlerRootView style={{ flex: 1 }}>
               <AuthProvider>
                 <SessionTracker />
-                <Stack>
-                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                  <Stack.Screen
-                    name="(auth)"
-                    options={{ presentation: "modal", headerShown: false }}
-                  />
-                  <Stack.Screen name="admin/events" options={{ headerShown: false }} />
-                  <Stack.Screen name="admin/posts" options={{ headerShown: false }} />
-                  <Stack.Screen name="admin/merch" options={{ headerShown: false }} />
-                  <Stack.Screen name="admin/members" options={{ headerShown: false }} />
-                  <Stack.Screen name="games/dodge" options={{ headerShown: false }} />
-                </Stack>
+                <AuthGate>
+                  <Stack>
+                    <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                    <Stack.Screen
+                      name="(auth)"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen name="admin/events" options={{ headerShown: false }} />
+                    <Stack.Screen name="admin/posts" options={{ headerShown: false }} />
+                    <Stack.Screen name="admin/merch" options={{ headerShown: false }} />
+                    <Stack.Screen name="admin/members" options={{ headerShown: false }} />
+                    <Stack.Screen name="games/dodge" options={{ headerShown: false }} />
+                  </Stack>
+                </AuthGate>
               </AuthProvider>
             </GestureHandlerRootView>
           </QueryClientProvider>
