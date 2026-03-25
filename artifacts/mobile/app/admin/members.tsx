@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Colors from "@/constants/colors";
+import { useAuth } from "@/context/AuthContext";
 import {
   adminListMembers,
   adminGetMemberAttendance,
@@ -287,16 +288,36 @@ function MemberDetailModal({
 
 export default function AdminMembersScreen() {
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const [selectedMember, setSelectedMember] = useState<AdminMember | null>(null);
   const [detailVisible, setDetailVisible] = useState(false);
 
-  const { data: members, isLoading } = useQuery({ queryKey: ["admin", "members"], queryFn: adminListMembers });
-  const { data: events = [] } = useQuery({ queryKey: ["admin", "events"], queryFn: adminListEvents });
+  const isAdmin = user?.isAdmin === true;
+
+  const { data: members, isLoading } = useQuery({
+    queryKey: ["admin", "members"],
+    queryFn: adminListMembers,
+    enabled: isAdmin,
+  });
+  const { data: events = [] } = useQuery({
+    queryKey: ["admin", "events"],
+    queryFn: adminListEvents,
+    enabled: isAdmin,
+  });
 
   const openDetail = (member: AdminMember) => {
     setSelectedMember(member);
     setDetailVisible(true);
   };
+
+  if (!isAdmin) {
+    return (
+      <View style={[styles.screen, styles.center]}>
+        <Feather name="lock" size={48} color={Colors.error} />
+        <Text style={{ color: Colors.text, fontSize: 18, fontWeight: "700", marginTop: 16 }}>Access Denied</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>

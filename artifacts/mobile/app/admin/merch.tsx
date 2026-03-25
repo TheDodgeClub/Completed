@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Colors from "@/constants/colors";
+import { useAuth } from "@/context/AuthContext";
 import {
   adminListMerch,
   adminCreateMerch,
@@ -164,10 +165,17 @@ function FormModal({
 export default function AdminMerchScreen() {
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
+  const { user } = useAuth();
   const [modalVisible, setModalVisible] = useState(false);
   const [editingProduct, setEditingProduct] = useState<MerchProduct | null>(null);
 
-  const { data: products, isLoading } = useQuery({ queryKey: ["admin", "merch"], queryFn: adminListMerch });
+  const isAdmin = user?.isAdmin === true;
+
+  const { data: products, isLoading } = useQuery({
+    queryKey: ["admin", "merch"],
+    queryFn: adminListMerch,
+    enabled: isAdmin,
+  });
 
   const createMutation = useMutation({
     mutationFn: adminCreateMerch,
@@ -188,6 +196,15 @@ export default function AdminMerchScreen() {
   });
 
   const saving = createMutation.isPending || updateMutation.isPending;
+
+  if (!isAdmin) {
+    return (
+      <View style={[styles.screen, styles.center]}>
+        <Feather name="lock" size={48} color={Colors.error} />
+        <Text style={{ color: Colors.text, fontSize: 18, fontWeight: "700", marginTop: 16 }}>Access Denied</Text>
+      </View>
+    );
+  }
 
   const handleSave = (form: FormState) => {
     if (!form.name.trim() || !form.description.trim() || !form.price.trim()) {

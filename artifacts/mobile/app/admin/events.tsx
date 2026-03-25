@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Colors from "@/constants/colors";
+import { useAuth } from "@/context/AuthContext";
 import {
   adminListEvents,
   adminCreateEvent,
@@ -155,10 +156,17 @@ function FormModal({
 export default function AdminEventsScreen() {
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
+  const { user } = useAuth();
   const [modalVisible, setModalVisible] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
 
-  const { data: events, isLoading } = useQuery({ queryKey: ["admin", "events"], queryFn: adminListEvents });
+  const isAdmin = user?.isAdmin === true;
+
+  const { data: events, isLoading } = useQuery({
+    queryKey: ["admin", "events"],
+    queryFn: adminListEvents,
+    enabled: isAdmin,
+  });
 
   const createMutation = useMutation({
     mutationFn: adminCreateEvent,
@@ -179,6 +187,15 @@ export default function AdminEventsScreen() {
   });
 
   const saving = createMutation.isPending || updateMutation.isPending;
+
+  if (!isAdmin) {
+    return (
+      <View style={[styles.screen, styles.center]}>
+        <Feather name="lock" size={48} color={Colors.error} />
+        <Text style={{ color: Colors.text, fontSize: 18, fontWeight: "700", marginTop: 16 }}>Access Denied</Text>
+      </View>
+    );
+  }
 
   const handleSave = (form: FormState) => {
     if (!form.title.trim() || !form.description.trim() || !form.date.trim() || !form.location.trim()) {
