@@ -8,6 +8,7 @@ import { teamHistoryTable } from "./team_history";
 import { eventRegistrationsTable } from "./event_registrations";
 import { messagesTable } from "./messages";
 import { postCommentsTable } from "./post_comments";
+import { userSessionsTable } from "./user_sessions";
 
 export const usersRelations = relations(usersTable, ({ many }) => ({
   attendance: many(attendanceTable),
@@ -18,6 +19,11 @@ export const usersRelations = relations(usersTable, ({ many }) => ({
   sentMessages: many(messagesTable, { relationName: "sender" }),
   receivedMessages: many(messagesTable, { relationName: "receiver" }),
   comments: many(postCommentsTable),
+  sessions: many(userSessionsTable),
+}));
+
+export const userSessionsRelations = relations(userSessionsTable, ({ one }) => ({
+  user: one(usersTable, { fields: [userSessionsTable.userId], references: [usersTable.id] }),
 }));
 
 export const messagesRelations = relations(messagesTable, ({ one }) => ({

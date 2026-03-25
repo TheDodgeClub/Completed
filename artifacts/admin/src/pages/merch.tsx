@@ -132,8 +132,8 @@ function MerchFormModal({ product, onClose }: { product?: MerchProduct; onClose:
     const payload = {
       ...data,
       price: Number(data.price),
-      imageUrl: data.imageUrl || undefined,
-      buyUrl: data.buyUrl || undefined,
+      imageUrl: data.imageUrl || null,
+      buyUrl: data.buyUrl || null,
     };
 
     if (product) {
@@ -202,7 +202,7 @@ function MerchFormModal({ product, onClose }: { product?: MerchProduct; onClose:
           <ImageUploader
             label="Product Image"
             value={watch("imageUrl") ?? ""}
-            onChange={(url) => setValue("imageUrl", url || undefined)}
+            onChange={(url) => setValue("imageUrl", url || null)}
           />
           <div className="space-y-2">
             <Label>External Buy Link (Optional)</Label>

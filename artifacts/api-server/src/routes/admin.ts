@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, eventsTable, postsTable, merchTable, usersTable, attendanceTable, awardsTable, videosTable, teamHistoryTable, eventRegistrationsTable } from "@workspace/db";
-import { eq, desc, and } from "drizzle-orm";
+import { db, eventsTable, postsTable, merchTable, usersTable, attendanceTable, awardsTable, videosTable, teamHistoryTable, eventRegistrationsTable, userSessionsTable } from "@workspace/db";
+import { eq, desc, and, avg, count, sum, gte, sql } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/requireAdmin";
 
 const router: IRouter = Router();
@@ -532,6 +532,91 @@ router.post("/notify", async (req, res) => {
   }
 
   res.json({ sent });
+});
+
+/* ========== SESSION ANALYTICS ========== */
+
+/* GET /api/admin/sessions/stats — engagement analytics */
+router.get("/sessions/stats", async (_req, res) => {
+  const now = new Date();
+  const todayStart = new Date(now);
+  todayStart.setHours(0, 0, 0, 0);
+  const weekStart = new Date(now);
+  weekStart.setDate(weekStart.getDate() - 6);
+  weekStart.setHours(0, 0, 0, 0);
+
+  const [allStats] = await db
+    .select({
+      totalSessions: count(),
+      avgDuration: avg(userSessionsTable.duration),
+      totalSeconds: sum(userSessionsTable.duration),
+    })
+    .from(userSessionsTable);
+
+  const [todayStats] = await db
+    .select({
+      sessions: count(),
+      avgDuration: avg(userSessionsTable.duration),
+    })
+    .from(userSessionsTable)
+    .where(gte(userSessionsTable.startedAt, todayStart));
+
+  const [weekStats] = await db
+    .select({
+      sessions: count(),
+      avgDuration: avg(userSessionsTable.duration),
+    })
+    .from(userSessionsTable)
+    .where(gte(userSessionsTable.startedAt, weekStart));
+
+  const topUsers = await db
+    .select({
+      userId: userSessionsTable.userId,
+      name: usersTable.name,
+      avatarUrl: usersTable.avatarUrl,
+      sessions: count(),
+      avgDuration: avg(userSessionsTable.duration),
+      totalSeconds: sum(userSessionsTable.duration),
+    })
+    .from(userSessionsTable)
+    .innerJoin(usersTable, eq(userSessionsTable.userId, usersTable.id))
+    .groupBy(userSessionsTable.userId, usersTable.name, usersTable.avatarUrl)
+    .orderBy(desc(sum(userSessionsTable.duration)))
+    .limit(8);
+
+  const dailyBreakdown = await db
+    .select({
+      day: sql<string>`DATE(${userSessionsTable.startedAt})`,
+      sessions: count(),
+      avgDuration: avg(userSessionsTable.duration),
+    })
+    .from(userSessionsTable)
+    .where(gte(userSessionsTable.startedAt, weekStart))
+    .groupBy(sql`DATE(${userSessionsTable.startedAt})`)
+    .orderBy(sql`DATE(${userSessionsTable.startedAt})`);
+
+  res.json({
+    totalSessions: Number(allStats?.totalSessions ?? 0),
+    avgDuration: Math.round(Number(allStats?.avgDuration ?? 0)),
+    totalSeconds: Number(allStats?.totalSeconds ?? 0),
+    todaySessions: Number(todayStats?.sessions ?? 0),
+    todayAvgDuration: Math.round(Number(todayStats?.avgDuration ?? 0)),
+    weekSessions: Number(weekStats?.sessions ?? 0),
+    weekAvgDuration: Math.round(Number(weekStats?.avgDuration ?? 0)),
+    topUsers: topUsers.map(u => ({
+      userId: u.userId,
+      name: u.name,
+      avatarUrl: u.avatarUrl,
+      sessions: Number(u.sessions),
+      avgDuration: Math.round(Number(u.avgDuration ?? 0)),
+      totalSeconds: Number(u.totalSeconds ?? 0),
+    })),
+    dailyBreakdown: dailyBreakdown.map(d => ({
+      day: d.day,
+      sessions: Number(d.sessions),
+      avgDuration: Math.round(Number(d.avgDuration ?? 0)),
+    })),
+  });
 });
 
 export default router;

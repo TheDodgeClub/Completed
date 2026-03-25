@@ -487,3 +487,10 @@ export async function adminSendNotification(data: {
     body: JSON.stringify(data),
   });
 }
+
+export async function recordSession(duration: number, startedAt: string): Promise<void> {
+  return apiFetch<void>("/sessions", {
+    method: "POST",
+    body: JSON.stringify({ duration, startedAt }),
+  });
+}

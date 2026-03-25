@@ -234,8 +234,8 @@ function EventFormModal({ event, onClose }: { event?: Event; onClose: () => void
     const payload = {
       ...data,
       date: new Date(data.date).toISOString(),
-      ticketUrl: data.ticketUrl || undefined,
-      imageUrl: data.imageUrl || undefined,
+      ticketUrl: data.ticketUrl || null,
+      imageUrl: data.imageUrl || null,
     };
 
     if (event) {
@@ -285,7 +285,7 @@ function EventFormModal({ event, onClose }: { event?: Event; onClose: () => void
           <ImageUploader
             label="Cover Image"
             value={watch("imageUrl") ?? ""}
-            onChange={(url) => setValue("imageUrl", url || undefined)}
+            onChange={(url) => setValue("imageUrl", url || null)}
           />
           <DialogFooter className="pt-4">
             <Button type="button" variant="outline" onClick={onClose} disabled={pending} className="rounded-xl border-border/50 hover:bg-secondary">Cancel</Button>

@@ -114,7 +114,7 @@ function PostFormModal({ post, onClose }: { post?: Post; onClose: () => void }) 
   const onSubmit = (data: PostInput) => {
     const payload = {
       ...data,
-      imageUrl: data.imageUrl || undefined,
+      imageUrl: data.imageUrl || null,
     };
 
     if (post) {
@@ -150,7 +150,7 @@ function PostFormModal({ post, onClose }: { post?: Post; onClose: () => void }) 
           <ImageUploader
             label="Post Image"
             value={watch("imageUrl") ?? ""}
-            onChange={(url) => setValue("imageUrl", url || undefined)}
+            onChange={(url) => setValue("imageUrl", url || null)}
           />
           <div className="flex items-center space-x-3 p-4 bg-background rounded-xl border border-border/50">
             <Checkbox 
