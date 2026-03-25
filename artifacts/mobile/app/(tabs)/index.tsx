@@ -61,11 +61,7 @@ export default function HomeScreen() {
         style={[styles.hero, { paddingTop: insets.top + 24 }]}
       >
         <View style={styles.heroTopRow}>
-          <Image
-            source={require("@/assets/images/icon.png")}
-            style={styles.heroLogo}
-            resizeMode="contain"
-          />
+          <View />
           <Pressable
             style={styles.notifBtn}
             onPress={() => {
@@ -225,10 +221,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
     marginBottom: 16,
-  },
-  heroLogo: {
-    height: 48,
-    width: 160,
   },
   notifBtn: {
     width: 40,
