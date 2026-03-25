@@ -112,23 +112,20 @@ export async function sendTicketConfirmationEmail(params: TicketEmailParams): Pr
     htmlContent: html,
   };
 
-  try {
-    const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
-      method: "POST",
-      headers: {
-        "api-key": apiKey,
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-    if (!resp.ok) {
-      const body = await resp.text();
-      console.error(`[email] Brevo API error ${resp.status}: ${body}`);
-    } else {
-      console.log(`[email] Confirmation sent to ${params.toEmail} for event "${params.eventName}"`);
-    }
-  } catch (err: any) {
-    console.error("[email] Failed to send confirmation:", err?.message ?? err);
+  const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "api-key": apiKey,
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!resp.ok) {
+    const body = await resp.text();
+    throw new Error(`Brevo API ${resp.status}: ${body}`);
   }
+
+  console.log(`[email] Confirmation sent to ${params.toEmail} for event "${params.eventName}"`);
 }
