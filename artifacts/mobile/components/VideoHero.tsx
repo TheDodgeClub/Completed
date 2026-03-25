@@ -56,7 +56,7 @@ export function VideoHero({ uri }: Props) {
 const styles = StyleSheet.create({
   container: {
     width: "100%",
-    aspectRatio: 16 / 9,
+    height: 220,
     backgroundColor: "#000",
     overflow: "hidden",
   },

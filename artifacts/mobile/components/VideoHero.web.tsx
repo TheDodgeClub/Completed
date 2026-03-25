@@ -28,6 +28,9 @@ export function VideoHero({ uri }: Props) {
         loop
         playsInline
         style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
           width: "100%",
           height: "100%",
           objectFit: "cover",
@@ -49,9 +52,10 @@ export function VideoHero({ uri }: Props) {
 const styles = StyleSheet.create({
   container: {
     width: "100%",
-    aspectRatio: 16 / 9,
+    height: 220,
     backgroundColor: "#000",
     overflow: "hidden",
+    position: "relative",
   },
   muteBtn: {
     position: "absolute",
