@@ -96,7 +96,6 @@ export default function TicketsScreen() {
         controlsColor: "#FFD700",
       });
       // After browser closes, poll for the ticket (payment may have completed)
-      await refetchTickets();
       const fresh = await refetchTickets();
       const newTicket = (fresh.data ?? []).find(t => t.eventId === event.id);
       if (newTicket) {

@@ -280,13 +280,63 @@ router.get("/success", async (req, res) => {
     console.error("Error issuing ticket after payment:", err);
   }
 
-  // Redirect back to the app — deep link into the member tickets screen
-  res.redirect(`https://${process.env.REPLIT_DOMAINS?.split(",")[0] ?? "localhost"}/mobile/?ticketSuccess=1&eventId=${eventId}`);
+  // Show a clean success page — user presses Done to return to the app
+  res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Payment Successful</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0D0D0D; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
+    .card { background: #1a1a1a; border-radius: 20px; padding: 40px 32px; max-width: 360px; width: 100%; text-align: center; border: 1px solid rgba(255,255,255,0.08); }
+    .icon { width: 72px; height: 72px; background: #0B5E2F; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 32px; }
+    h1 { font-size: 22px; font-weight: 700; margin-bottom: 10px; color: #fff; }
+    p { font-size: 15px; color: rgba(255,255,255,0.6); line-height: 1.5; margin-bottom: 28px; }
+    .badge { display: inline-block; background: rgba(11,94,47,0.25); border: 1px solid #0B5E2F; color: #1A8C4E; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-bottom: 28px; }
+    .hint { font-size: 13px; color: rgba(255,255,255,0.35); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">✓</div>
+    <h1>Payment Successful!</h1>
+    <p>Your ticket has been issued. A confirmation email is on its way to you.</p>
+    <div class="badge">🎟 Ticket Confirmed</div>
+    <p class="hint">Press <strong>Done</strong> at the top to return to the app and view your ticket.</p>
+  </div>
+</body>
+</html>`);
 });
 
 /* GET /api/tickets/cancel */
 router.get("/cancel", (_req, res) => {
-  res.redirect(`https://${process.env.REPLIT_DOMAINS?.split(",")[0] ?? "localhost"}/mobile/?ticketCancelled=1`);
+  res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Payment Cancelled</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0D0D0D; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
+    .card { background: #1a1a1a; border-radius: 20px; padding: 40px 32px; max-width: 360px; width: 100%; text-align: center; border: 1px solid rgba(255,255,255,0.08); }
+    .icon { width: 72px; height: 72px; background: #2a1a1a; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 32px; }
+    h1 { font-size: 22px; font-weight: 700; margin-bottom: 10px; color: #fff; }
+    p { font-size: 15px; color: rgba(255,255,255,0.6); line-height: 1.5; margin-bottom: 28px; }
+    .hint { font-size: 13px; color: rgba(255,255,255,0.35); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">✕</div>
+    <h1>Payment Cancelled</h1>
+    <p>No charge was made. Your spot is still available — head back to try again.</p>
+    <p class="hint">Press <strong>Done</strong> to return to the app.</p>
+  </div>
+</body>
+</html>`);
 });
 
 /* POST /api/tickets/free — issue a free ticket immediately */

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useState } from "react";
 import { View, Pressable, StyleSheet, Text } from "react-native";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { Feather } from "@expo/vector-icons";
