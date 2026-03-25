@@ -53,6 +53,10 @@ export default function RootLayout() {
                   name="(auth)"
                   options={{ presentation: "modal", headerShown: false }}
                 />
+                <Stack.Screen name="admin/events" options={{ headerShown: false }} />
+                <Stack.Screen name="admin/posts" options={{ headerShown: false }} />
+                <Stack.Screen name="admin/merch" options={{ headerShown: false }} />
+                <Stack.Screen name="admin/members" options={{ headerShown: false }} />
               </Stack>
             </AuthProvider>
           </GestureHandlerRootView>

@@ -168,3 +168,144 @@ export async function listMerch(): Promise<MerchProduct[]> {
 export async function getStats(): Promise<CommunityStats> {
   return apiFetch<CommunityStats>("/stats");
 }
+
+/* ========== ADMIN TYPES ========== */
+
+export type AdminMember = {
+  id: number;
+  name: string;
+  email: string;
+  isAdmin: boolean;
+  memberSince: string;
+  eventsAttended: number;
+  medalsEarned: number;
+  avatarUrl: string | null;
+};
+
+export type AdminAttendanceRecord = {
+  id: number;
+  userId: number;
+  eventId: number;
+  earnedMedal: boolean;
+  attendedAt: string;
+  event: {
+    id: number;
+    title: string;
+    date: string;
+    location: string;
+  };
+};
+
+/* ========== ADMIN API ========== */
+
+/* --- Events --- */
+export async function adminListEvents(): Promise<Event[]> {
+  return apiFetch<Event[]>("/admin/events");
+}
+
+export async function adminCreateEvent(data: {
+  title: string;
+  description: string;
+  date: string;
+  location: string;
+  ticketUrl?: string;
+  imageUrl?: string;
+}): Promise<Event> {
+  return apiFetch<Event>("/admin/events", { method: "POST", body: JSON.stringify(data) });
+}
+
+export async function adminUpdateEvent(id: number, data: {
+  title?: string;
+  description?: string;
+  date?: string;
+  location?: string;
+  ticketUrl?: string;
+  imageUrl?: string;
+}): Promise<Event> {
+  return apiFetch<Event>(`/admin/events/${id}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export async function adminDeleteEvent(id: number): Promise<void> {
+  return apiFetch<void>(`/admin/events/${id}`, { method: "DELETE" });
+}
+
+/* --- Posts --- */
+export async function adminListPosts(): Promise<Post[]> {
+  return apiFetch<Post[]>("/admin/posts");
+}
+
+export async function adminCreatePost(data: {
+  title: string;
+  content: string;
+  imageUrl?: string;
+  isMembersOnly: boolean;
+}): Promise<Post> {
+  return apiFetch<Post>("/admin/posts", { method: "POST", body: JSON.stringify(data) });
+}
+
+export async function adminUpdatePost(id: number, data: {
+  title?: string;
+  content?: string;
+  imageUrl?: string;
+  isMembersOnly?: boolean;
+}): Promise<Post> {
+  return apiFetch<Post>(`/admin/posts/${id}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export async function adminDeletePost(id: number): Promise<void> {
+  return apiFetch<void>(`/admin/posts/${id}`, { method: "DELETE" });
+}
+
+/* --- Merch --- */
+export async function adminListMerch(): Promise<MerchProduct[]> {
+  return apiFetch<MerchProduct[]>("/admin/merch");
+}
+
+export async function adminCreateMerch(data: {
+  name: string;
+  description: string;
+  price: number;
+  imageUrl?: string;
+  buyUrl?: string;
+  category: string;
+  inStock: boolean;
+}): Promise<MerchProduct> {
+  return apiFetch<MerchProduct>("/admin/merch", { method: "POST", body: JSON.stringify(data) });
+}
+
+export async function adminUpdateMerch(id: number, data: {
+  name?: string;
+  description?: string;
+  price?: number;
+  imageUrl?: string;
+  buyUrl?: string;
+  category?: string;
+  inStock?: boolean;
+}): Promise<MerchProduct> {
+  return apiFetch<MerchProduct>(`/admin/merch/${id}`, { method: "PUT", body: JSON.stringify(data) });
+}
+
+export async function adminDeleteMerch(id: number): Promise<void> {
+  return apiFetch<void>(`/admin/merch/${id}`, { method: "DELETE" });
+}
+
+/* --- Members --- */
+export async function adminListMembers(): Promise<AdminMember[]> {
+  return apiFetch<AdminMember[]>("/admin/members");
+}
+
+export async function adminGetMemberAttendance(userId: number): Promise<AdminAttendanceRecord[]> {
+  return apiFetch<AdminAttendanceRecord[]>(`/admin/members/${userId}/attendance`);
+}
+
+export async function adminMarkAttendance(data: {
+  userId: number;
+  eventId: number;
+  earnedMedal: boolean;
+}): Promise<AdminAttendanceRecord> {
+  return apiFetch<AdminAttendanceRecord>("/admin/attendance", { method: "POST", body: JSON.stringify(data) });
+}
+
+export async function adminDeleteAttendance(id: number): Promise<void> {
+  return apiFetch<void>(`/admin/attendance/${id}`, { method: "DELETE" });
+}

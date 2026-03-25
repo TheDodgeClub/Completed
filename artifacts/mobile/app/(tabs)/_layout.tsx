@@ -8,8 +8,9 @@ import React from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Colors from "@/constants/colors";
+import { useAuth } from "@/context/AuthContext";
 
-function NativeTabLayout() {
+function NativeTabLayout({ isAdmin }: { isAdmin: boolean }) {
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="index">
@@ -32,11 +33,17 @@ function NativeTabLayout() {
         <Icon sf={{ default: "person.badge.shield.checkmark", selected: "person.badge.shield.checkmark.fill" }} />
         <Label>Member</Label>
       </NativeTabs.Trigger>
+      {isAdmin && (
+        <NativeTabs.Trigger name="admin">
+          <Icon sf={{ default: "gearshape", selected: "gearshape.fill" }} />
+          <Label>Admin</Label>
+        </NativeTabs.Trigger>
+      )}
     </NativeTabs>
   );
 }
 
-function ClassicTabLayout() {
+function ClassicTabLayout({ isAdmin }: { isAdmin: boolean }) {
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
   const safeAreaInsets = useSafeAreaInsets();
@@ -124,13 +131,32 @@ function ClassicTabLayout() {
             ),
         }}
       />
+      <Tabs.Screen
+        name="admin"
+        options={
+          isAdmin
+            ? {
+                title: "Admin",
+                tabBarIcon: ({ color }) =>
+                  isIOS ? (
+                    <SymbolView name="gearshape" tintColor={color} size={24} />
+                  ) : (
+                    <Feather name="settings" size={22} color={color} />
+                  ),
+              }
+            : { href: null }
+        }
+      />
     </Tabs>
   );
 }
 
 export default function TabLayout() {
+  const { user } = useAuth();
+  const isAdmin = user?.isAdmin === true;
+
   if (isLiquidGlassAvailable()) {
-    return <NativeTabLayout />;
+    return <NativeTabLayout isAdmin={isAdmin} />;
   }
-  return <ClassicTabLayout />;
+  return <ClassicTabLayout isAdmin={isAdmin} />;
 }

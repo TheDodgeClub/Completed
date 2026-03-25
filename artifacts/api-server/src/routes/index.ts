@@ -6,6 +6,7 @@ import usersRouter from "./users";
 import postsRouter from "./posts";
 import merchRouter from "./merch";
 import statsRouter from "./stats";
+import adminRouter from "./admin";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use("/users", usersRouter);
 router.use("/posts", postsRouter);
 router.use("/merch", merchRouter);
 router.use("/stats", statsRouter);
+router.use("/admin", adminRouter);
 
 export default router;
