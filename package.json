@@ -16,5 +16,11 @@
   "dependencies": {
     "stripe": "20.0.0",
     "stripe-replit-sync": "1.0.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "picomatch@2": "2.3.2",
+      "picomatch@4": "4.0.4"
+    }
   }
 }
