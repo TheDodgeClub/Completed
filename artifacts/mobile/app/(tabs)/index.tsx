@@ -435,8 +435,10 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* Go Elite Banner */}
-        <EliteBanner isElite={user?.isElite ?? false} isAuthenticated={isAuthenticated} />
+        {/* Go Elite Banner — players only */}
+        {user?.accountType !== "supporter" && (
+          <EliteBanner isElite={user?.isElite ?? false} isAuthenticated={isAuthenticated} />
+        )}
 
         {/* ── Feature 5: Community Pulse ── */}
         {activityItems && activityItems.length > 0 && (
