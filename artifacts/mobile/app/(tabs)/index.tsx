@@ -230,22 +230,24 @@ export default function HomeScreen() {
             <Feather name="tag" size={13} color="#0D0D0D" />
             <Text style={styles.heroBtnSecondaryText}>Get Tickets</Text>
           </Pressable>
-          <Pressable
-            style={({ pressed }) => [
-              styles.heroBtn,
-              user?.isElite ? styles.heroBtnEliteActive : styles.heroBtnElite,
-              { opacity: pressed ? 0.85 : 1 },
-            ]}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              router.push("/elite");
-            }}
-          >
-            <Text style={{ fontSize: 12, lineHeight: 14 }}>⚡</Text>
-            <Text style={user?.isElite ? styles.heroBtnEliteActiveText : styles.heroBtnEliteText}>
-              {user?.isElite ? "You're Elite" : "Go Elite"}
-            </Text>
-          </Pressable>
+          {user?.accountType !== "supporter" && (
+            <Pressable
+              style={({ pressed }) => [
+                styles.heroBtn,
+                user?.isElite ? styles.heroBtnEliteActive : styles.heroBtnElite,
+                { opacity: pressed ? 0.85 : 1 },
+              ]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                router.push("/elite");
+              }}
+            >
+              <Text style={{ fontSize: 12, lineHeight: 14 }}>⚡</Text>
+              <Text style={user?.isElite ? styles.heroBtnEliteActiveText : styles.heroBtnEliteText}>
+                {user?.isElite ? "You're Elite" : "Go Elite"}
+              </Text>
+            </Pressable>
+          )}
         </View>
       </LinearGradient>
 
