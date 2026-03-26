@@ -74,17 +74,19 @@ export default function HomeScreen() {
     >
       {/* Hero */}
       <LinearGradient
-        colors={[Colors.primary, "#052A15"]}
+        colors={["#074A24", "#021409"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[styles.hero, { paddingTop: insets.top + 24 }]}
       >
         <View style={styles.heroTopRow}>
-          <Image
-            source={require("@/assets/images/tdc-logo.png")}
-            style={{ flex: 1, height: logoHeight }}
-            resizeMode="contain"
-          />
+          <View style={{ flex: 1, alignItems: "flex-start" }}>
+            <Image
+              source={require("@/assets/images/tdc-logo.png")}
+              style={{ height: logoHeight, width: screenWidth * 0.45 }}
+              resizeMode="contain"
+            />
+          </View>
           <Pressable
             style={styles.notifBtn}
             onPress={() => {
@@ -96,33 +98,24 @@ export default function HomeScreen() {
         </View>
 
         <Text style={styles.heroTagline}>
-          Come alone – Win together.
+          Come alone. Win together.
         </Text>
 
         <View style={styles.heroCTARow}>
-          {isAuthenticated ? (
-            <Pressable
-              style={({ pressed }) => [styles.heroBtn, styles.heroBtnPrimary, { opacity: pressed ? 0.85 : 1 }]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          <Pressable
+            style={({ pressed }) => [styles.heroBtn, styles.heroBtnPrimary, { opacity: pressed ? 0.85 : 1 }]}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              if (isAuthenticated) {
                 router.push("/(tabs)/member");
-              }}
-            >
-              <Feather name="shield" size={16} color="#fff" />
-              <Text style={styles.heroBtnPrimaryText}>Member Zone</Text>
-            </Pressable>
-          ) : (
-            <Pressable
-              style={({ pressed }) => [styles.heroBtn, styles.heroBtnPrimary, { opacity: pressed ? 0.85 : 1 }]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              } else {
                 router.push("/(auth)/register");
-              }}
-            >
-              <Feather name="user-plus" size={16} color="#fff" />
-              <Text style={styles.heroBtnPrimaryText}>Join Now</Text>
-            </Pressable>
-          )}
+              }
+            }}
+          >
+            <Feather name="shield" size={13} color="#fff" />
+            <Text style={styles.heroBtnPrimaryText}>Member Zone</Text>
+          </Pressable>
           <Pressable
             style={({ pressed }) => [styles.heroBtn, styles.heroBtnSecondary, { opacity: pressed ? 0.85 : 1 }]}
             onPress={() => {
@@ -130,8 +123,8 @@ export default function HomeScreen() {
               router.push("/(tabs)/tickets");
             }}
           >
-            <Feather name="tag" size={16} color="#fff" />
-            <Text style={styles.heroBtnSecondaryText}>Buy Tickets</Text>
+            <Feather name="tag" size={13} color="#fff" />
+            <Text style={styles.heroBtnSecondaryText}>Get Tickets</Text>
           </Pressable>
         </View>
       </LinearGradient>
@@ -258,22 +251,22 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     heroTagline: {
       fontFamily: "Inter_400Regular",
       fontSize: 15,
-      color: "rgba(255,255,255,0.85)",
+      color: "#FFC107",
       marginBottom: 24,
       lineHeight: 22,
       maxWidth: 260,
     },
     heroCTARow: {
       flexDirection: "row",
-      gap: 12,
+      gap: 10,
     },
     heroBtn: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 8,
-      paddingHorizontal: 18,
-      paddingVertical: 12,
-      borderRadius: 12,
+      gap: 6,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: 10,
     },
     heroBtnPrimary: {
       backgroundColor: "rgba(255,255,255,0.2)",
@@ -282,7 +275,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     },
     heroBtnPrimaryText: {
       fontFamily: "Inter_600SemiBold",
-      fontSize: 14,
+      fontSize: 11,
       color: "#fff",
     },
     heroBtnSecondary: {
@@ -292,7 +285,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     },
     heroBtnSecondaryText: {
       fontFamily: "Inter_600SemiBold",
-      fontSize: 14,
+      fontSize: 11,
       color: "#fff",
     },
     body: { padding: 20, gap: 8 },
