@@ -76,6 +76,9 @@ function AttendanceRow({ record }: { record: AttendanceRecord }) {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const date = new Date(record.event.date);
+  const xp = record.xpEarned ?? 50;
+  const streak = record.streakAt ?? 1;
+  const isMilestone = (record.milestoneBonus ?? 0) > 0;
   return (
     <View style={styles.attendRow}>
       <View style={styles.attendDate}>
@@ -84,13 +87,24 @@ function AttendanceRow({ record }: { record: AttendanceRecord }) {
       </View>
       <View style={styles.attendInfo}>
         <Text style={styles.attendTitle} numberOfLines={1}>{record.event.title}</Text>
-        <Text style={styles.attendLocation} numberOfLines={1}>{record.event.location}</Text>
-      </View>
-      {record.earnedMedal && (
-        <View style={styles.medalBadge}>
-          <Feather name="award" size={14} color={Colors.accent} />
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
+          <Text style={styles.attendLocation} numberOfLines={1}>{record.event.location}</Text>
+          {isMilestone && <Text style={styles.attendMilestoneBadge}>🎯 Milestone</Text>}
         </View>
-      )}
+      </View>
+      <View style={{ alignItems: "flex-end", gap: 4 }}>
+        <View style={styles.attendXpChip}>
+          <Text style={styles.attendXpText}>+{xp} XP</Text>
+        </View>
+        {streak >= 2 && (
+          <Text style={styles.attendStreakLabel}>🔥 ×{streak}</Text>
+        )}
+        {record.earnedMedal && (
+          <View style={styles.medalBadge}>
+            <Feather name="award" size={12} color={Colors.accent} />
+          </View>
+        )}
+      </View>
     </View>
   );
 }
@@ -856,7 +870,15 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     attendMonth: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: Colors.textMuted, letterSpacing: 0.3 },
     attendInfo: { flex: 1 },
     attendTitle: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.text },
-    attendLocation: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textMuted, marginTop: 2 },
+    attendLocation: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textMuted },
+    attendXpChip: {
+      paddingHorizontal: 7, paddingVertical: 3,
+      backgroundColor: `${Colors.primary}20`,
+      borderRadius: 8, borderWidth: 1, borderColor: `${Colors.primary}40`,
+    },
+    attendXpText: { fontFamily: "Inter_700Bold", fontSize: 11, color: Colors.primary },
+    attendStreakLabel: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: "#FF6B35" },
+    attendMilestoneBadge: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: Colors.accent },
     medalBadge: {
       width: 32, height: 32, borderRadius: 16,
       backgroundColor: `${Colors.accent}20`,

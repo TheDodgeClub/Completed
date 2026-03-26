@@ -89,6 +89,9 @@ export type AttendanceRecord = {
   eventId: number;
   earnedMedal: boolean;
   attendedAt: string;
+  xpEarned: number;
+  streakAt: number;
+  milestoneBonus: number;
   event: Event;
 };
 

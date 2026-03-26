@@ -267,32 +267,60 @@ router.get("/:id/profile", async (req, res) => {
 
 /* GET /api/users/:id/attendance */
 router.get("/:id/attendance", async (req, res) => {
-  const records = await db.query.attendanceTable.findMany({
-    where: eq(attendanceTable.userId, Number(req.params.id)),
-    with: { event: true },
-  });
+  const userId = Number(req.params.id);
+  const [records, pastEvents] = await Promise.all([
+    db.query.attendanceTable.findMany({
+      where: eq(attendanceTable.userId, userId),
+      with: { event: true },
+    }),
+    db.select({ id: eventsTable.id }).from(eventsTable).where(lte(eventsTable.date, new Date())).orderBy(eventsTable.date),
+  ]);
+
+  // Compute per-event XP (same streak/milestone algorithm used in getUserStats)
+  const attendedIds = new Set(records.map(r => r.eventId));
+  const xpByEventId = new Map<number, { xpEarned: number; streakAt: number; milestoneBonus: number }>();
+  let streak = 0;
+  let attendedCount = 0;
+  for (const ev of pastEvents) {
+    if (attendedIds.has(ev.id)) {
+      streak++;
+      attendedCount++;
+      const streakBonus = streak >= 8 ? 50 : streak >= 4 ? 25 : streak >= 2 ? 10 : 0;
+      let milestoneBonus = 0;
+      for (const m of ATTENDANCE_MILESTONES) { if (attendedCount === m.events) { milestoneBonus = m.bonus; break; } }
+      xpByEventId.set(ev.id, { xpEarned: 50 + streakBonus + milestoneBonus, streakAt: streak, milestoneBonus });
+    } else {
+      streak = 0;
+    }
+  }
 
   const result = records
     .filter(r => !r.event.date || r.event.date <= new Date())
     .sort((a, b) => b.event.date.getTime() - a.event.date.getTime())
-    .map(r => ({
-      id: r.id,
-      userId: r.userId,
-      eventId: r.eventId,
-      earnedMedal: r.earnedMedal,
-      attendedAt: r.attendedAt.toISOString(),
-      event: {
-        id: r.event.id,
-        title: r.event.title,
-        description: r.event.description,
-        date: r.event.date.toISOString(),
-        location: r.event.location,
-        ticketUrl: r.event.ticketUrl ?? null,
-        imageUrl: r.event.imageUrl ?? null,
-        isUpcoming: r.event.date > new Date(),
-        attendeeCount: r.event.attendeeCount,
-      },
-    }));
+    .map(r => {
+      const xpData = xpByEventId.get(r.eventId) ?? { xpEarned: 50, streakAt: 1, milestoneBonus: 0 };
+      return {
+        id: r.id,
+        userId: r.userId,
+        eventId: r.eventId,
+        earnedMedal: r.earnedMedal,
+        attendedAt: r.attendedAt.toISOString(),
+        xpEarned: xpData.xpEarned,
+        streakAt: xpData.streakAt,
+        milestoneBonus: xpData.milestoneBonus,
+        event: {
+          id: r.event.id,
+          title: r.event.title,
+          description: r.event.description,
+          date: r.event.date.toISOString(),
+          location: r.event.location,
+          ticketUrl: r.event.ticketUrl ?? null,
+          imageUrl: r.event.imageUrl ?? null,
+          isUpcoming: r.event.date > new Date(),
+          attendeeCount: r.event.attendeeCount,
+        },
+      };
+    });
 
   res.json(result);
 });
