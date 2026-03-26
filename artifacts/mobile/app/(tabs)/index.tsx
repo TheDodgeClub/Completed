@@ -33,7 +33,7 @@ import { EliteBanner } from "@/components/EliteBanner";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 /* ── Level constants ── */
-const LEVEL_THRESHOLDS = [0, 200, 400, 600, 800, 1300, 1800, 2300, 2800, 3300];
+const LEVEL_THRESHOLDS = [0, 300, 800, 1600, 2500, 5000, 10000, 20000, 40000, 80000];
 const LEVEL_NAMES = ["Beginner", "Developing", "Experienced", "Skilled", "Advanced", "Pro", "League", "Expert", "Master", "Icon"];
 
 function getLevelProgress(xp: number, level: number) {

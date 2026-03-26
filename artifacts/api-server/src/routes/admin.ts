@@ -340,7 +340,7 @@ router.delete("/merch/:id", async (req, res) => {
 
 /* ========== MEMBERS ========== */
 
-const LEVEL_THRESHOLDS = [0, 200, 400, 600, 800, 1300, 1800, 2300, 2800, 3300];
+const LEVEL_THRESHOLDS = [0, 300, 800, 1600, 2500, 5000, 10000, 20000, 40000, 80000];
 function computeXP(events: number, medals: number, rings: number, bonus: number = 0) { return events * 100 + medals * 300 + rings * 1000 + bonus; }
 function computeLevel(xp: number) {
   let level = 1;

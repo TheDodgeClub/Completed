@@ -29,7 +29,7 @@ import {
 const LEVEL_NAMES = ["Beginner", "Developing", "Experienced", "Skilled", "Advanced", "Pro", "League", "Expert", "Master", "Icon"];
 
 function getLevel(xp: number): number {
-  const thresholds = [0, 200, 400, 600, 800, 1300, 1800, 2300, 2800, 3300];
+  const thresholds = [0, 300, 800, 1600, 2500, 5000, 10000, 20000, 40000, 80000];
   let level = 1;
   for (let i = 1; i < thresholds.length; i++) {
     if (xp >= thresholds[i]) level = i + 1; else break;
