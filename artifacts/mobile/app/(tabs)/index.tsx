@@ -32,7 +32,7 @@ export default function HomeScreen() {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const { user, isAuthenticated } = useAuth();
-  const logoHeight = screenWidth * 0.084;
+  const logoHeight = screenWidth * 0.084 * 1.2;
 
   const { data: events, isLoading: eventsLoading, refetch: refetchEvents } = useQuery({
     queryKey: ["upcoming-events"],
@@ -83,7 +83,7 @@ export default function HomeScreen() {
           <View style={{ flex: 1, alignItems: "flex-start" }}>
             <Image
               source={require("@/assets/images/tdc-logo.png")}
-              style={{ height: logoHeight, width: screenWidth * 0.63 }}
+              style={{ height: logoHeight, width: screenWidth * 0.63 * 1.2, marginLeft: -6 }}
               resizeMode="contain"
             />
           </View>
@@ -249,7 +249,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       justifyContent: "center",
     },
     heroTagline: {
-      fontFamily: "Inter_400Regular",
+      fontFamily: "Inter_600SemiBold",
       fontSize: 15,
       color: "#FFC107",
       marginBottom: 24,
