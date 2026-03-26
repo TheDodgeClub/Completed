@@ -32,6 +32,26 @@ import { VideoHero } from "@/components/VideoHero";
 import { EliteBanner } from "@/components/EliteBanner";
 
 
+/* ── Supporter tier constants ── */
+const SUPPORTER_TIERS = [
+  { name: "Club Friend",  emoji: "🤝", minXp: 0,    perk: "Welcome to The Dodge Club!" },
+  { name: "Die Hard",     emoji: "🔥", minXp: 150,  perk: "Shoutout at events" },
+  { name: "Club Legend",  emoji: "⭐", minXp: 500,  perk: "VIP supporter status" },
+  { name: "Superfan",     emoji: "🏆", minXp: 1000, perk: "Name on the club wall" },
+] as const;
+function getSupporterProgress(xp: number) {
+  let tierIdx = 0;
+  for (let i = 0; i < SUPPORTER_TIERS.length; i++) { if (xp >= SUPPORTER_TIERS[i].minXp) tierIdx = i; }
+  const current = SUPPORTER_TIERS[tierIdx];
+  const next = SUPPORTER_TIERS[tierIdx + 1] ?? null;
+  const isMax = next === null;
+  const start = current.minXp;
+  const end = next?.minXp ?? start;
+  const progress = isMax ? 1 : Math.min(1, Math.max(0, (xp - start) / (end - start)));
+  const xpToNext = isMax ? 0 : end - xp;
+  return { current, next, isMax, progress, xpToNext };
+}
+
 /* ── Level constants ── */
 const LEVEL_THRESHOLDS = [0, 300, 800, 1600, 2500, 5000, 10000, 20000, 40000, 80000];
 const LEVEL_NAMES = ["Beginner", "Developing", "Experienced", "Skilled", "Advanced", "Pro", "League", "Expert", "Master", "Icon"];
@@ -300,6 +320,35 @@ export default function HomeScreen() {
             )}
           </View>
         )}
+
+        {/* ── Supporter Journey Bar ── */}
+        {isAuthenticated && user?.accountType === "supporter" && (() => {
+          const sp = getSupporterProgress(user.xp ?? 0);
+          return (
+            <View style={styles.supporterJourneyCard}>
+              <View style={styles.supporterJourneyHeader}>
+                <Text style={styles.supporterJourneyLabel}>Supporter Journey</Text>
+                <Text style={styles.supporterJourneyXp}>{(user.xp ?? 0).toLocaleString()} XP</Text>
+              </View>
+              <Text style={styles.supporterJourneyTier}>{sp.current.emoji} {sp.current.name}</Text>
+              <View style={styles.supporterJourneyTrack}>
+                <View style={[styles.supporterJourneyFill, { width: `${Math.round(sp.progress * 100)}%` as any }]} />
+              </View>
+              <View style={styles.supporterJourneyFooter}>
+                {sp.isMax ? (
+                  <Text style={styles.supporterJourneyHint}>Superfan status reached 🏆 You're a club legend!</Text>
+                ) : (
+                  <Text style={styles.supporterJourneyHint}>
+                    {sp.xpToNext} XP to unlock {sp.next!.emoji} {sp.next!.name} — {sp.next!.perk}
+                  </Text>
+                )}
+                {!sp.isMax && (
+                  <Text style={styles.supporterJourneyNext}>{sp.next!.emoji}</Text>
+                )}
+              </View>
+            </View>
+          );
+        })()}
 
         {/* Next Upcoming Event Banner — guests only */}
         {!isAuthenticated && nextEvent && (
@@ -837,6 +886,68 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       borderColor: `${Colors.primary}44`,
     },
     onboardMerchBtnText: { fontFamily: "Inter_700Bold", fontSize: 11, color: Colors.primary },
+
+    /* ── Supporter Journey Card ── */
+    supporterJourneyCard: {
+      backgroundColor: Colors.surface,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: "#FFC10740",
+      padding: 16,
+      marginBottom: 8,
+      gap: 6,
+    },
+    supporterJourneyHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    supporterJourneyLabel: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 10,
+      color: Colors.textMuted,
+      textTransform: "uppercase",
+      letterSpacing: 0.8,
+    },
+    supporterJourneyXp: {
+      fontFamily: "Inter_700Bold",
+      fontSize: 11,
+      color: "#FFC107",
+    },
+    supporterJourneyTier: {
+      fontFamily: "Poppins_800ExtraBold",
+      fontSize: 15,
+      color: Colors.text,
+      lineHeight: 21,
+    },
+    supporterJourneyTrack: {
+      height: 7,
+      backgroundColor: Colors.surface2 ?? Colors.border,
+      borderRadius: 4,
+      overflow: "hidden",
+      marginVertical: 2,
+    },
+    supporterJourneyFill: {
+      height: "100%",
+      backgroundColor: "#FFC107",
+      borderRadius: 4,
+    },
+    supporterJourneyFooter: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 8,
+    },
+    supporterJourneyHint: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 11,
+      color: Colors.textMuted,
+      flex: 1,
+      lineHeight: 15,
+    },
+    supporterJourneyNext: {
+      fontSize: 18,
+    },
 
     /* ── Game Card ── */
     gameCard: {
