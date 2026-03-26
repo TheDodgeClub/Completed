@@ -17,7 +17,7 @@ import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
 
-const LEVEL_NAMES = ["Rookie", "Player", "Contender", "Competitor", "Veteran", "Ace", "Pro", "Champion", "Legend", "Icon"];
+const LEVEL_NAMES = ["Beginner", "Developing", "Experienced", "Skilled", "Advanced", "Pro", "League", "Expert", "Master", "Icon"];
 
 type LiveUser = {
   id: number;

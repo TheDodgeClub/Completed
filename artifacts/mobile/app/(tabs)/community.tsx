@@ -26,7 +26,7 @@ import {
   MemberSummary, UserProfile, LeaderboardEntry, LeaderboardData,
 } from "@/lib/api";
 
-const LEVEL_NAMES = ["Rookie", "Player", "Contender", "Competitor", "Veteran", "Ace", "Pro", "Champion", "Legend", "Icon"];
+const LEVEL_NAMES = ["Beginner", "Developing", "Experienced", "Skilled", "Advanced", "Pro", "League", "Expert", "Master", "Icon"];
 
 function getLevel(xp: number): number {
   const thresholds = [0, 200, 400, 600, 800, 1300, 1800, 2300, 2800, 3300];

@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, Trophy, CalendarCheck, Trash2, ShieldCheck, Loader2, CircleDot, Star, Pencil, Check } from "lucide-react";
 
 const PLAYER_ROLES = ["Thrower", "Catcher", "Dodger", "All-Rounder"] as const;
-const LEVEL_NAMES = ["Rookie", "Player", "Contender", "Competitor", "Veteran", "Ace", "Pro", "Champion", "Legend", "Icon"];
+const LEVEL_NAMES = ["Beginner", "Developing", "Experienced", "Skilled", "Advanced", "Pro", "League", "Expert", "Master", "Icon"];
 
 function resolveAvatarUrl(url: string | null | undefined): string | undefined {
   if (!url) return undefined;

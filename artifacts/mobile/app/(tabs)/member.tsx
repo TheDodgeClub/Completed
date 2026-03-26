@@ -43,7 +43,7 @@ import { EliteBanner } from "@/components/EliteBanner";
 
 const PLAYER_ROLES = ["Thrower", "Catcher", "Dodger", "All-Rounder"] as const;
 const LEVEL_THRESHOLDS = [0, 200, 400, 600, 800, 1300, 1800, 2300, 2800, 3300];
-const LEVEL_NAMES = ["Rookie", "Player", "Contender", "Competitor", "Veteran", "Ace", "Pro", "Champion", "Legend", "Icon"];
+const LEVEL_NAMES = ["Beginner", "Developing", "Experienced", "Skilled", "Advanced", "Pro", "League", "Expert", "Master", "Icon"];
 
 function getLevelProgress(xp: number, level: number) {
   const currentThreshold = LEVEL_THRESHOLDS[level - 1] ?? 0;
