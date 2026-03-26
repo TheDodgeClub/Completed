@@ -334,32 +334,51 @@ export default function HomeScreen() {
           </Pressable>
         )}
 
-        {/* Upcoming Events */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Upcoming Events</Text>
-            <Pressable onPress={() => router.push("/(tabs)/tickets")}>
-              <Text style={styles.seeAll}>See All</Text>
-            </Pressable>
-          </View>
-          {eventsLoading ? (
-            <ActivityIndicator color={Colors.primary} style={{ marginTop: 16 }} />
-          ) : events && events.length > 0 ? (
-            events.slice(0, 3).map(event => (
-              <EventCard
-                key={event.id}
-                event={event}
-                compact
-                onPress={() => router.push("/(tabs)/tickets")}
-              />
-            ))
-          ) : (
-            <View style={styles.empty}>
-              <Feather name="calendar" size={32} color={Colors.textMuted} />
-              <Text style={styles.emptyText}>No upcoming events yet</Text>
+        {/* Upcoming Events — excludes the featured banner event */}
+        {(() => {
+          const remainingEvents = events
+            ? events.filter(e => e.id !== nextEvent?.id).slice(0, 3)
+            : [];
+          if (eventsLoading) {
+            return (
+              <View style={styles.section}>
+                <ActivityIndicator color={Colors.primary} style={{ marginTop: 8 }} />
+              </View>
+            );
+          }
+          if (!nextEvent && (!events || events.length === 0)) {
+            return (
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Upcoming Events</Text>
+                </View>
+                <View style={styles.empty}>
+                  <Feather name="calendar" size={32} color={Colors.textMuted} />
+                  <Text style={styles.emptyText}>No upcoming events yet</Text>
+                </View>
+              </View>
+            );
+          }
+          if (remainingEvents.length === 0) return null;
+          return (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>More Events</Text>
+                <Pressable onPress={() => router.push("/(tabs)/tickets")}>
+                  <Text style={styles.seeAll}>See All</Text>
+                </Pressable>
+              </View>
+              {remainingEvents.map(event => (
+                <EventCard
+                  key={event.id}
+                  event={event}
+                  compact
+                  onPress={() => router.push("/(tabs)/tickets")}
+                />
+              ))}
             </View>
-          )}
-        </View>
+          );
+        })()}
 
         {/* ── Club Shop row ── */}
         {merch && merch.length > 0 && (
