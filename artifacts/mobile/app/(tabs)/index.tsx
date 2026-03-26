@@ -76,16 +76,17 @@ export default function HomeScreen() {
   const { user, isAuthenticated } = useAuth();
   const logoHeight = screenWidth * 0.084 * 1.2;
 
-  const ONBOARD_KEY = user ? `supporter_onboarding_dismissed_${user.id}` : null;
-  const [onboardDismissed, setOnboardDismissed] = useState(true);
+  const ONBOARD_KEY = user ? `supporter_onboarding_collapsed_${user.id}` : null;
+  const [onboardCollapsed, setOnboardCollapsed] = useState(false);
   useEffect(() => {
     if (!ONBOARD_KEY || user?.accountType !== "supporter") return;
-    AsyncStorage.getItem(ONBOARD_KEY).then(val => { setOnboardDismissed(val === "1"); });
+    AsyncStorage.getItem(ONBOARD_KEY).then(val => { setOnboardCollapsed(val === "1"); });
   }, [ONBOARD_KEY, user?.accountType]);
-  const dismissOnboarding = async () => {
+  const toggleOnboarding = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setOnboardDismissed(true);
-    if (ONBOARD_KEY) await AsyncStorage.setItem(ONBOARD_KEY, "1");
+    const next = !onboardCollapsed;
+    setOnboardCollapsed(next);
+    if (ONBOARD_KEY) await AsyncStorage.setItem(ONBOARD_KEY, next ? "1" : "0");
   };
 
   const { data: events, isLoading: eventsLoading, refetch: refetchEvents } = useQuery({
@@ -241,54 +242,63 @@ export default function HomeScreen() {
       <View style={styles.body}>
 
         {/* ── Supporter Onboarding Card ── */}
-        {isAuthenticated && user?.accountType === "supporter" && !onboardDismissed && (
+        {isAuthenticated && user?.accountType === "supporter" && (
           <View style={styles.onboardCard}>
-            <View style={styles.onboardCardHeader}>
+            <Pressable
+              style={[styles.onboardCardHeader, onboardCollapsed && { borderBottomWidth: 0 }]}
+              onPress={toggleOnboarding}
+            >
               <View style={{ flex: 1 }}>
                 <Text style={styles.onboardCardTitle}>Welcome to The Dodge Club 👋</Text>
                 <Text style={styles.onboardCardSub}>Here's how to get started as a supporter</Text>
               </View>
-              <Pressable style={styles.onboardCloseBtn} onPress={dismissOnboarding}>
-                <Feather name="x" size={16} color={Colors.textMuted} />
-              </Pressable>
-            </View>
-            <Pressable
-              style={({ pressed }) => [styles.onboardStep, { opacity: pressed ? 0.85 : 1 }]}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(tabs)/tickets"); }}
-            >
-              <View style={styles.onboardBadge}><Text style={styles.onboardBadgeText}>1</Text></View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.onboardStepTitle}>Find an event & secure your spot</Text>
-                <Text style={styles.onboardStepSub}>Browse upcoming sessions and grab a ticket</Text>
-              </View>
-              <Feather name="chevron-right" size={15} color={Colors.textMuted} />
+              <Feather
+                name={onboardCollapsed ? "chevron-down" : "chevron-up"}
+                size={18}
+                color={Colors.textMuted}
+              />
             </Pressable>
-            <View style={styles.onboardDivider} />
-            <Pressable
-              style={({ pressed }) => [styles.onboardStep, { opacity: pressed ? 0.85 : 1 }]}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(tabs)/updates"); }}
-            >
-              <View style={styles.onboardBadge}><Text style={styles.onboardBadgeText}>2</Text></View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.onboardStepTitle}>Watch the rules video</Text>
-                <Text style={styles.onboardStepSub}>Know the game before you arrive</Text>
-              </View>
-              <Feather name="play-circle" size={16} color={Colors.accent} />
-            </Pressable>
-            <View style={styles.onboardDivider} />
-            <View style={styles.onboardStep}>
-              <View style={styles.onboardBadge}><Text style={styles.onboardBadgeText}>3</Text></View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.onboardStepTitle}>Show up & rep the club</Text>
-                <Text style={styles.onboardStepSub}>Attend your first session, then grab some merch!</Text>
-              </View>
-              <Pressable
-                style={({ pressed }) => [styles.onboardMerchBtn, { opacity: pressed ? 0.8 : 1 }]}
-                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(tabs)/merch"); }}
-              >
-                <Text style={styles.onboardMerchBtnText}>Shop 👕</Text>
-              </Pressable>
-            </View>
+            {!onboardCollapsed && (
+              <>
+                <Pressable
+                  style={({ pressed }) => [styles.onboardStep, { opacity: pressed ? 0.85 : 1 }]}
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(tabs)/tickets"); }}
+                >
+                  <View style={styles.onboardBadge}><Text style={styles.onboardBadgeText}>1</Text></View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.onboardStepTitle}>Find an event & secure your spot</Text>
+                    <Text style={styles.onboardStepSub}>Browse upcoming sessions and grab a ticket</Text>
+                  </View>
+                  <Feather name="chevron-right" size={15} color={Colors.textMuted} />
+                </Pressable>
+                <View style={styles.onboardDivider} />
+                <Pressable
+                  style={({ pressed }) => [styles.onboardStep, { opacity: pressed ? 0.85 : 1 }]}
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(tabs)/updates"); }}
+                >
+                  <View style={styles.onboardBadge}><Text style={styles.onboardBadgeText}>2</Text></View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.onboardStepTitle}>Watch the rules video</Text>
+                    <Text style={styles.onboardStepSub}>Know the game before you arrive</Text>
+                  </View>
+                  <Feather name="play-circle" size={16} color={Colors.accent} />
+                </Pressable>
+                <View style={styles.onboardDivider} />
+                <View style={styles.onboardStep}>
+                  <View style={styles.onboardBadge}><Text style={styles.onboardBadgeText}>3</Text></View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.onboardStepTitle}>Show up & rep the club</Text>
+                    <Text style={styles.onboardStepSub}>Attend your first session, then grab some merch!</Text>
+                  </View>
+                  <Pressable
+                    style={({ pressed }) => [styles.onboardMerchBtn, { opacity: pressed ? 0.8 : 1 }]}
+                    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(tabs)/merch"); }}
+                  >
+                    <Text style={styles.onboardMerchBtnText}>Shop 👕</Text>
+                  </Pressable>
+                </View>
+              </>
+            )}
           </View>
         )}
 
@@ -818,7 +828,6 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     },
     onboardCardTitle: { fontFamily: "Poppins_800ExtraBold", fontSize: 14, color: Colors.text },
     onboardCardSub: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.textMuted, marginTop: 1 },
-    onboardCloseBtn: { padding: 4 },
     onboardStep: {
       flexDirection: "row",
       alignItems: "center",
