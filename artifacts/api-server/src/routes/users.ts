@@ -77,12 +77,14 @@ router.get("/leaderboard", async (_req, res) => {
     if (a.type === "ring") ringsByUser.set(a.userId, (ringsByUser.get(a.userId) ?? 0) + 1);
   }
 
-  const withXp = users.map(u => ({
+  const allUsers = users.map(u => ({
     id: u.id,
     name: u.name,
     avatarUrl: u.avatarUrl ?? null,
     username: u.username ?? null,
     isElite: u.isElite ?? false,
+    medals: medalsByUser.get(u.id) ?? 0,
+    rings: ringsByUser.get(u.id) ?? 0,
     xp: computeXP(
       attendanceByUser.get(u.id) ?? 0,
       medalsByUser.get(u.id) ?? 0,
@@ -92,8 +94,11 @@ router.get("/leaderboard", async (_req, res) => {
     ),
   }));
 
-  const top5 = withXp.sort((a, b) => b.xp - a.xp).slice(0, 5);
-  res.json(top5);
+  const topXp = [...allUsers].sort((a, b) => b.xp - a.xp).slice(0, 5);
+  const topMedals = [...allUsers].sort((a, b) => b.medals - a.medals).filter(u => u.medals > 0).slice(0, 5);
+  const hallOfFame = [...allUsers].sort((a, b) => b.rings - a.rings).filter(u => u.rings > 0).slice(0, 5);
+
+  res.json({ xp: topXp, medals: topMedals, hallOfFame });
 });
 
 /* GET /api/users — member directory (public) */

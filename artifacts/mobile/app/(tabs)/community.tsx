@@ -23,7 +23,7 @@ import { useAuth } from "@/context/AuthContext";
 import { resolveImageUrl } from "@/constants/api";
 import {
   listMembers, getMemberProfile, getLeaderboard,
-  MemberSummary, UserProfile, LeaderboardEntry,
+  MemberSummary, UserProfile, LeaderboardEntry, LeaderboardData,
 } from "@/lib/api";
 
 const LEVEL_NAMES = ["Rookie", "Player", "Contender", "Competitor", "Veteran", "Elite", "Pro", "Champion", "Legend", "Icon"];
@@ -52,11 +52,28 @@ function Avatar({ avatarUrl, name, size = 44, Colors }: { avatarUrl: string | nu
 
 const RANK_COLORS = ["#FFD700", "#C0C0C0", "#CD7F32"];
 
-function LeaderboardCard({ entry, rank, Colors }: { entry: LeaderboardEntry; rank: number; Colors: any }) {
+type LeaderboardTab = "xp" | "medals" | "hallOfFame";
+
+const TABS: { key: LeaderboardTab; label: string; icon: string }[] = [
+  { key: "xp", label: "XP", icon: "⚡" },
+  { key: "medals", label: "Medals", icon: "🏅" },
+  { key: "hallOfFame", label: "Hall of Fame", icon: "💍" },
+];
+
+function LeaderboardCard({
+  entry, rank, tab, Colors,
+}: {
+  entry: LeaderboardEntry; rank: number; tab: LeaderboardTab; Colors: any;
+}) {
   const isTop3 = rank <= 3;
   const rankColor = RANK_COLORS[rank - 1] ?? Colors.textMuted;
   const uri = resolveImageUrl(entry.avatarUrl);
   const initials = entry.name.charAt(0).toUpperCase();
+
+  const statValue = tab === "xp" ? entry.xp.toLocaleString()
+    : tab === "medals" ? String(entry.medals)
+    : String(entry.rings);
+  const statLabel = tab === "xp" ? "XP" : tab === "medals" ? "medals" : "rings";
 
   return (
     <View
@@ -72,10 +89,9 @@ function LeaderboardCard({ entry, rank, Colors }: { entry: LeaderboardEntry; ran
         marginBottom: isTop3 ? 8 : 0,
       }}
     >
-      {/* Rank number */}
       <View style={{ width: 30, alignItems: "center" }}>
         {rank <= 3 ? (
-          <Text style={{ fontSize: 18, fontFamily: "Poppins_800ExtraBold", color: rankColor }}>
+          <Text style={{ fontSize: 18 }}>
             {rank === 1 ? "🥇" : rank === 2 ? "🥈" : "🥉"}
           </Text>
         ) : (
@@ -83,7 +99,6 @@ function LeaderboardCard({ entry, rank, Colors }: { entry: LeaderboardEntry; ran
         )}
       </View>
 
-      {/* Avatar */}
       <View style={{ position: "relative", marginLeft: 10, marginRight: 12 }}>
         {uri ? (
           <Image source={{ uri }} style={{ width: 38, height: 38, borderRadius: 19, borderWidth: isTop3 ? 2 : 0, borderColor: rankColor }} />
@@ -99,7 +114,6 @@ function LeaderboardCard({ entry, rank, Colors }: { entry: LeaderboardEntry; ran
         )}
       </View>
 
-      {/* Name */}
       <View style={{ flex: 1 }}>
         <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: isTop3 ? 15 : 14, color: Colors.text }} numberOfLines={1}>
           {entry.name}
@@ -109,40 +123,87 @@ function LeaderboardCard({ entry, rank, Colors }: { entry: LeaderboardEntry; ran
         ) : null}
       </View>
 
-      {/* XP */}
       <View style={{ alignItems: "flex-end" }}>
         <Text style={{ fontFamily: "Poppins_800ExtraBold", fontSize: isTop3 ? 16 : 13, color: isTop3 ? rankColor : Colors.textSecondary }}>
-          {entry.xp.toLocaleString()}
+          {statValue}
         </Text>
-        <Text style={{ fontFamily: "Inter_400Regular", fontSize: 10, color: Colors.textMuted }}>XP</Text>
+        <Text style={{ fontFamily: "Inter_400Regular", fontSize: 10, color: Colors.textMuted }}>{statLabel}</Text>
       </View>
     </View>
   );
 }
 
 function Leaderboard({ Colors }: { Colors: any }) {
-  const { data: entries, isLoading } = useQuery({
+  const [activeTab, setActiveTab] = useState<LeaderboardTab>("xp");
+
+  const { data, isLoading } = useQuery<LeaderboardData>({
     queryKey: ["leaderboard"],
     queryFn: getLeaderboard,
     staleTime: 60 * 1000,
   });
+
+  const entries = data ? data[activeTab] : [];
 
   return (
     <View style={{ marginBottom: 24 }}>
       {/* Title */}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 14 }}>
         <Text style={{ fontSize: 20, lineHeight: 24 }}>🏆</Text>
-        <Text style={{ fontFamily: "Poppins_800ExtraBold", fontSize: 20, color: Colors.text }}>XP Leaderboard</Text>
+        <Text style={{ fontFamily: "Poppins_800ExtraBold", fontSize: 20, color: Colors.text }}>Leaderboard</Text>
+      </View>
+
+      {/* Tabs */}
+      <View style={{ flexDirection: "row", gap: 8, marginBottom: 14 }}>
+        {TABS.map(tab => {
+          const active = activeTab === tab.key;
+          return (
+            <Pressable
+              key={tab.key}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setActiveTab(tab.key);
+              }}
+              style={{
+                flex: 1,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 5,
+                paddingVertical: 9,
+                borderRadius: 12,
+                backgroundColor: active ? Colors.primary : Colors.surface,
+                borderWidth: 1,
+                borderColor: active ? Colors.primary : Colors.border,
+              }}
+            >
+              <Text style={{ fontSize: 13 }}>{tab.icon}</Text>
+              <Text style={{
+                fontFamily: "Inter_600SemiBold",
+                fontSize: 12,
+                color: active ? "#fff" : Colors.textSecondary,
+              }}>
+                {tab.label}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
 
       {isLoading ? (
         <ActivityIndicator color={Colors.primary} />
       ) : !entries || entries.length === 0 ? (
-        <Text style={{ fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.textMuted }}>No data yet</Text>
+        <View style={{ backgroundColor: Colors.surface, borderRadius: 16, borderWidth: 1, borderColor: Colors.border, padding: 24, alignItems: "center" }}>
+          <Text style={{ fontSize: 28, marginBottom: 8 }}>
+            {activeTab === "hallOfFame" ? "💍" : activeTab === "medals" ? "🏅" : "⚡"}
+          </Text>
+          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.textMuted, textAlign: "center" }}>
+            {activeTab === "hallOfFame" ? "No ring holders yet" : activeTab === "medals" ? "No medals earned yet" : "No XP data yet"}
+          </Text>
+        </View>
       ) : (
         <View style={{ backgroundColor: Colors.surface, borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: Colors.border, padding: 12, gap: 2 }}>
           {entries.map((entry, i) => (
-            <LeaderboardCard key={entry.id} entry={entry} rank={i + 1} Colors={Colors} />
+            <LeaderboardCard key={entry.id} entry={entry} rank={i + 1} tab={activeTab} Colors={Colors} />
           ))}
         </View>
       )}

@@ -443,10 +443,18 @@ export type LeaderboardEntry = {
   username: string | null;
   isElite: boolean;
   xp: number;
+  medals: number;
+  rings: number;
 };
 
-export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
-  return apiFetch<LeaderboardEntry[]>("/users/leaderboard");
+export type LeaderboardData = {
+  xp: LeaderboardEntry[];
+  medals: LeaderboardEntry[];
+  hallOfFame: LeaderboardEntry[];
+};
+
+export async function getLeaderboard(): Promise<LeaderboardData> {
+  return apiFetch<LeaderboardData>("/users/leaderboard");
 }
 
 export async function getMemberProfile(id: number): Promise<UserProfile> {
