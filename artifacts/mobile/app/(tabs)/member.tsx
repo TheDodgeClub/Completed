@@ -26,14 +26,12 @@ import { resolveImageUrl, API_BASE } from "@/constants/api";
 import { useAuth } from "@/context/AuthContext";
 import {
   getUserAttendance,
-  getUserAchievements,
   getUserTeamHistory,
   getUserUpcomingEvents,
   listUpcomingEvents,
   updateProfile,
   updateAvatar,
   requestUploadUrl,
-  Achievement,
   AttendanceRecord,
   TeamHistory,
   UpcomingEvent,
@@ -70,30 +68,6 @@ function LevelBadge({ level }: { level: number }) {
   return (
     <View style={styles.levelBadge}>
       <Text style={styles.levelBadgeText}>LV {level}</Text>
-    </View>
-  );
-}
-
-
-function AchievementBadge({ achievement }: { achievement: Achievement }) {
-  const Colors = useColors();
-  const styles = useMemo(() => makeStyles(Colors), [Colors]);
-  const iconMap: Record<string, string> = {
-    star: "star", award: "award", shield: "shield", zap: "zap", medal: "award", trophy: "award",
-  };
-  const iconName = (iconMap[achievement.icon] || "award") as any;
-  return (
-    <View style={[styles.achieveBadge, !achievement.unlocked && styles.achieveLocked]}>
-      <View style={[styles.achieveIcon, achievement.unlocked && styles.achieveIconUnlocked]}>
-        <Feather name={iconName} size={20} color={achievement.unlocked ? Colors.accent : Colors.textMuted} />
-      </View>
-      <Text style={[styles.achieveTitle, !achievement.unlocked && { color: Colors.textMuted }]} numberOfLines={1}>
-        {achievement.title}
-      </Text>
-      <Text style={[styles.achieveDesc, !achievement.unlocked && { color: Colors.textMuted }]} numberOfLines={2}>
-        {achievement.description}
-      </Text>
-      {achievement.unlocked && <View style={styles.unlockedDot} />}
     </View>
   );
 }
@@ -320,11 +294,6 @@ export default function MemberScreen() {
     enabled: !!userId,
   });
 
-  const { data: achievements, refetch: refetchAchievements } = useQuery({
-    queryKey: ["achievements", userId],
-    queryFn: () => getUserAchievements(userId),
-    enabled: !!userId,
-  });
 
   const { data: teamHistory, refetch: refetchTeamHistory } = useQuery({
     queryKey: ["team-history", userId],
@@ -360,7 +329,7 @@ export default function MemberScreen() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([refreshUser(), refetchAttendance(), refetchAchievements(), refetchTeamHistory(), refetchUpcoming()]);
+    await Promise.all([refreshUser(), refetchAttendance(), refetchTeamHistory(), refetchUpcoming()]);
     setRefreshing(false);
   };
 
@@ -432,8 +401,6 @@ export default function MemberScreen() {
   const { progress, isMax, xpToNext } = getLevelProgress(xp, level);
   const nextLevelName = LEVEL_NAMES[level] ?? "Max";
   const avatarUri = resolveImageUrl(user.avatarUrl);
-  const unlockedCount = achievements?.filter(a => a.unlocked).length ?? 0;
-
   return (
     <ScrollView
       style={styles.screen}
@@ -537,11 +504,6 @@ export default function MemberScreen() {
           <Text style={[styles.statValue, { color: "#A78BFA" }]}>{user.ringsEarned ?? 0}</Text>
           <Text style={styles.statLabel}>Rings</Text>
         </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statBlock}>
-          <Text style={[styles.statValue, { color: "#60A5FA" }]}>{unlockedCount}</Text>
-          <Text style={styles.statLabel}>Awards</Text>
-        </View>
       </View>
 
       {/* ── Next Event Countdown ── */}
@@ -602,21 +564,8 @@ export default function MemberScreen() {
           </View>
         )}
 
-        {/* ── Achievements ── */}
+        {/* ── Mini Game ── */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Achievements</Text>
-          </View>
-          {achievements && achievements.length > 0 && (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.achieveScroll}>
-              <View style={styles.achieveRow}>
-                {achievements.map(a => (
-                  <AchievementBadge key={a.id} achievement={a} />
-                ))}
-              </View>
-            </ScrollView>
-          )}
-          {/* Mini Game */}
           <Pressable
             style={({ pressed }) => [styles.gameCard, { opacity: pressed ? 0.85 : 1 }]}
             onPress={() => {

@@ -310,8 +310,6 @@ function ProfileModal({ member, onClose, currentUserId }: {
                 {[
                   { label: "XP", value: profile.xp.toLocaleString() },
                   { label: "Events", value: profile.eventsAttended },
-                  { label: "Medals", value: profile.medalsEarned },
-                  { label: "Rings", value: profile.ringsEarned },
                 ].map((s) => (
                   <View key={s.label} style={styles.statBox}>
                     <Text style={styles.statValue}>{s.value}</Text>
