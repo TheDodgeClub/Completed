@@ -672,79 +672,6 @@ export default function MemberScreen() {
           )}
         </View>
 
-        {/* ── Supporter Onboarding Journey ── */}
-        {user.accountType === "supporter" && (() => {
-          const step1Done = (upcomingEvents?.length ?? 0) > 0;
-          const step3Done = (user.eventsAttended ?? 0) > 0;
-          if (step1Done && step3Done) return null;
-          return (
-            <View style={styles.onboardCard}>
-              <View style={styles.onboardHeader}>
-                <Text style={styles.onboardTitle}>Welcome to The Dodge Club 👋</Text>
-                <Text style={styles.onboardSubtitle}>Your first steps as a supporter</Text>
-              </View>
-
-              {/* Step 1 */}
-              <Pressable
-                style={({ pressed }) => [styles.onboardStep, step1Done && styles.onboardStepDone, { opacity: pressed ? 0.85 : 1 }]}
-                onPress={() => { if (!step1Done) { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(tabs)/tickets"); } }}
-                disabled={step1Done}
-              >
-                <View style={[styles.onboardBadge, step1Done && styles.onboardBadgeDone]}>
-                  {step1Done
-                    ? <Feather name="check" size={13} color="#fff" />
-                    : <Text style={styles.onboardBadgeText}>1</Text>}
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.onboardStepTitle, step1Done && styles.onboardStepTitleDone]}>Find an event & secure your spot</Text>
-                  <Text style={styles.onboardStepSub}>Browse upcoming sessions and grab a ticket</Text>
-                </View>
-                {!step1Done && <Feather name="chevron-right" size={16} color={Colors.textMuted} />}
-              </Pressable>
-
-              <View style={styles.onboardDivider} />
-
-              {/* Step 2 */}
-              <Pressable
-                style={({ pressed }) => [styles.onboardStep, { opacity: pressed ? 0.85 : 1 }]}
-                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(tabs)/updates"); }}
-              >
-                <View style={styles.onboardBadge}>
-                  <Text style={styles.onboardBadgeText}>2</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.onboardStepTitle}>Watch the rules video</Text>
-                  <Text style={styles.onboardStepSub}>Know the game before you arrive</Text>
-                </View>
-                <Feather name="play-circle" size={18} color={Colors.accent} />
-              </Pressable>
-
-              <View style={styles.onboardDivider} />
-
-              {/* Step 3 */}
-              <View style={[styles.onboardStep, step3Done && styles.onboardStepDone]}>
-                <View style={[styles.onboardBadge, step3Done && styles.onboardBadgeDone]}>
-                  {step3Done
-                    ? <Feather name="check" size={13} color="#fff" />
-                    : <Text style={styles.onboardBadgeText}>3</Text>}
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.onboardStepTitle, step3Done && styles.onboardStepTitleDone]}>Show up & rep the club</Text>
-                  <Text style={styles.onboardStepSub}>Attend your first session, then grab some merch!</Text>
-                </View>
-                {!step3Done && (
-                  <Pressable
-                    style={({ pressed }) => [styles.onboardMerchBtn, { opacity: pressed ? 0.8 : 1 }]}
-                    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(tabs)/merch"); }}
-                  >
-                    <Text style={styles.onboardMerchBtnText}>Shop 👕</Text>
-                  </Pressable>
-                )}
-              </View>
-            </View>
-          );
-        })()}
-
         {/* ── Achievement Progress — players only ── */}
         {user.accountType !== "supporter" && achievements && achievements.length > 0 && (
           <View style={styles.section}>
@@ -1271,57 +1198,6 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     gameCardEmoji: { fontSize: 24 },
     gameCardTitle: { fontFamily: "Poppins_800ExtraBold", fontSize: 15, color: Colors.accent, marginBottom: 2 },
     gameCardSub: { fontFamily: "Inter_400Regular", fontSize: 12, color: "rgba(255,255,255,0.55)", marginTop: 1 },
-
-    /* ── Supporter Onboarding ── */
-    onboardCard: {
-      marginHorizontal: 16,
-      marginBottom: 16,
-      backgroundColor: Colors.surface,
-      borderRadius: 16,
-      borderWidth: 1,
-      borderColor: `${Colors.primary}40`,
-      overflow: "hidden",
-    },
-    onboardHeader: {
-      paddingHorizontal: 16,
-      paddingTop: 16,
-      paddingBottom: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: Colors.border,
-    },
-    onboardTitle: { fontFamily: "Poppins_800ExtraBold", fontSize: 15, color: Colors.text },
-    onboardSubtitle: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textMuted, marginTop: 2 },
-    onboardStep: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 12,
-      paddingHorizontal: 16,
-      paddingVertical: 14,
-    },
-    onboardStepDone: { opacity: 0.5 },
-    onboardBadge: {
-      width: 28,
-      height: 28,
-      borderRadius: 14,
-      backgroundColor: Colors.primary,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    onboardBadgeDone: { backgroundColor: "#22c55e" },
-    onboardBadgeText: { fontFamily: "Poppins_800ExtraBold", fontSize: 12, color: "#fff" },
-    onboardStepTitle: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.text },
-    onboardStepTitleDone: { textDecorationLine: "line-through", color: Colors.textMuted },
-    onboardStepSub: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.textMuted, marginTop: 2 },
-    onboardDivider: { height: 1, backgroundColor: Colors.border, marginHorizontal: 16 },
-    onboardMerchBtn: {
-      backgroundColor: `${Colors.primary}22`,
-      borderRadius: 8,
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-      borderWidth: 1,
-      borderColor: `${Colors.primary}44`,
-    },
-    onboardMerchBtnText: { fontFamily: "Inter_700Bold", fontSize: 12, color: Colors.primary },
 
     achieveProgressList: { gap: 12 },
     achieveProgressRow: {

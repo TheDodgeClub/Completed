@@ -136,7 +136,6 @@ export default function HomeScreen() {
 
   const publicPosts = posts?.filter(p => !p.isMembersOnly).slice(0, 3) ?? [];
   const nextEvent = events?.[0] ?? null;
-  const isNewMember = isAuthenticated && (user?.eventsAttended ?? 0) === 0;
 
   /* ── XP progress for logged-in user ── */
   const xpProgress = user ? getLevelProgress(user.xp ?? 0, user.level ?? 1) : null;
@@ -365,24 +364,6 @@ export default function HomeScreen() {
             </View>
           </LinearGradient>
         </Pressable>
-
-        {/* ── Getting Started card — new members only ── */}
-        {isNewMember && (
-          <Pressable
-            style={({ pressed }) => [styles.gettingStartedCard, { opacity: pressed ? 0.88 : 1 }]}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.push("/(tabs)/tickets");
-            }}
-          >
-            <Feather name="zap" size={20} color={Colors.primary} />
-            <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={styles.gettingStartedTitle}>Welcome to The Dodge Club!</Text>
-              <Text style={styles.gettingStartedText}>Register for your first event to earn XP and unlock achievements.</Text>
-            </View>
-            <Feather name="chevron-right" size={18} color={Colors.primary} />
-          </Pressable>
-        )}
 
         {/* Upcoming Events — excludes the featured banner event */}
         {(() => {
@@ -895,30 +876,6 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       marginTop: 2,
     },
     gameCardArrow: {},
-    /* ── Getting Started Card ── */
-    gettingStartedCard: {
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: Colors.card,
-      borderRadius: 14,
-      borderWidth: 1,
-      borderColor: Colors.primary + "40",
-      padding: 16,
-      marginBottom: 16,
-      gap: 4,
-    },
-    gettingStartedTitle: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 14,
-      color: Colors.text,
-      marginBottom: 2,
-    },
-    gettingStartedText: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 12,
-      color: Colors.textMuted,
-      lineHeight: 17,
-    },
     /* ── Merch Row ── */
     merchRow: {
       gap: 12,
