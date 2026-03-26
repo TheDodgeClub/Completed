@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, Pressable, StyleSheet, Text } from "react-native";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { Feather } from "@expo/vector-icons";
@@ -18,6 +18,20 @@ export function VideoHero({ uri }: Props) {
     p.play();
   });
 
+  // Expo-video v3: use addListener on the SharedObject player to detect when
+  // the video is ready, then ensure playback is running. This handles iOS
+  // simulator timing issues where the initial p.play() fires before buffering.
+  useEffect(() => {
+    const subscription = player.addListener("statusChange", ({ status }) => {
+      if (status === "readyToPlay") {
+        try {
+          player.play();
+        } catch {}
+      }
+    });
+    return () => subscription.remove();
+  }, [player]);
+
   function toggleMute() {
     const next = !muted;
     player.muted = next;
@@ -31,24 +45,18 @@ export function VideoHero({ uri }: Props) {
         style={styles.video}
         contentFit="cover"
         nativeControls={false}
-        allowsFullscreen={false}
+        fullscreenOptions={{ isFullscreenButtonHidden: true }}
         allowsPictureInPicture={false}
       />
 
-      {/* Gradient overlay at bottom */}
       <View style={styles.overlay} pointerEvents="none" />
 
-      {/* Mute / unmute button */}
       <Pressable
         style={({ pressed }) => [styles.muteBtn, { opacity: pressed ? 0.7 : 1 }]}
         onPress={toggleMute}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
-        <Feather
-          name={muted ? "volume-x" : "volume-2"}
-          size={16}
-          color="#fff"
-        />
+        <Feather name={muted ? "volume-x" : "volume-2"} size={16} color="#fff" />
         <Text style={styles.muteBtnLabel}>{muted ? "Unmute" : "Mute"}</Text>
       </Pressable>
     </View>
@@ -73,7 +81,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     height: 60,
     backgroundColor: "transparent",
-    // soft fade at bottom so the mute button is always readable
   },
   muteBtn: {
     position: "absolute",
