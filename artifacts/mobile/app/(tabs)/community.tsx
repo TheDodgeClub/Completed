@@ -57,7 +57,7 @@ type LeaderboardTab = "xp" | "medals" | "hallOfFame";
 const TABS: { key: LeaderboardTab; label: string; icon: string }[] = [
   { key: "xp", label: "XP", icon: "⚡" },
   { key: "medals", label: "Medals", icon: "🏅" },
-  { key: "hallOfFame", label: "Hall of Fame", icon: "💍" },
+  { key: "hallOfFame", label: "Hall of Fame", icon: "🏆" },
 ];
 
 function LeaderboardCard({
@@ -194,7 +194,7 @@ function Leaderboard({ Colors }: { Colors: any }) {
       ) : !entries || entries.length === 0 ? (
         <View style={{ backgroundColor: Colors.surface, borderRadius: 16, borderWidth: 1, borderColor: Colors.border, padding: 24, alignItems: "center" }}>
           <Text style={{ fontSize: 28, marginBottom: 8 }}>
-            {activeTab === "hallOfFame" ? "💍" : activeTab === "medals" ? "🏅" : "⚡"}
+            {activeTab === "hallOfFame" ? "🏆" : activeTab === "medals" ? "🏅" : "⚡"}
           </Text>
           <Text style={{ fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.textMuted, textAlign: "center" }}>
             {activeTab === "hallOfFame" ? "No ring holders yet" : activeTab === "medals" ? "No medals earned yet" : "No XP data yet"}

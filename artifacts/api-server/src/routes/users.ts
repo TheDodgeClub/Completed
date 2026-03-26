@@ -63,18 +63,29 @@ router.get("/leaderboard", async (_req, res) => {
     db.query.usersTable.findMany({
       columns: { id: true, name: true, avatarUrl: true, username: true, bonusXp: true, gameXp: true, isElite: true },
     }),
-    db.query.attendanceTable.findMany({ columns: { userId: true } }),
+    db.query.attendanceTable.findMany({ columns: { userId: true, earnedMedal: true } }),
     db.query.awardsTable.findMany({ columns: { userId: true, type: true } }),
   ]);
 
   const attendanceByUser = new Map<number, number>();
-  for (const a of allAttendance) attendanceByUser.set(a.userId, (attendanceByUser.get(a.userId) ?? 0) + 1);
+  const attendanceMedalsByUser = new Map<number, number>();
+  for (const a of allAttendance) {
+    attendanceByUser.set(a.userId, (attendanceByUser.get(a.userId) ?? 0) + 1);
+    if (a.earnedMedal) attendanceMedalsByUser.set(a.userId, (attendanceMedalsByUser.get(a.userId) ?? 0) + 1);
+  }
 
-  const medalsByUser = new Map<number, number>();
+  const awardMedalsByUser = new Map<number, number>();
   const ringsByUser = new Map<number, number>();
   for (const a of allAwards) {
-    if (a.type === "medal") medalsByUser.set(a.userId, (medalsByUser.get(a.userId) ?? 0) + 1);
+    if (a.type === "medal") awardMedalsByUser.set(a.userId, (awardMedalsByUser.get(a.userId) ?? 0) + 1);
     if (a.type === "ring") ringsByUser.set(a.userId, (ringsByUser.get(a.userId) ?? 0) + 1);
+  }
+
+  // medals = attendance medals + direct award medals (matches getUserStats + admin dashboard)
+  const medalsByUser = new Map<number, number>();
+  const allUserIds = new Set([...attendanceMedalsByUser.keys(), ...awardMedalsByUser.keys()]);
+  for (const uid of allUserIds) {
+    medalsByUser.set(uid, (attendanceMedalsByUser.get(uid) ?? 0) + (awardMedalsByUser.get(uid) ?? 0));
   }
 
   const allUsers = users.map(u => ({
