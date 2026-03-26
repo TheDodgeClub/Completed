@@ -33,7 +33,7 @@ import { EliteBanner } from "@/components/EliteBanner";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 /* ── Level constants ── */
-const LEVEL_THRESHOLDS = [0, 300, 700, 1200, 1800, 2500, 3300, 4200, 5200, 6300];
+const LEVEL_THRESHOLDS = [0, 200, 400, 600, 800, 1300, 1800, 2300, 2800, 3300];
 const LEVEL_NAMES = ["Rookie", "Player", "Contender", "Competitor", "Veteran", "Elite", "Pro", "Champion", "Legend", "Icon"];
 
 function getLevelProgress(xp: number, level: number) {
@@ -119,7 +119,6 @@ export default function HomeScreen() {
 
   const publicPosts = posts?.filter(p => !p.isMembersOnly).slice(0, 3) ?? [];
   const nextEvent = events?.[0] ?? null;
-  const countdown = nextEvent ? getCountdown(nextEvent.date) : null;
 
   const quickActions = [
     {
@@ -217,10 +216,7 @@ export default function HomeScreen() {
         {isAuthenticated && user && xpProgress && (
           <View style={styles.xpSection}>
             <View style={styles.xpTopRow}>
-              <View>
-                <Text style={styles.xpLevelName}>{levelName}</Text>
-                <Text style={styles.xpValue}>{(user.xp ?? 0).toLocaleString()} XP</Text>
-              </View>
+              <Text style={styles.xpSectionLabel}>Your Progress</Text>
               {/* ── Feature 3: Rank chip ── */}
               {rank?.xpRank && (
                 <Pressable
@@ -232,13 +228,17 @@ export default function HomeScreen() {
                 </Pressable>
               )}
             </View>
+            <View style={styles.xpLevelRow}>
+              <Text style={styles.xpLevelName}>{levelName}</Text>
+              <Text style={styles.xpValue}>{(user.xp ?? 0).toLocaleString()} XP</Text>
+            </View>
             <View style={styles.xpBarBg}>
               <View style={[styles.xpBarFill, { width: `${Math.round(xpProgress.pct * 100)}%` as any }]} />
             </View>
             <Text style={styles.xpHint}>
               {xpProgress.isMax
                 ? "Maximum level reached 🏆"
-                : `${(xpProgress.xpNeeded - xpProgress.xpInLevel).toLocaleString()} XP to ${xpProgress.nextLevelName}`}
+                : `${(xpProgress.xpNeeded - xpProgress.xpInLevel).toLocaleString()} XP needed to reach ${xpProgress.nextLevelName}`}
             </Text>
           </View>
         )}
@@ -294,13 +294,6 @@ export default function HomeScreen() {
                   {new Date(nextEvent.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
                 </Text>
               </LinearGradient>
-              {/* ── Feature 2: Countdown chip ── */}
-              {countdown && (
-                <View style={styles.countdownChip}>
-                  <Feather name="clock" size={11} color="#FFC107" />
-                  <Text style={styles.countdownText}>{countdown}</Text>
-                </View>
-              )}
             </Pressable>
           ) : (
             /* Text-only card when no image is set */
@@ -315,12 +308,7 @@ export default function HomeScreen() {
                   {new Date(nextEvent.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
                 </Text>
               </View>
-              {countdown && (
-                <View style={styles.countdownChipInline}>
-                  <Feather name="clock" size={11} color="#FFC107" />
-                  <Text style={styles.countdownText}>{countdown}</Text>
-                </View>
-              )}
+              <Feather name="chevron-right" size={16} color={Colors.textMuted} />
             </Pressable>
           )
         )}
@@ -381,7 +369,7 @@ export default function HomeScreen() {
               <Text style={styles.sectionTitle}>Community Pulse</Text>
             </View>
             <View style={styles.pulseCard}>
-              {activityItems.slice(0, 6).map((item: ActivityItem, idx: number) => (
+              {activityItems.slice(0, 5).map((item: ActivityItem, idx: number) => (
                 <View key={item.id}>
                   {idx > 0 && <View style={styles.pulseDivider} />}
                   <View style={styles.pulseRow}>
@@ -489,20 +477,32 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     xpTopRow: {
       flexDirection: "row",
       justifyContent: "space-between",
-      alignItems: "flex-start",
+      alignItems: "center",
+      marginBottom: 6,
+    },
+    xpSectionLabel: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 11,
+      color: "rgba(255,255,255,0.55)",
+      textTransform: "uppercase",
+      letterSpacing: 0.8,
+    },
+    xpLevelRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "baseline",
       marginBottom: 8,
     },
     xpLevelName: {
       fontFamily: "Poppins_800ExtraBold",
-      fontSize: 13,
+      fontSize: 15,
       color: "#FFC107",
-      lineHeight: 18,
+      lineHeight: 20,
     },
     xpValue: {
       fontFamily: "Inter_600SemiBold",
-      fontSize: 11,
+      fontSize: 12,
       color: "rgba(255,255,255,0.7)",
-      marginTop: 1,
     },
     rankChip: {
       flexDirection: "row",

@@ -29,7 +29,7 @@ import {
 const LEVEL_NAMES = ["Rookie", "Player", "Contender", "Competitor", "Veteran", "Elite", "Pro", "Champion", "Legend", "Icon"];
 
 function getLevel(xp: number): number {
-  const thresholds = [0, 300, 700, 1200, 1800, 2500, 3300, 4200, 5200, 6300];
+  const thresholds = [0, 200, 400, 600, 800, 1300, 1800, 2300, 2800, 3300];
   let level = 1;
   for (let i = 1; i < thresholds.length; i++) {
     if (xp >= thresholds[i]) level = i + 1; else break;

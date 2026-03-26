@@ -57,7 +57,7 @@ async function sendPasswordResetEmail(email: string, code: string): Promise<void
 const router: IRouter = Router();
 
 /* ---------- helpers ---------- */
-const LEVEL_THRESHOLDS = [0, 300, 700, 1200, 1800, 2500, 3300, 4200, 5200, 6300];
+const LEVEL_THRESHOLDS = [0, 200, 400, 600, 800, 1300, 1800, 2300, 2800, 3300];
 
 function computeXP(eventsAttended: number, medalsEarned: number, ringsEarned: number, bonusXp: number = 0): number {
   return eventsAttended * 100 + medalsEarned * 300 + ringsEarned * 1000 + bonusXp;

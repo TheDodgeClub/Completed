@@ -29,6 +29,7 @@ import {
   getUserAchievements,
   getUserTeamHistory,
   getUserUpcomingEvents,
+  listUpcomingEvents,
   updateProfile,
   updateAvatar,
   requestUploadUrl,
@@ -41,14 +42,27 @@ import { getToken } from "@/lib/api";
 import { EliteBanner } from "@/components/EliteBanner";
 
 const PLAYER_ROLES = ["Thrower", "Catcher", "Dodger", "All-Rounder"] as const;
-const LEVEL_THRESHOLDS = [0, 300, 700, 1200, 1800, 2500, 3300, 4200, 5200, 6300];
+const LEVEL_THRESHOLDS = [0, 200, 400, 600, 800, 1300, 1800, 2300, 2800, 3300];
 const LEVEL_NAMES = ["Rookie", "Player", "Contender", "Competitor", "Veteran", "Elite", "Pro", "Champion", "Legend", "Icon"];
 
 function getLevelProgress(xp: number, level: number) {
   const currentThreshold = LEVEL_THRESHOLDS[level - 1] ?? 0;
-  const nextThreshold = LEVEL_THRESHOLDS[level] ?? LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1];
-  const progress = nextThreshold === currentThreshold ? 1 : (xp - currentThreshold) / (nextThreshold - currentThreshold);
-  return { progress: Math.min(1, Math.max(0, progress)), nextThreshold, currentThreshold };
+  const nextThreshold = LEVEL_THRESHOLDS[level];
+  const isMax = nextThreshold === undefined;
+  const safNext = nextThreshold ?? LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1];
+  const progress = safNext === currentThreshold ? 1 : (xp - currentThreshold) / (safNext - currentThreshold);
+  return { progress: Math.min(1, Math.max(0, progress)), nextThreshold: safNext, currentThreshold, isMax, xpToNext: isMax ? 0 : safNext - xp };
+}
+
+function getCountdown(dateStr: string): string | null {
+  const diff = new Date(dateStr).getTime() - Date.now();
+  if (diff <= 0 || diff > 30 * 86400000) return null;
+  const d = Math.floor(diff / 86400000);
+  const h = Math.floor((diff % 86400000) / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
 }
 
 function LevelBadge({ level }: { level: number }) {
@@ -363,6 +377,15 @@ export default function MemberScreen() {
     enabled: !!userId,
   });
 
+  const { data: clubEvents } = useQuery({
+    queryKey: ["upcoming-events"],
+    queryFn: listUpcomingEvents,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const nextClubEvent = clubEvents?.[0] ?? null;
+  const nextClubCountdown = nextClubEvent ? getCountdown(nextClubEvent.date) : null;
+
   const { mutate: saveProfile } = useMutation({
     mutationFn: updateProfile,
     onSuccess: async () => {
@@ -445,7 +468,8 @@ export default function MemberScreen() {
   const xp = user.xp ?? 0;
   const level = user.level ?? 1;
   const levelName = LEVEL_NAMES[level - 1] ?? "Player";
-  const { progress } = getLevelProgress(xp, level);
+  const { progress, isMax, xpToNext } = getLevelProgress(xp, level);
+  const nextLevelName = LEVEL_NAMES[level] ?? "Max";
   const avatarUri = resolveImageUrl(user.avatarUrl);
   const unlockedCount = achievements?.filter(a => a.unlocked).length ?? 0;
 
@@ -522,12 +546,18 @@ export default function MemberScreen() {
         {/* XP Progress */}
         <View style={styles.xpSection}>
           <View style={styles.xpLabelRow}>
+            <Text style={styles.xpProgressLabel}>Your Progress</Text>
             <Text style={styles.xpLabel}>{xp.toLocaleString()} XP</Text>
-            <Text style={styles.xpNextLevel}>Level {level + 1}</Text>
+          </View>
+          <View style={styles.xpLevelNameRow}>
+            <Text style={styles.xpLevelNameDisplay}>{levelName}</Text>
           </View>
           <View style={styles.xpTrack}>
             <View style={[styles.xpFill, { width: `${Math.round(progress * 100)}%` }]} />
           </View>
+          <Text style={styles.xpHintText}>
+            {isMax ? "Maximum level reached 🏆" : `${xpToNext.toLocaleString()} XP needed to reach ${nextLevelName}`}
+          </Text>
         </View>
       </LinearGradient>
 
@@ -553,6 +583,26 @@ export default function MemberScreen() {
           <Text style={styles.statLabel}>Awards</Text>
         </View>
       </View>
+
+      {/* ── Next Event Countdown ── */}
+      {nextClubEvent && nextClubCountdown && (
+        <Pressable
+          style={styles.countdownBar}
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(tabs)/tickets"); }}
+        >
+          <Feather name="calendar" size={14} color={Colors.primary} />
+          <View style={{ flex: 1, marginLeft: 10 }}>
+            <Text style={styles.countdownBarTitle} numberOfLines={1}>{nextClubEvent.title}</Text>
+            <Text style={styles.countdownBarDate}>
+              {new Date(nextClubEvent.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+            </Text>
+          </View>
+          <View style={styles.countdownChip}>
+            <Feather name="clock" size={11} color="#FFC107" />
+            <Text style={styles.countdownChipText}>{nextClubCountdown}</Text>
+          </View>
+        </Pressable>
+      )}
 
       <View style={styles.body}>
         {/* ── Quick Actions ── */}
@@ -752,11 +802,38 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
 
     /* XP Bar */
     xpSection: { marginTop: 4 },
-    xpLabelRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 6 },
+    xpLabelRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 2 },
+    xpProgressLabel: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 0.7 },
     xpLabel: { fontFamily: "Inter_700Bold", fontSize: 12, color: "rgba(255,255,255,0.9)" },
-    xpNextLevel: { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.5)" },
+    xpLevelNameRow: { marginBottom: 6 },
+    xpLevelNameDisplay: { fontFamily: "Poppins_800ExtraBold", fontSize: 14, color: "#FFC107", lineHeight: 20 },
     xpTrack: { height: 6, backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 3, overflow: "hidden" },
     xpFill: { height: "100%", backgroundColor: Colors.accent, borderRadius: 3 },
+    xpHintText: { fontFamily: "Inter_400Regular", fontSize: 10, color: "rgba(255,255,255,0.45)", marginTop: 5 },
+    /* ── Countdown bar ── */
+    countdownBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: Colors.card,
+      borderBottomWidth: 1,
+      borderBottomColor: Colors.border,
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+    },
+    countdownBarTitle: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.text },
+    countdownBarDate: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.textMuted, marginTop: 1 },
+    countdownChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      backgroundColor: "rgba(255,193,7,0.12)",
+      borderRadius: 20,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderWidth: 1,
+      borderColor: "rgba(255,193,7,0.4)",
+    },
+    countdownChipText: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: "#FFC107" },
 
     /* Stats */
     statsSection: {
