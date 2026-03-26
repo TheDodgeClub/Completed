@@ -382,7 +382,7 @@ router.get("/members", async (_req, res) => {
       name: u.name,
       email: u.email,
       isAdmin: u.isAdmin,
-      memberSince: u.createdAt.toISOString(),
+      memberSince: (u.memberSince ?? u.createdAt).toISOString(),
       eventsAttended,
       medalsEarned,
       ringsEarned,
@@ -402,12 +402,12 @@ router.get("/members", async (_req, res) => {
 
 /* PUT /api/admin/members/:id — edit member profile */
 router.put("/members/:id", async (req, res) => {
-  const { name, username, bio, preferredRole } = req.body;
+  const { name, username, bio, memberSince } = req.body;
   const updates: Record<string, unknown> = {};
   if (name !== undefined) updates.name = name;
   if (username !== undefined) updates.username = username || null;
   if (bio !== undefined) updates.bio = bio || null;
-  if (preferredRole !== undefined) updates.preferredRole = preferredRole || null;
+  if (memberSince !== undefined) updates.memberSince = memberSince ? new Date(memberSince) : null;
 
   const [user] = await db.update(usersTable).set(updates).where(eq(usersTable.id, Number(req.params.id))).returning();
   if (!user) { res.status(404).json({ error: "Not found" }); return; }
@@ -420,7 +420,7 @@ router.put("/members/:id", async (req, res) => {
   const xp = computeXP(eventsAttended, medalsEarned, ringsEarned, user.bonusXp ?? 0);
   res.json({
     id: user.id, name: user.name, email: user.email, isAdmin: user.isAdmin,
-    memberSince: user.createdAt.toISOString(), eventsAttended, medalsEarned, ringsEarned, xp,
+    memberSince: (user.memberSince ?? user.createdAt).toISOString(), eventsAttended, medalsEarned, ringsEarned, xp,
     level: computeLevel(xp), avatarUrl: user.avatarUrl ?? null,
     username: user.username ?? null, preferredRole: user.preferredRole ?? null, bio: user.bio ?? null,
   });

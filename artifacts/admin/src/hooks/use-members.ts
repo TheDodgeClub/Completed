@@ -144,7 +144,7 @@ export function useDeleteMember() {
 export function useUpdateMember() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: { name?: string; username?: string; bio?: string; preferredRole?: string } }) =>
+    mutationFn: ({ id, data }: { id: number; data: { name?: string; username?: string; bio?: string; memberSince?: string } }) =>
       fetchApi<AdminMember>(`/api/admin/members/${id}`, {
         method: "PUT",
         body: JSON.stringify(data),

@@ -48,7 +48,7 @@ function toProfile(user: typeof usersTable.$inferSelect, stats: Awaited<ReturnTy
     email: user.email,
     name: user.name,
     isAdmin: user.isAdmin,
-    memberSince: user.createdAt.toISOString(),
+    memberSince: (user.memberSince ?? user.createdAt).toISOString(),
     avatarUrl: user.avatarUrl ?? null,
     username: user.username ?? null,
     preferredRole: user.preferredRole ?? null,
@@ -216,7 +216,7 @@ router.get("/", async (_req, res) => {
     username: u.username ?? null,
     bio: u.bio ?? null,
     preferredRole: u.preferredRole ?? null,
-    memberSince: u.createdAt.toISOString(),
+    memberSince: (u.memberSince ?? u.createdAt).toISOString(),
     isElite: u.isElite ?? false,
   })));
 });

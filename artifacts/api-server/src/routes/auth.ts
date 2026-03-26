@@ -85,7 +85,7 @@ function toProfile(
     email: user.email,
     name: user.name,
     isAdmin: user.isAdmin,
-    memberSince: user.createdAt.toISOString(),
+    memberSince: (user.memberSince ?? user.createdAt).toISOString(),
     eventsAttended,
     medalsEarned,
     ringsEarned,

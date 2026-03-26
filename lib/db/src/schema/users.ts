@@ -25,6 +25,7 @@ export const usersTable = pgTable("users", {
   eliteSince: timestamp("elite_since"),
   bonusXp: integer("bonus_xp").notNull().default(0),
   gameXp: integer("game_xp").notNull().default(0),
+  memberSince: timestamp("member_since"),
 });
 
 export const insertUserSchema = createInsertSchema(usersTable).omit({

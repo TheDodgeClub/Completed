@@ -170,6 +170,7 @@ function MemberDetailSheet({ member, onClose }: { member: AdminMember | null; on
   const [editName, setEditName] = useState("");
   const [editUsername, setEditUsername] = useState("");
   const [editBio, setEditBio] = useState("");
+  const [editMemberSince, setEditMemberSince] = useState("");
   const [profileExpanded, setProfileExpanded] = useState(false);
 
   const handleAddAttendance = (e: React.FormEvent) => {
@@ -207,7 +208,7 @@ function MemberDetailSheet({ member, onClose }: { member: AdminMember | null; on
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
     if (!member) return;
-    updateMember({ id: member.id, data: { name: editName, username: editUsername || undefined, bio: editBio || undefined } }, {
+    updateMember({ id: member.id, data: { name: editName, username: editUsername || undefined, bio: editBio || undefined, memberSince: editMemberSince || undefined } }, {
       onSuccess: () => { toast({ title: "Profile updated" }); setProfileExpanded(false); },
       onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
     });
@@ -294,6 +295,7 @@ function MemberDetailSheet({ member, onClose }: { member: AdminMember | null; on
                       setEditName(member.name);
                       setEditUsername(member.username ?? "");
                       setEditBio(member.bio ?? "");
+                      setEditMemberSince(member.memberSince ? member.memberSince.split("T")[0] : "");
                     }
                   }}
                   className="w-full flex items-center justify-between text-left"
@@ -318,6 +320,16 @@ function MemberDetailSheet({ member, onClose }: { member: AdminMember | null; on
                     <div className="space-y-1">
                       <Label className="text-xs">Bio</Label>
                       <Textarea value={editBio} onChange={e => setEditBio(e.target.value)} placeholder="Member bio..." rows={2} className="bg-background border-border rounded-xl text-sm resize-none" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Member Since</Label>
+                      <input
+                        type="date"
+                        value={editMemberSince}
+                        onChange={e => setEditMemberSince(e.target.value)}
+                        className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      />
+                      <p className="text-[10px] text-muted-foreground">Leave blank to use account creation date</p>
                     </div>
                     <Button type="submit" disabled={updatingProfile} className="w-full rounded-xl bg-primary hover:bg-primary/90 text-white">
                       {updatingProfile ? "Saving..." : "Save Profile"}
