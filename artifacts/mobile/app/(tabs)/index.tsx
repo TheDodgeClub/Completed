@@ -256,8 +256,8 @@ export default function HomeScreen() {
 
       <View style={styles.body}>
 
-        {/* Next Upcoming Event Banner with countdown */}
-        {nextEvent && (
+        {/* Next Upcoming Event Banner — guests only */}
+        {!isAuthenticated && nextEvent && (
           nextEvent.imageUrl ? (
             /* Full image banner */
             <Pressable
@@ -340,9 +340,11 @@ export default function HomeScreen() {
 
         {/* Upcoming Events — excludes the featured banner event */}
         {(() => {
-          const remainingEvents = events
-            ? events.filter(e => e.id !== nextEvent?.id).slice(0, 3)
+          // Authenticated users see all events; guests already have the featured banner so exclude it
+          const displayEvents = events
+            ? (isAuthenticated ? events.slice(0, 3) : events.filter(e => e.id !== nextEvent?.id).slice(0, 3))
             : [];
+          const sectionTitle = isAuthenticated ? "Upcoming Events" : "More Events";
           if (eventsLoading) {
             return (
               <View style={styles.section}>
@@ -350,7 +352,7 @@ export default function HomeScreen() {
               </View>
             );
           }
-          if (!nextEvent && (!events || events.length === 0)) {
+          if (!events || events.length === 0) {
             return (
               <View style={styles.section}>
                 <View style={styles.sectionHeader}>
@@ -363,16 +365,16 @@ export default function HomeScreen() {
               </View>
             );
           }
-          if (remainingEvents.length === 0) return null;
+          if (displayEvents.length === 0) return null;
           return (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>More Events</Text>
+                <Text style={styles.sectionTitle}>{sectionTitle}</Text>
                 <Pressable onPress={() => router.push("/(tabs)/tickets")}>
                   <Text style={styles.seeAll}>See All</Text>
                 </Pressable>
               </View>
-              {remainingEvents.map(event => (
+              {displayEvents.map(event => (
                 <EventCard
                   key={event.id}
                   event={event}
