@@ -50,15 +50,39 @@ function Avatar({ avatarUrl, name, size = 44, Colors }: { avatarUrl: string | nu
   );
 }
 
+function EliteEBadge() {
+  return (
+    <View style={{
+      position: "absolute", bottom: -2, right: -2,
+      width: 18, height: 18, borderRadius: 9,
+      backgroundColor: "#FFC107",
+      alignItems: "center", justifyContent: "center",
+      borderWidth: 1.5, borderColor: "#0D0D0D",
+    }}>
+      <Text style={{ fontFamily: "Poppins_800ExtraBold", fontSize: 9, color: "#0D0D0D", lineHeight: 12 }}>E</Text>
+    </View>
+  );
+}
+
 function MemberRow({ member, onPress }: { member: MemberSummary; onPress: () => void }) {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
 
   return (
     <Pressable style={({ pressed }) => [styles.memberRow, { opacity: pressed ? 0.85 : 1 }]} onPress={onPress}>
-      <Avatar avatarUrl={member.avatarUrl} name={member.name} size={46} Colors={Colors} />
+      <View style={{ position: "relative" }}>
+        <Avatar avatarUrl={member.avatarUrl} name={member.name} size={46} Colors={Colors} />
+        {member.isElite && <EliteEBadge />}
+      </View>
       <View style={styles.memberInfo}>
-        <Text style={styles.memberName}>{member.name}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <Text style={styles.memberName}>{member.name}</Text>
+          {member.isElite && (
+            <View style={{ backgroundColor: "#FFC10720", borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1, borderWidth: 1, borderColor: "#FFC10760" }}>
+              <Text style={{ fontFamily: "Inter_700Bold", fontSize: 9, color: "#FFC107", letterSpacing: 0.5 }}>ELITE</Text>
+            </View>
+          )}
+        </View>
         <Text style={styles.memberMeta}>
           {member.username ? `@${member.username}` : member.preferredRole ?? "Member"}
         </Text>
@@ -112,6 +136,14 @@ function ProfileModal({ member, onClose, currentUserId }: {
             <ActivityIndicator color={Colors.primary} style={{ marginTop: 32 }} />
           ) : profile ? (
             <View style={styles.profileBody}>
+              {member.isElite && (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#FFC10715", borderRadius: 12, padding: 10, borderWidth: 1, borderColor: "#FFC10740" }}>
+                  <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: "#FFC107", alignItems: "center", justifyContent: "center" }}>
+                    <Text style={{ fontFamily: "Poppins_800ExtraBold", fontSize: 14, color: "#0D0D0D", lineHeight: 18 }}>E</Text>
+                  </View>
+                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#FFC107" }}>Elite Member</Text>
+                </View>
+              )}
               {/* Stats row */}
               <View style={styles.statsRow}>
                 {[

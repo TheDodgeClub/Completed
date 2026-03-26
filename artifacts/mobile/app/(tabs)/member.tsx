@@ -511,7 +511,7 @@ export default function MemberScreen() {
           {user.preferredRole && <RoleBadge role={user.preferredRole} />}
           {user.isElite && (
             <View style={styles.eliteBadge}>
-              <Feather name="star" size={10} color="#0D0D0D" />
+              <Text style={{ fontFamily: "Poppins_800ExtraBold", fontSize: 10, color: "#0D0D0D", lineHeight: 14 }}>E</Text>
               <Text style={styles.eliteBadgeText}>ELITE</Text>
             </View>
           )}
@@ -579,7 +579,7 @@ export default function MemberScreen() {
             style={({ pressed }) => [styles.quickBtn, user.isElite ? styles.quickBtnElite : {}, { opacity: pressed ? 0.8 : 1 }]}
             onPress={() => router.push("/elite")}
           >
-            <Feather name="star" size={20} color={Colors.accent} />
+            <Text style={{ fontFamily: "Poppins_800ExtraBold", fontSize: 18, color: Colors.accent, lineHeight: 22 }}>E</Text>
             <Text style={styles.quickBtnText}>{user.isElite ? "Elite" : "Go Elite"}</Text>
           </Pressable>
         </View>

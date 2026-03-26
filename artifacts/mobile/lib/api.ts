@@ -429,6 +429,7 @@ export type MemberSummary = {
   bio: string | null;
   preferredRole: string | null;
   memberSince: string;
+  isElite?: boolean;
 };
 
 export async function listMembers(): Promise<MemberSummary[]> {

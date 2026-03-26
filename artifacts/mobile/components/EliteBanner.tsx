@@ -11,6 +11,21 @@ type Props = {
   isAuthenticated: boolean;
 };
 
+function EliteE({ size = 20, dark = false }: { size?: number; dark?: boolean }) {
+  return (
+    <Text
+      style={{
+        fontFamily: "Poppins_800ExtraBold",
+        fontSize: size,
+        color: dark ? "#0D0D0D" : "#FFC107",
+        lineHeight: size * 1.2,
+      }}
+    >
+      E
+    </Text>
+  );
+}
+
 export function EliteBanner({ isElite, isAuthenticated }: Props) {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
@@ -32,7 +47,7 @@ export function EliteBanner({ isElite, isAuthenticated }: Props) {
         >
           <View style={styles.left}>
             <View style={styles.iconWrap}>
-              <Feather name="star" size={20} color="#0D0D0D" />
+              <EliteE size={22} dark />
             </View>
             <View>
               <Text style={styles.title}>You're Elite</Text>
@@ -61,17 +76,19 @@ export function EliteBanner({ isElite, isAuthenticated }: Props) {
       >
         <View style={styles.left}>
           <View style={[styles.iconWrap, { backgroundColor: "#FFC10730", borderColor: "#FFC10780", borderWidth: 1.5 }]}>
-            <Feather name="star" size={20} color="#FFC107" />
+            <EliteE size={22} />
           </View>
           <View>
-            <Text style={[styles.title, { color: "#FFC107", textShadowColor: "#FFDD6080", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 }]}>Go Elite</Text>
+            <Text style={[styles.title, { color: "#FFC107", textShadowColor: "#FFDD6080", textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 8 }]}>
+              Go Elite
+            </Text>
             <Text style={[styles.sub, { color: "rgba(255,193,7,0.65)" }]}>
-              {isAuthenticated ? "£8.99/month · Cancel anytime" : "Log in to join · £8.99/month"}
+              Unlock everything
             </Text>
           </View>
         </View>
         <View style={[styles.cta, { backgroundColor: "#FFC107", shadowColor: "#FFC107", shadowOpacity: 0.5, shadowOffset: { width: 0, height: 2 }, shadowRadius: 8, elevation: 4 }]}>
-          <Text style={styles.ctaText}>Join</Text>
+          <Text style={styles.ctaText}>Go Elite</Text>
         </View>
       </LinearGradient>
     </Pressable>
