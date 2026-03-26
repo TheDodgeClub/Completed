@@ -66,13 +66,13 @@ const ATTENDANCE_MILESTONES = [
   { events: 50, bonus: 1000 },
 ];
 
-function computeAttendanceXP(attendedEventIds: Set<number>, pastEvents: { id: number }[]) {
+function computeAttendanceXP(attendedEventIds: Set<number>, pastEvents: { id: number; xpReward: number }[]) {
   let streak = 0, bestStreak = 0, eventXP = 0, attendedCount = 0;
   for (const event of pastEvents) {
     if (attendedEventIds.has(event.id)) {
       streak++;
       attendedCount++;
-      eventXP += 50 + (streak >= 8 ? 50 : streak >= 4 ? 25 : streak >= 2 ? 10 : 0);
+      eventXP += (event.xpReward ?? 50) + (streak >= 8 ? 50 : streak >= 4 ? 25 : streak >= 2 ? 10 : 0);
       for (const m of ATTENDANCE_MILESTONES) { if (attendedCount === m.events) { eventXP += m.bonus; break; } }
       if (streak > bestStreak) bestStreak = streak;
     } else { streak = 0; }
@@ -123,7 +123,7 @@ async function getUserStats(userId: number, bonusXp: number = 0, gameXp: number 
   const [records, awards, pastEvents] = await Promise.all([
     db.select().from(attendanceTable).where(eq(attendanceTable.userId, userId)),
     db.select().from(awardsTable).where(eq(awardsTable.userId, userId)),
-    db.select({ id: eventsTable.id }).from(eventsTable).where(lte(eventsTable.date, new Date())).orderBy(eventsTable.date),
+    db.select({ id: eventsTable.id, xpReward: eventsTable.xpReward }).from(eventsTable).where(lte(eventsTable.date, new Date())).orderBy(eventsTable.date),
   ]);
   const attendedIds = new Set(records.map(r => r.eventId));
   const { eventXP, currentStreak, bestStreak, eventsAttended } = computeAttendanceXP(attendedIds, pastEvents);

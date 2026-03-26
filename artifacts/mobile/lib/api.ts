@@ -41,6 +41,7 @@ export type UpcomingEvent = {
   date: string;
   location: string;
   imageUrl: string | null;
+  xpReward?: number;
 };
 
 export type CheckoutField = {
@@ -66,6 +67,7 @@ export type Event = {
   stripePriceId: string | null;
   checkoutFields: CheckoutField[];
   waiverText: string | null;
+  xpReward: number;
 };
 
 export type Ticket = {

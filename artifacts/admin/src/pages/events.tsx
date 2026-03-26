@@ -530,10 +530,12 @@ function EventFormModal({ event, onClose }: { event?: Event; onClose: () => void
       stripePriceId: event.stripePriceId,
       eliteEarlyAccess: event.eliteEarlyAccess ?? false,
       eliteDiscountPercent: event.eliteDiscountPercent ?? null,
+      xpReward: event.xpReward ?? 50,
     } : {
       title: "", description: "", date: "", location: "", ticketUrl: "", imageUrl: "",
       ticketPrice: null, ticketCapacity: null, stripeProductId: null, stripePriceId: null,
       eliteEarlyAccess: false, eliteDiscountPercent: null,
+      xpReward: 50,
     }
   });
 
@@ -596,6 +598,21 @@ function EventFormModal({ event, onClose }: { event?: Event; onClose: () => void
             value={watch("imageUrl") ?? ""}
             onChange={(url) => setValue("imageUrl", url || null)}
           />
+          <div className="space-y-2 p-4 bg-emerald-500/5 rounded-xl border border-emerald-500/20">
+            <Label className="text-emerald-400 font-semibold flex items-center gap-1.5 text-sm">
+              ⚡ XP Reward for Attending
+            </Label>
+            <Input
+              type="number"
+              min={0}
+              max={10000}
+              {...register("xpReward", { valueAsNumber: true })}
+              className="bg-background border-border rounded-xl h-9"
+              placeholder="50"
+            />
+            <p className="text-xs text-muted-foreground">Base XP awarded to members who attend this event. Streak and milestone bonuses are added on top.</p>
+          </div>
+
           <div className="space-y-3 p-4 bg-yellow-500/5 rounded-xl border border-yellow-500/20">
             <Label className="text-yellow-500 font-semibold flex items-center gap-1.5 text-sm">
               <Star className="w-3.5 h-3.5" /> Elite Member Perks

@@ -28,6 +28,7 @@ export interface Event {
   waiverText: string | null;
   eliteEarlyAccess: boolean;
   eliteDiscountPercent: number | null;
+  xpReward: number;
 }
 
 export type EventInput = Omit<Event, "id" | "isUpcoming" | "isPublished" | "attendeeCount">;

@@ -369,6 +369,12 @@ function EventBuyCard({
             <Feather name="clock" size={11} color={Colors.textMuted} />
             <Text style={styles.ticketMetaText}>{time}</Text>
           </View>
+          {(event.xpReward ?? 50) > 0 && (
+            <View style={styles.xpEarnBadge}>
+              <Feather name="zap" size={10} color="#FFC107" />
+              <Text style={styles.xpEarnText}>Earn {event.xpReward ?? 50} XP</Text>
+            </View>
+          )}
         </View>
         {priceLabel && (
           <View style={[styles.priceBadge, isFree && styles.priceBadgeFree]}>
@@ -878,6 +884,22 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       fontSize: 12,
       color: Colors.textMuted,
       flex: 1,
+    },
+    xpEarnBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 3,
+      backgroundColor: "#FFC10720",
+      borderRadius: 6,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      alignSelf: "flex-start",
+      marginTop: 4,
+    },
+    xpEarnText: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 11,
+      color: "#FFC107",
     },
     ticketCodeRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
     ticketCode: {

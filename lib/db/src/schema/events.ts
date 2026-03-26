@@ -21,6 +21,7 @@ export const eventsTable = pgTable("events", {
   waiverText: text("waiver_text"),
   eliteEarlyAccess: boolean("elite_early_access").notNull().default(false),
   eliteDiscountPercent: integer("elite_discount_percent"),
+  xpReward: integer("xp_reward").notNull().default(50),
 });
 
 export type CheckoutField = {

@@ -17,7 +17,7 @@ const ATTENDANCE_MILESTONES = [
 
 function computeAttendanceXP(
   attendedEventIds: Set<number>,
-  pastEvents: { id: number }[],
+  pastEvents: { id: number; xpReward: number }[],
 ): { eventXP: number; currentStreak: number; bestStreak: number; eventsAttended: number } {
   let streak = 0;
   let bestStreak = 0;
@@ -28,7 +28,7 @@ function computeAttendanceXP(
       streak++;
       attendedCount++;
       const streakBonus = streak >= 8 ? 50 : streak >= 4 ? 25 : streak >= 2 ? 10 : 0;
-      eventXP += 50 + streakBonus;
+      eventXP += (event.xpReward ?? 50) + streakBonus;
       for (const m of ATTENDANCE_MILESTONES) {
         if (attendedCount === m.events) { eventXP += m.bonus; break; }
       }
@@ -64,7 +64,7 @@ async function getUserStats(userId: number, bonusXp: number = 0, gameXp: number 
   const [records, awards, pastEvents] = await Promise.all([
     db.query.attendanceTable.findMany({ where: eq(attendanceTable.userId, userId) }),
     db.query.awardsTable.findMany({ where: eq(awardsTable.userId, userId) }),
-    db.select({ id: eventsTable.id }).from(eventsTable).where(lte(eventsTable.date, new Date())).orderBy(eventsTable.date),
+    db.select({ id: eventsTable.id, xpReward: eventsTable.xpReward }).from(eventsTable).where(lte(eventsTable.date, new Date())).orderBy(eventsTable.date),
   ]);
   const attendedIds = new Set(records.map(r => r.eventId));
   const { eventXP, currentStreak, bestStreak, eventsAttended } = computeAttendanceXP(attendedIds, pastEvents);
@@ -100,7 +100,7 @@ router.get("/leaderboard", async (_req, res) => {
     }),
     db.query.attendanceTable.findMany({ columns: { userId: true, eventId: true, earnedMedal: true } }),
     db.query.awardsTable.findMany({ columns: { userId: true, type: true } }),
-    db.select({ id: eventsTable.id }).from(eventsTable).where(lte(eventsTable.date, new Date())).orderBy(eventsTable.date),
+    db.select({ id: eventsTable.id, xpReward: eventsTable.xpReward }).from(eventsTable).where(lte(eventsTable.date, new Date())).orderBy(eventsTable.date),
   ]);
 
   const attendanceEventsByUser = new Map<number, Set<number>>();
@@ -159,7 +159,7 @@ router.get("/me/rank", async (req, res) => {
     }),
     db.query.attendanceTable.findMany({ columns: { userId: true, eventId: true, earnedMedal: true } }),
     db.query.awardsTable.findMany({ columns: { userId: true, type: true } }),
-    db.select({ id: eventsTable.id }).from(eventsTable).where(lte(eventsTable.date, new Date())).orderBy(eventsTable.date),
+    db.select({ id: eventsTable.id, xpReward: eventsTable.xpReward }).from(eventsTable).where(lte(eventsTable.date, new Date())).orderBy(eventsTable.date),
   ]);
 
   const attendanceEventsByUser = new Map<number, Set<number>>();
@@ -273,7 +273,7 @@ router.get("/:id/attendance", async (req, res) => {
       where: eq(attendanceTable.userId, userId),
       with: { event: true },
     }),
-    db.select({ id: eventsTable.id }).from(eventsTable).where(lte(eventsTable.date, new Date())).orderBy(eventsTable.date),
+    db.select({ id: eventsTable.id, xpReward: eventsTable.xpReward }).from(eventsTable).where(lte(eventsTable.date, new Date())).orderBy(eventsTable.date),
   ]);
 
   // Compute per-event XP (same streak/milestone algorithm used in getUserStats)
@@ -288,7 +288,7 @@ router.get("/:id/attendance", async (req, res) => {
       const streakBonus = streak >= 8 ? 50 : streak >= 4 ? 25 : streak >= 2 ? 10 : 0;
       let milestoneBonus = 0;
       for (const m of ATTENDANCE_MILESTONES) { if (attendedCount === m.events) { milestoneBonus = m.bonus; break; } }
-      xpByEventId.set(ev.id, { xpEarned: 50 + streakBonus + milestoneBonus, streakAt: streak, milestoneBonus });
+      xpByEventId.set(ev.id, { xpEarned: (ev.xpReward ?? 50) + streakBonus + milestoneBonus, streakAt: streak, milestoneBonus });
     } else {
       streak = 0;
     }
@@ -380,6 +380,7 @@ router.get("/:id/upcoming-events", async (req, res) => {
       date: r.event.date.toISOString(),
       location: r.event.location,
       imageUrl: r.event.imageUrl ?? null,
+      xpReward: r.event.xpReward ?? 50,
     }));
   res.json(upcoming);
 });

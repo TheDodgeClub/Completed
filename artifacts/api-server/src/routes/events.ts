@@ -21,6 +21,7 @@ function toEvent(e: typeof eventsTable.$inferSelect) {
     stripePriceId: e.stripePriceId ?? null,
     checkoutFields: (e.checkoutFields as any[]) ?? [],
     waiverText: e.waiverText ?? null,
+    xpReward: e.xpReward ?? 50,
   };
 }
 

@@ -30,6 +30,7 @@ function toAdminEvent(e: typeof eventsTable.$inferSelect) {
     waiverText: e.waiverText ?? null,
     eliteEarlyAccess: e.eliteEarlyAccess,
     eliteDiscountPercent: e.eliteDiscountPercent ?? null,
+    xpReward: e.xpReward ?? 50,
   };
 }
 
@@ -41,16 +42,16 @@ router.get("/events", async (_req, res) => {
 
 /* POST /api/admin/events — create */
 router.post("/events", async (req, res) => {
-  const { title, description, date, location, ticketUrl, imageUrl } = req.body;
+  const { title, description, date, location, ticketUrl, imageUrl, xpReward } = req.body;
   const [event] = await db.insert(eventsTable)
-    .values({ title, description, date: new Date(date), location, ticketUrl: ticketUrl || null, imageUrl: imageUrl || null })
+    .values({ title, description, date: new Date(date), location, ticketUrl: ticketUrl || null, imageUrl: imageUrl || null, xpReward: xpReward != null ? Number(xpReward) : 50 })
     .returning();
   res.status(201).json(toAdminEvent(event));
 });
 
 /* PUT /api/admin/events/:id — update */
 router.put("/events/:id", async (req, res) => {
-  const { title, description, date, location, ticketUrl, imageUrl, eliteEarlyAccess, eliteDiscountPercent } = req.body;
+  const { title, description, date, location, ticketUrl, imageUrl, eliteEarlyAccess, eliteDiscountPercent, xpReward } = req.body;
   const [event] = await db.update(eventsTable)
     .set({
       title, description,
@@ -60,6 +61,7 @@ router.put("/events/:id", async (req, res) => {
       imageUrl: imageUrl || null,
       eliteEarlyAccess: eliteEarlyAccess !== undefined ? !!eliteEarlyAccess : undefined,
       eliteDiscountPercent: eliteDiscountPercent != null ? Number(eliteDiscountPercent) : null,
+      xpReward: xpReward != null ? Number(xpReward) : undefined,
     })
     .where(eq(eventsTable.id, Number(req.params.id)))
     .returning();
@@ -91,6 +93,7 @@ router.post("/events/:id/duplicate", async (req, res) => {
     imageUrl: source.imageUrl,
     checkoutFields: source.checkoutFields,
     waiverText: source.waiverText,
+    xpReward: source.xpReward,
     isPublished: false,
   }).returning();
   res.status(201).json(toAdminEvent(copy));
@@ -347,12 +350,12 @@ const ATTENDANCE_MILESTONES = [
   { events: 25, bonus: 500  },
   { events: 50, bonus: 1000 },
 ];
-function computeAttendanceXP(attendedEventIds: Set<number>, pastEvents: { id: number }[]) {
+function computeAttendanceXP(attendedEventIds: Set<number>, pastEvents: { id: number; xpReward: number }[]) {
   let streak = 0, bestStreak = 0, eventXP = 0, attendedCount = 0;
   for (const ev of pastEvents) {
     if (attendedEventIds.has(ev.id)) {
       streak++; attendedCount++;
-      eventXP += 50 + (streak >= 8 ? 50 : streak >= 4 ? 25 : streak >= 2 ? 10 : 0);
+      eventXP += (ev.xpReward ?? 50) + (streak >= 8 ? 50 : streak >= 4 ? 25 : streak >= 2 ? 10 : 0);
       for (const m of ATTENDANCE_MILESTONES) { if (attendedCount === m.events) { eventXP += m.bonus; break; } }
       if (streak > bestStreak) bestStreak = streak;
     } else { streak = 0; }
@@ -374,7 +377,7 @@ router.get("/members", async (_req, res) => {
     db.select().from(usersTable).orderBy(usersTable.name),
     db.select().from(attendanceTable),
     db.select().from(awardsTable),
-    db.select({ id: eventsTable.id }).from(eventsTable).where(lte(eventsTable.date, new Date())).orderBy(eventsTable.date),
+    db.select({ id: eventsTable.id, xpReward: eventsTable.xpReward }).from(eventsTable).where(lte(eventsTable.date, new Date())).orderBy(eventsTable.date),
   ]);
 
   const attendanceEventsByUser = new Map<number, Set<number>>();
@@ -436,7 +439,7 @@ router.put("/members/:id", async (req, res) => {
   const [records, awards, pastEvents] = await Promise.all([
     db.select().from(attendanceTable).where(eq(attendanceTable.userId, user.id)),
     db.select().from(awardsTable).where(eq(awardsTable.userId, user.id)),
-    db.select({ id: eventsTable.id }).from(eventsTable).where(lte(eventsTable.date, new Date())).orderBy(eventsTable.date),
+    db.select({ id: eventsTable.id, xpReward: eventsTable.xpReward }).from(eventsTable).where(lte(eventsTable.date, new Date())).orderBy(eventsTable.date),
   ]);
   const attendedIds = new Set(records.map(r => r.eventId));
   const { eventXP, eventsAttended, currentStreak, bestStreak } = computeAttendanceXP(attendedIds, pastEvents);
