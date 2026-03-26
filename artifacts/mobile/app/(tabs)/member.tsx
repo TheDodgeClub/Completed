@@ -48,8 +48,7 @@ const LEVEL_NAMES = ["Beginner", "Developing", "Experienced", "Skilled", "Advanc
 
 const SUPPORTER_TIERS = [
   { name: "Club Friend",  emoji: "🤝", minXp: 0,    perk: "Welcome to The Dodge Club!" },
-  { name: "Loud Fan",     emoji: "📣", minXp: 75,   perk: "Priority event updates" },
-  { name: "Die Hard",     emoji: "🔥", minXp: 200,  perk: "Shoutout at events" },
+  { name: "Die Hard",     emoji: "🔥", minXp: 150,  perk: "Shoutout at events" },
   { name: "Club Legend",  emoji: "⭐", minXp: 500,  perk: "VIP supporter status" },
   { name: "Superfan",     emoji: "🏆", minXp: 1000, perk: "Name on the club wall" },
 ] as const;
