@@ -107,6 +107,7 @@ export default function SettingsPage() {
   const [bodyText, setBodyText] = useState(DEFAULT_BODY);
   const [ctaText, setCtaText] = useState("");
   const [ctaUrl, setCtaUrl] = useState("");
+  const [testEmailAddress, setTestEmailAddress] = useState("");
 
   const previewHtml = useMemo(
     () => buildPreviewHtml({ headerImageUrl: resolveImageUrl(headerImageUrl), bodyText, ctaText, ctaUrl }),
@@ -163,8 +164,11 @@ export default function SettingsPage() {
   async function handleTestEmail() {
     setTesting(true);
     try {
-      const result = await fetchApi<{ sentTo: string }>("/api/settings/admin/test-email", { method: "POST" });
-      toast({ title: "Test email sent!", description: `Check inbox at ${result.sentTo}` });
+      const result = await fetchApi<{ sentTo: string }>("/api/settings/admin/test-email", {
+        method: "POST",
+        body: JSON.stringify({ email: testEmailAddress.trim() || undefined }),
+      });
+      toast({ title: "Test email sent!", description: `Delivered to ${result.sentTo}` });
     } catch (err: any) {
       toast({ title: "Failed to send test email", description: err.message, variant: "destructive" });
     } finally {
@@ -399,18 +403,27 @@ export default function SettingsPage() {
               </div>
 
               {/* Action buttons */}
-              <div className="flex items-center gap-3 pt-1">
+              <div className="space-y-3 pt-1">
                 <Button onClick={handleSave} disabled={saving}>
                   {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
                   Save Template
                 </Button>
-                <Button variant="outline" onClick={handleTestEmail} disabled={testing}>
-                  {testing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
-                  Send Test Email
-                </Button>
-                <span className="text-xs text-muted-foreground">
-                  Test email sends to your admin inbox
-                </span>
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1 max-w-xs">
+                    <Input
+                      type="email"
+                      placeholder="Send test to… (leave blank for your inbox)"
+                      value={testEmailAddress}
+                      onChange={(e) => setTestEmailAddress(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && !testing && handleTestEmail()}
+                      className="pr-10 text-sm"
+                    />
+                  </div>
+                  <Button variant="outline" onClick={handleTestEmail} disabled={testing}>
+                    {testing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
+                    Send Test
+                  </Button>
+                </div>
               </div>
             </div>
           )}

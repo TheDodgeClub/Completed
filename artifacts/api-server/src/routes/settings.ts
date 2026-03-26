@@ -57,7 +57,7 @@ router.put("/admin", requireAdmin, async (req, res) => {
   res.json(settings);
 });
 
-/* POST /api/admin/settings/test-email — send a test confirmation email to the admin */
+/* POST /api/admin/settings/test-email — send a test confirmation email */
 router.post("/admin/test-email", requireAdmin, async (req: any, res) => {
   const userId = req.session.userId;
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
@@ -65,16 +65,20 @@ router.post("/admin/test-email", requireAdmin, async (req: any, res) => {
     res.status(404).json({ error: "User not found" });
     return;
   }
+
+  const targetEmail: string = (req.body?.email ?? "").trim() || user.email;
+  const targetName = targetEmail === user.email ? (user.name ?? user.email) : targetEmail;
+
   try {
     await sendTicketConfirmationEmail({
-      toEmail: user.email,
-      toName: user.name ?? user.email,
+      toEmail: targetEmail,
+      toName: targetName,
       eventName: "Example Dodge Ball Night",
       eventDate: new Date(),
       eventLocation: "Dodge Club Arena, London",
       ticketCode: "TEST-1234",
     });
-    res.json({ ok: true, sentTo: user.email });
+    res.json({ ok: true, sentTo: targetEmail });
   } catch (err: any) {
     res.status(500).json({ error: err.message ?? "Failed to send test email" });
   }
