@@ -658,16 +658,6 @@ export default function MemberScreen() {
             <Feather name="tag" size={20} color={Colors.primary} />
             <Text style={styles.quickBtnText}>Tickets</Text>
           </Pressable>
-          <Pressable
-            style={({ pressed }) => [styles.quickBtn, { opacity: pressed ? 0.8 : 1 }]}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              router.push("/games/dodge");
-            }}
-          >
-            <Text style={{ fontSize: 20, lineHeight: 24 }}>🏐</Text>
-            <Text style={styles.quickBtnText}>Play</Text>
-          </Pressable>
           {user.accountType !== "supporter" && (
             <Pressable
               style={({ pressed }) => [styles.quickBtn, user.isElite ? styles.quickBtnElite : {}, { opacity: pressed ? 0.8 : 1 }]}
@@ -741,25 +731,32 @@ export default function MemberScreen() {
           </View>
         )}
 
-        {/* ── Mini Game ── */}
-        <View style={styles.section}>
-          <Pressable
-            style={({ pressed }) => [styles.gameCard, { opacity: pressed ? 0.85 : 1 }]}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              router.push("/games/dodge");
-            }}
+        {/* ── Daily Dodge ── */}
+        <Pressable
+          style={({ pressed }) => [styles.gameCard, { opacity: pressed ? 0.88 : 1 }]}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            router.push("/games/dodge");
+          }}
+        >
+          <LinearGradient
+            colors={["#0a3d1f", "#051a0d"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.gameCardGradient}
           >
-            <View style={styles.gameCardIcon}>
+            <View style={styles.gameCardLeft}>
               <Text style={styles.gameCardEmoji}>🏐</Text>
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.gameCardTitle}>DODGEBALL</Text>
-              <Text style={styles.gameCardSub}>Throw at the opponent — earn up to +50 XP</Text>
+            <View style={styles.gameCardBody}>
+              <Text style={styles.gameCardTitle}>DAILY DODGE</Text>
+              <Text style={styles.gameCardSub}>Play today's game — earn up to +50 XP</Text>
             </View>
-            <Feather name="chevron-right" size={18} color={Colors.accent} />
-          </Pressable>
-        </View>
+            <View style={styles.gameCardArrow}>
+              <Feather name="play-circle" size={28} color="#FFC107" />
+            </View>
+          </LinearGradient>
+        </Pressable>
 
         {/* ── Team History ── */}
         {teamHistory && teamHistory.length > 0 && (
@@ -1174,18 +1171,30 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
 
     /* Game card */
     gameCard: {
-      flexDirection: "row", alignItems: "center", gap: 12,
-      backgroundColor: Colors.surface, borderRadius: 14, marginTop: 12,
-      padding: 14, borderWidth: 1, borderColor: `${Colors.accent}33`,
+      borderRadius: 16,
+      overflow: "hidden",
+      marginHorizontal: 16,
+      marginBottom: 12,
     },
-    gameCardIcon: {
-      width: 42, height: 42, borderRadius: 10,
-      backgroundColor: `${Colors.primary}22`,
-      alignItems: "center", justifyContent: "center",
+    gameCardGradient: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 16,
+      gap: 12,
     },
-    gameCardEmoji: { fontSize: 22 },
-    gameCardTitle: { fontFamily: "Poppins_800ExtraBold", fontSize: 15, color: Colors.accent },
-    gameCardSub: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textMuted, marginTop: 1 },
+    gameCardLeft: {
+      width: 44,
+      height: 44,
+      borderRadius: 12,
+      backgroundColor: "rgba(255,255,255,0.08)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    gameCardBody: { flex: 1 },
+    gameCardArrow: {},
+    gameCardEmoji: { fontSize: 24 },
+    gameCardTitle: { fontFamily: "Poppins_800ExtraBold", fontSize: 15, color: Colors.accent, marginBottom: 2 },
+    gameCardSub: { fontFamily: "Inter_400Regular", fontSize: 12, color: "rgba(255,255,255,0.55)", marginTop: 1 },
 
     /* Achievement progress */
     achieveProgressList: { gap: 12 },
