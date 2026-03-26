@@ -24,6 +24,15 @@ export type UserProfile = {
   bio: string | null;
   isElite?: boolean;
   eliteSince?: string | null;
+  accountType?: "player" | "supporter";
+  referralCode?: string | null;
+};
+
+export type EventAttendee = {
+  id: number;
+  name: string;
+  avatarUrl: string | null;
+  accountType: string;
 };
 
 export type TeamHistory = {
@@ -104,6 +113,8 @@ export type Achievement = {
   icon: string;
   unlocked: boolean;
   unlockedAt: string | null;
+  current?: number;
+  threshold?: number;
 };
 
 export type Post = {
@@ -169,10 +180,10 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
 }
 
 /* ---- auth ---- */
-export async function register(email: string, password: string, name: string) {
+export async function register(email: string, password: string, name: string, accountType: "player" | "supporter" = "player", referralCode?: string) {
   const data = await apiFetch<{ user: UserProfile; token: string }>("/auth/register", {
     method: "POST",
-    body: JSON.stringify({ email, password, name }),
+    body: JSON.stringify({ email, password, name, accountType, referralCode }),
   });
   await setToken(data.token);
   await AsyncStorage.setItem(USER_KEY, JSON.stringify(data.user));
@@ -205,6 +216,14 @@ export async function listEvents(): Promise<Event[]> {
 
 export async function listUpcomingEvents(): Promise<Event[]> {
   return apiFetch<Event[]>("/events/upcoming");
+}
+
+export async function getEventAttendees(eventId: number): Promise<EventAttendee[]> {
+  return apiFetch<EventAttendee[]>(`/events/${eventId}/attendees`);
+}
+
+export async function giftTicket(eventId: number, recipientEmail: string): Promise<{ ticket?: any; checkoutUrl?: string; gifted?: boolean }> {
+  return apiFetch(`/tickets/gift`, { method: "POST", body: JSON.stringify({ eventId, recipientEmail }) });
 }
 
 /* ---- users ---- */

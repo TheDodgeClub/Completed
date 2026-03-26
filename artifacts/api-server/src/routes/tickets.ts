@@ -387,4 +387,95 @@ router.post("/free", requireAuth, async (req: any, res) => {
   res.status(201).json({ ticket });
 });
 
+/* POST /api/tickets/gift — purchase a paid ticket for another user by email */
+router.post("/gift", requireAuth, async (req: any, res) => {
+  const gifterId = req.session.userId;
+  const { eventId, recipientEmail } = req.body as { eventId?: number; recipientEmail?: string };
+  if (!eventId || !recipientEmail) {
+    res.status(400).json({ error: "eventId and recipientEmail are required" });
+    return;
+  }
+  const [event] = await db.select().from(eventsTable).where(eq(eventsTable.id, eventId)).limit(1);
+  if (!event) { res.status(404).json({ error: "Event not found" }); return; }
+  const isFree = !event.ticketPrice || Number(event.ticketPrice) === 0;
+
+  let recipient = await db.query.usersTable.findFirst({ where: eq(usersTable.email, recipientEmail.toLowerCase()) });
+  if (!recipient) {
+    res.status(404).json({ error: "No account found for that email address. They need to create an account first." });
+    return;
+  }
+
+  const [existing] = await db
+    .select()
+    .from(ticketsTable)
+    .where(and(eq(ticketsTable.userId, recipient.id), eq(ticketsTable.eventId, eventId)))
+    .limit(1);
+  if (existing) {
+    res.status(409).json({ error: "That person already has a ticket for this event." });
+    return;
+  }
+
+  if (isFree) {
+    const [ticket] = await db
+      .insert(ticketsTable)
+      .values({ userId: recipient.id, eventId, status: "paid", ticketCode: generateTicketCode(), amountPaid: 0 })
+      .returning();
+    sendTicketConfirmationEmail({
+      toEmail: recipient.email,
+      toName: recipient.name ?? recipient.email,
+      eventName: event.title,
+      eventDate: event.date,
+      eventLocation: event.location,
+      ticketCode: ticket.ticketCode,
+    }).catch((e) => console.error("[email] gift send error:", e));
+    res.status(201).json({ ticket, gifted: true });
+    return;
+  }
+
+  const stripe = getUncachableStripeClient();
+  const [gifter] = await db.select().from(usersTable).where(eq(usersTable.id, gifterId)).limit(1);
+  const session = await stripe.checkout.sessions.create({
+    mode: "payment",
+    line_items: [{ price: event.stripePriceId!, quantity: 1 }],
+    success_url: `${process.env.API_BASE_URL ?? "https://api.thedodgeclub.co.uk"}/api/tickets/gift-success?session_id={CHECKOUT_SESSION_ID}&recipientId=${recipient.id}&eventId=${eventId}`,
+    cancel_url: `${process.env.API_BASE_URL ?? "https://api.thedodgeclub.co.uk"}/api/tickets/cancel`,
+    customer_email: gifter?.email,
+    metadata: { giftTicket: "true", recipientId: String(recipient.id), eventId: String(eventId) },
+  });
+  res.json({ checkoutUrl: session.url });
+});
+
+/* GET /api/tickets/gift-success */
+router.get("/gift-success", async (req, res) => {
+  const { session_id, recipientId, eventId } = req.query as { session_id?: string; recipientId?: string; eventId?: string };
+  if (!session_id || !recipientId || !eventId) { res.status(400).send("Missing params"); return; }
+  const stripe = getUncachableStripeClient();
+  const session = await stripe.checkout.sessions.retrieve(session_id);
+  if (session.payment_status !== "paid") { res.status(400).send("Payment not confirmed"); return; }
+  const rId = Number(recipientId);
+  const eId = Number(eventId);
+  const [existing] = await db.select().from(ticketsTable).where(and(eq(ticketsTable.userId, rId), eq(ticketsTable.eventId, eId))).limit(1);
+  if (!existing) {
+    const [ticket] = await db.insert(ticketsTable).values({
+      userId: rId, eventId: eId, status: "paid",
+      ticketCode: generateTicketCode(),
+      amountPaid: session.amount_total ?? 0,
+      stripeCheckoutSessionId: session_id,
+    }).returning();
+    const [recipient] = await db.select().from(usersTable).where(eq(usersTable.id, rId)).limit(1);
+    const [event] = await db.select().from(eventsTable).where(eq(eventsTable.id, eId)).limit(1);
+    if (recipient && event) {
+      sendTicketConfirmationEmail({
+        toEmail: recipient.email,
+        toName: recipient.name ?? recipient.email,
+        eventName: event.title,
+        eventDate: event.date,
+        eventLocation: event.location,
+        ticketCode: ticket.ticketCode,
+      }).catch((e) => console.error("[email] gift success email error:", e));
+    }
+  }
+  res.redirect("thedodgeclub://gift-success");
+});
+
 export default router;

@@ -42,7 +42,9 @@ workspace/
 - **Tickets** — My Tickets (QR codes for purchased tickets) + Buy Tickets (Stripe Checkout or free registration); pre-checkout buyer form with configurable fields + waiver agreement modal shown before purchase
 - **Merch** — Product grid with buy links (external URL, Shopify-ready)
 - **Updates** — Message board; guests see public posts, members see all; elite-only posts locked behind Elite paywall
-- **Member Zone** — Protected dashboard with stats, achievements, event history; elite badge + "Go Elite" quick action
+- **Member Zone** — Protected dashboard with player/supporter split; achievement progress bars with share button (player only); referral code card with copy/share (all users); event history (player only); XP progress (player only); supporter badge; "Refer a Friend" section
+- **Who's Going** — Event cards in Buy Tickets tab show avatars + count of confirmed attendees
+- **Gift a Ticket** — When you own a ticket, a gift button opens a modal to send a ticket to a friend's email
 - **Elite Membership** — £8.99/month Stripe subscription paywall (app/elite.tsx); benefits: early ticket access, tips & tricks, elite-only posts, discounted tickets, elite badge; Stripe Customer Portal for self-service management
 
 ### Ticket Confirmation Emails
@@ -54,13 +56,14 @@ workspace/
 - Default branded HTML template used if no custom body is set
 - Admin can send a test email via Settings → "Send Test Email" button (`POST /api/settings/admin/test-email`)
 
-### Authentication
-- Email + password registration and login
+### Authentication & Registration
+- Email + password registration and login; 2-step onboarding (name/email/password → Player/Supporter role selection + optional referral code)
 - Token stored in AsyncStorage, sent via `x-auth-token` header
 - Protected routes in Member Zone
+- New users get a unique 6-char referral code at registration
 
 ### Data Models
-- `users` — id, email, passwordHash, name, isAdmin, avatarUrl, stripeCustomerId, **isElite**, **stripeSubscriptionId**, **eliteSince**
+- `users` — id, email, passwordHash, name, isAdmin, avatarUrl, stripeCustomerId, **isElite**, **stripeSubscriptionId**, **eliteSince**, **accountType** (player|supporter), **referralCode**, **referredBy**
 - `events` — id, title, description, date, location, ticketUrl, imageUrl, attendeeCount, ticketPrice, ticketCapacity, stripeProductId, stripePriceId, **eliteEarlyAccess**, **eliteDiscountPercent**
 - `tickets` — id, userId, eventId, stripeCheckoutSessionId, stripePaymentIntentId, status (pending/paid/free/cancelled), ticketCode (16-char hex), checkedIn, amountPaid
 - `attendance` — id, userId, eventId, earnedMedal, attendedAt
@@ -83,7 +86,9 @@ workspace/
 - Free events: set price = 0, users register with one tap
 - Mobile checkout: `POST /api/tickets/checkout` → Stripe Checkout URL → `expo-web-browser` → redirect back to app → ticket issued
 - Tickets stored with unique 16-char QR code, displayed in My Tickets tab as scannable QR code
-- API routes: `GET /api/tickets/my`, `GET /api/tickets/event/:id`, `POST /api/tickets/checkout`, `POST /api/tickets/free`, `GET /api/tickets/success`
+- API routes: `GET /api/tickets/my`, `GET /api/tickets/event/:id`, `POST /api/tickets/checkout`, `POST /api/tickets/free`, `GET /api/tickets/success`, `POST /api/tickets/gift`, `GET /api/tickets/gift-success`
+- `GET /api/events/:id/attendees` — returns attendees (users with confirmed tickets) for an event
+- `POST /api/admin/notify-event-reminders` — sends 48h push notification reminders to ticket holders for events within the next 48 hours
 
 ### Achievement System
 - First Timer (1 event)

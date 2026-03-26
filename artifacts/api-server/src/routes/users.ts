@@ -342,8 +342,13 @@ router.get("/:id/achievements", async (req, res) => {
   ];
 
   const result = all.map(a => {
-    const unlocked = a.type === "events" ? eventsAttended >= a.threshold : medalsEarned >= a.threshold;
-    return { id: a.id, title: a.title, description: a.description, icon: a.icon, unlocked, unlockedAt: unlocked ? new Date().toISOString() : null };
+    const current = a.type === "events" ? eventsAttended : medalsEarned;
+    const unlocked = current >= a.threshold;
+    return {
+      id: a.id, title: a.title, description: a.description, icon: a.icon,
+      unlocked, unlockedAt: unlocked ? new Date().toISOString() : null,
+      current: Math.min(current, a.threshold), threshold: a.threshold,
+    };
   });
 
   res.json(result);

@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, eventsTable, attendanceTable } from "@workspace/db";
-import { eq, gte, desc, count, and } from "drizzle-orm";
+import { db, eventsTable, attendanceTable, ticketsTable, usersTable } from "@workspace/db";
+import { eq, gte, desc, count, and, inArray } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -52,6 +52,22 @@ router.get("/:id", async (req, res) => {
   });
   if (!event) { res.status(404).json({ error: "Not found" }); return; }
   res.json(toEvent(event));
+});
+
+/* GET /api/events/:id/attendees — who's going (users with confirmed tickets) */
+router.get("/:id/attendees", async (req, res) => {
+  const eventId = Number(req.params.id);
+  const tickets = await db
+    .select({ userId: ticketsTable.userId })
+    .from(ticketsTable)
+    .where(and(eq(ticketsTable.eventId, eventId), inArray(ticketsTable.status, ["paid", "free"])));
+  if (tickets.length === 0) { res.json([]); return; }
+  const userIds = tickets.map(t => t.userId);
+  const users = await db
+    .select({ id: usersTable.id, name: usersTable.name, avatarUrl: usersTable.avatarUrl, accountType: usersTable.accountType })
+    .from(usersTable)
+    .where(inArray(usersTable.id, userIds));
+  res.json(users);
 });
 
 /* POST /api/events */

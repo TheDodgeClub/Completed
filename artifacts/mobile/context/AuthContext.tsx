@@ -18,7 +18,7 @@ type AuthState = {
 
 type AuthContextType = AuthState & {
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string) => Promise<void>;
+  register: (email: string, password: string, name: string, accountType?: "player" | "supporter", referralCode?: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 };
@@ -55,8 +55,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState({ user: data.user, token: data.token, isLoading: false, isAuthenticated: true });
   };
 
-  const register = async (email: string, password: string, name: string) => {
-    const data = await apiRegister(email, password, name);
+  const register = async (email: string, password: string, name: string, accountType: "player" | "supporter" = "player", referralCode?: string) => {
+    const data = await apiRegister(email, password, name, accountType, referralCode);
     setState({ user: data.user, token: data.token, isLoading: false, isAuthenticated: true });
   };
 

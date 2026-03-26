@@ -26,6 +26,9 @@ export const usersTable = pgTable("users", {
   bonusXp: integer("bonus_xp").notNull().default(0),
   gameXp: integer("game_xp").notNull().default(0),
   memberSince: timestamp("member_since"),
+  accountType: text("account_type").notNull().default("player"),
+  referralCode: text("referral_code").unique(),
+  referredBy: integer("referred_by"),
 });
 
 export const insertUserSchema = createInsertSchema(usersTable).omit({

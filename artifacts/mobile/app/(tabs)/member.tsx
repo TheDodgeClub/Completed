@@ -13,7 +13,9 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Share,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -28,6 +30,7 @@ import {
   getUserAttendance,
   getUserTeamHistory,
   getUserUpcomingEvents,
+  getUserAchievements,
   listUpcomingEvents,
   updateProfile,
   updateAvatar,
@@ -35,6 +38,7 @@ import {
   AttendanceRecord,
   TeamHistory,
   UpcomingEvent,
+  Achievement,
 } from "@/lib/api";
 import { getToken } from "@/lib/api";
 import { EliteBanner } from "@/components/EliteBanner";
@@ -308,6 +312,12 @@ export default function MemberScreen() {
     enabled: !!userId,
   });
 
+  const { data: achievements, refetch: refetchAchievements } = useQuery({
+    queryKey: ["achievements", userId],
+    queryFn: () => getUserAchievements(userId),
+    enabled: !!userId,
+  });
+
 
   const { data: teamHistory, refetch: refetchTeamHistory } = useQuery({
     queryKey: ["team-history", userId],
@@ -343,7 +353,7 @@ export default function MemberScreen() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([refreshUser(), refetchAttendance(), refetchTeamHistory(), refetchUpcoming()]);
+    await Promise.all([refreshUser(), refetchAttendance(), refetchTeamHistory(), refetchUpcoming(), refetchAchievements()]);
     setRefreshing(false);
   };
 
@@ -474,8 +484,17 @@ export default function MemberScreen() {
         {user.username && <Text style={styles.memberUsername}>@{user.username}</Text>}
 
         <View style={styles.badgeRow}>
-          <LevelBadge level={level} />
-          <Text style={styles.levelNameText}>{levelName}</Text>
+          {user.accountType === "supporter" ? (
+            <View style={styles.supporterBadge}>
+              <Feather name="heart" size={12} color="#fff" />
+              <Text style={styles.supporterBadgeText}>SUPPORTER</Text>
+            </View>
+          ) : (
+            <>
+              <LevelBadge level={level} />
+              <Text style={styles.levelNameText}>{levelName}</Text>
+            </>
+          )}
           {user.isElite && (
             <View style={styles.eliteBadge}>
               <Text style={{ fontFamily: "Poppins_800ExtraBold", fontSize: 10, color: "#0D0D0D", lineHeight: 14 }}>E</Text>
@@ -490,8 +509,8 @@ export default function MemberScreen() {
           Member since {new Date(user.memberSince).toLocaleDateString("en-GB", { month: "long", year: "numeric" })}
         </Text>
 
-        {/* XP Progress */}
-        <View style={styles.xpSection}>
+        {/* XP Progress — players only */}
+        {user.accountType !== "supporter" && <View style={styles.xpSection}>
           <View style={styles.xpLabelRow}>
             <Text style={styles.xpProgressLabel}>Your Progress</Text>
             <Text style={styles.xpLabel}>{xp.toLocaleString()} XP</Text>
@@ -513,27 +532,48 @@ export default function MemberScreen() {
           {currentStreak >= 2 && (
             <Text style={styles.xpStreakHint}>🔥 {currentStreak}-event streak — bonus XP active!</Text>
           )}
-        </View>
+        </View>}
       </LinearGradient>
 
       {/* ── Stats Bar ── */}
       <View style={styles.statsSection}>
-        <View style={styles.statBlock}>
-          <Text style={[styles.statValue, { color: currentStreak > 0 ? "#FF6B35" : Colors.textMuted }]}>
-            {currentStreak > 0 ? `🔥${currentStreak}` : "–"}
-          </Text>
-          <Text style={styles.statLabel}>Event Streak</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statBlock}>
-          <Text style={[styles.statValue, { color: Colors.accent }]}>{user.medalsEarned ?? 0}</Text>
-          <Text style={styles.statLabel}>Medals</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statBlock}>
-          <Text style={[styles.statValue, { color: "#A78BFA" }]}>{user.ringsEarned ?? 0}</Text>
-          <Text style={styles.statLabel}>Rings</Text>
-        </View>
+        {user.accountType === "supporter" ? (
+          <>
+            <View style={styles.statBlock}>
+              <Text style={[styles.statValue, { color: Colors.primary }]}>{upcomingEvents?.length ?? 0}</Text>
+              <Text style={styles.statLabel}>Events Going</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statBlock}>
+              <Text style={[styles.statValue, { color: Colors.accent }]}>{user.eventsAttended ?? 0}</Text>
+              <Text style={styles.statLabel}>Attended</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statBlock}>
+              <Text style={[styles.statValue, { color: Colors.secondary }]}>❤️</Text>
+              <Text style={styles.statLabel}>Supporter</Text>
+            </View>
+          </>
+        ) : (
+          <>
+            <View style={styles.statBlock}>
+              <Text style={[styles.statValue, { color: currentStreak > 0 ? "#FF6B35" : Colors.textMuted }]}>
+                {currentStreak > 0 ? `🔥${currentStreak}` : "–"}
+              </Text>
+              <Text style={styles.statLabel}>Event Streak</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statBlock}>
+              <Text style={[styles.statValue, { color: Colors.accent }]}>{user.medalsEarned ?? 0}</Text>
+              <Text style={styles.statLabel}>Medals</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statBlock}>
+              <Text style={[styles.statValue, { color: "#A78BFA" }]}>{user.ringsEarned ?? 0}</Text>
+              <Text style={styles.statLabel}>Rings</Text>
+            </View>
+          </>
+        )}
       </View>
 
       {/* ── Next Event Countdown ── */}
@@ -581,6 +621,56 @@ export default function MemberScreen() {
             <Text style={styles.quickBtnText}>{user.isElite ? "Elite" : "Go Elite"}</Text>
           </Pressable>
         </View>
+
+        {/* ── Achievement Progress — players only ── */}
+        {user.accountType !== "supporter" && achievements && achievements.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Achievements</Text>
+            </View>
+            <View style={styles.achieveProgressList}>
+              {achievements.map(a => {
+                const pct = a.threshold && a.threshold > 0 ? Math.min((a.current ?? 0) / a.threshold, 1) : 0;
+                return (
+                  <View key={a.id} style={styles.achieveProgressRow}>
+                    <View style={[styles.achieveProgressIcon, a.unlocked && styles.achieveProgressIconUnlocked]}>
+                      <Text style={{ fontSize: 18 }}>
+                        {a.icon === "star" ? "⭐" : a.icon === "award" ? "🏆" : a.icon === "shield" ? "🛡️" : a.icon === "zap" ? "⚡" : a.icon === "medal" ? "🏅" : "🎖️"}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                        <Text style={styles.achieveProgressTitle}>{a.title}</Text>
+                        {a.unlocked ? (
+                          <Pressable
+                            onPress={() => {
+                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                              Share.share({ message: `I just unlocked the "${a.title}" achievement on The Dodge Club! 🏐 ${a.description}` });
+                            }}
+                            style={styles.achieveShareBtn}
+                          >
+                            <Feather name="share-2" size={12} color={Colors.primary} />
+                            <Text style={styles.achieveShareText}>Share</Text>
+                          </Pressable>
+                        ) : (
+                          <Text style={styles.achieveProgressCount}>
+                            {a.current ?? 0}/{a.threshold ?? 0}
+                          </Text>
+                        )}
+                      </View>
+                      <View style={styles.achieveProgressTrack}>
+                        <View style={[styles.achieveProgressFill, { width: `${Math.round(pct * 100)}%` }]} />
+                      </View>
+                      {!a.unlocked && (
+                        <Text style={styles.achieveProgressHint}>{a.description}</Text>
+                      )}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        )}
 
         {/* ── Upcoming Events ── */}
         {upcomingEvents && upcomingEvents.length > 0 && (
@@ -631,28 +721,75 @@ export default function MemberScreen() {
         {/* ── Go Elite Banner ── */}
         <EliteBanner isElite={user.isElite ?? false} isAuthenticated={true} />
 
-        {/* ── Event History ── */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Event History</Text>
-          </View>
-          {attendance && attendance.length > 0 ? (
-            attendance.slice(0, 10).map(record => (
-              <AttendanceRow key={record.id} record={record} />
-            ))
-          ) : (
-            <View style={styles.empty}>
-              <Feather name="calendar" size={32} color={Colors.textMuted} />
-              <Text style={styles.emptyText}>No events attended yet</Text>
-              <Pressable
-                style={({ pressed }) => [styles.exploreBtn, { opacity: pressed ? 0.85 : 1 }]}
-                onPress={() => router.push("/(tabs)/tickets")}
-              >
-                <Text style={styles.exploreBtnText}>Find Events</Text>
-              </Pressable>
+        {/* ── Event History — players only ── */}
+        {user.accountType !== "supporter" && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Event History</Text>
             </View>
-          )}
-        </View>
+            {attendance && attendance.length > 0 ? (
+              attendance.slice(0, 10).map(record => (
+                <AttendanceRow key={record.id} record={record} />
+              ))
+            ) : (
+              <View style={styles.empty}>
+                <Feather name="calendar" size={32} color={Colors.textMuted} />
+                <Text style={styles.emptyText}>No events attended yet</Text>
+                <Pressable
+                  style={({ pressed }) => [styles.exploreBtn, { opacity: pressed ? 0.85 : 1 }]}
+                  onPress={() => router.push("/(tabs)/tickets")}
+                >
+                  <Text style={styles.exploreBtnText}>Find Events</Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* ── Referral Code ── */}
+        {user.referralCode && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Refer a Friend</Text>
+            </View>
+            <View style={styles.referralCard}>
+              <View style={styles.referralTop}>
+                <View>
+                  <Text style={styles.referralLabel}>Your referral code</Text>
+                  <Text style={styles.referralCode}>{user.referralCode}</Text>
+                </View>
+                <Feather name="gift" size={28} color={Colors.primary} />
+              </View>
+              <Text style={styles.referralHint}>Share your code — when a friend signs up with it, you're both connected in the club.</Text>
+              <View style={styles.referralBtnRow}>
+                <Pressable
+                  style={[styles.referralBtn, { flex: 1 }]}
+                  onPress={async () => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    await Clipboard.setStringAsync(user.referralCode!);
+                    Alert.alert("Copied!", "Your referral code has been copied.");
+                  }}
+                >
+                  <Feather name="copy" size={14} color={Colors.primary} />
+                  <Text style={styles.referralBtnText}>Copy Code</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.referralBtn, styles.referralBtnPrimary, { flex: 1 }]}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    Share.share({
+                      message: `Join The Dodge Club! Use my code ${user.referralCode} when you sign up. Download the app and start playing! 🏐`,
+                      title: "Join The Dodge Club",
+                    });
+                  }}
+                >
+                  <Feather name="share-2" size={14} color="#fff" />
+                  <Text style={[styles.referralBtnText, { color: "#fff" }]}>Share</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        )}
 
       </View>
 
@@ -991,5 +1128,65 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     gameCardEmoji: { fontSize: 22 },
     gameCardTitle: { fontFamily: "Poppins_800ExtraBold", fontSize: 15, color: Colors.accent },
     gameCardSub: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textMuted, marginTop: 1 },
+
+    /* Achievement progress */
+    achieveProgressList: { gap: 12 },
+    achieveProgressRow: {
+      flexDirection: "row", alignItems: "flex-start", gap: 12,
+      backgroundColor: Colors.surface, borderRadius: 14, padding: 14,
+      borderWidth: 1, borderColor: Colors.border,
+    },
+    achieveProgressIcon: {
+      width: 40, height: 40, borderRadius: 20,
+      backgroundColor: Colors.surface2,
+      alignItems: "center", justifyContent: "center", flexShrink: 0,
+    },
+    achieveProgressIconUnlocked: {
+      backgroundColor: `${Colors.accent}20`,
+      borderWidth: 1, borderColor: `${Colors.accent}40`,
+    },
+    achieveProgressTitle: { fontFamily: "Inter_700Bold", fontSize: 13, color: Colors.text },
+    achieveProgressCount: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.textMuted },
+    achieveProgressTrack: {
+      height: 6, backgroundColor: Colors.surface2,
+      borderRadius: 3, overflow: "hidden", marginTop: 6,
+    },
+    achieveProgressFill: { height: "100%", backgroundColor: Colors.primary, borderRadius: 3 },
+    achieveProgressHint: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.textMuted, marginTop: 4 },
+    achieveShareBtn: {
+      flexDirection: "row", alignItems: "center", gap: 4,
+      backgroundColor: `${Colors.primary}15`,
+      paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8,
+    },
+    achieveShareText: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: Colors.primary },
+
+    /* Referral code */
+    referralCard: {
+      backgroundColor: Colors.surface, borderRadius: 18,
+      borderWidth: 1, borderColor: Colors.border, padding: 18, gap: 12,
+    },
+    referralTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+    referralLabel: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textMuted, marginBottom: 4 },
+    referralCode: {
+      fontFamily: "Inter_700Bold", fontSize: 26, color: Colors.primary,
+      letterSpacing: 3,
+    },
+    referralHint: { fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.textSecondary, lineHeight: 18 },
+    referralBtnRow: { flexDirection: "row", gap: 10 },
+    referralBtn: {
+      flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+      paddingVertical: 12, borderRadius: 12,
+      borderWidth: 1, borderColor: Colors.primary,
+    },
+    referralBtnPrimary: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+    referralBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.primary },
+
+    /* Supporter badge */
+    supporterBadge: {
+      flexDirection: "row", alignItems: "center", gap: 4,
+      backgroundColor: "#E91E63",
+      paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
+    },
+    supporterBadgeText: { fontFamily: "Inter_700Bold", fontSize: 10, color: "#fff", letterSpacing: 0.5 },
   });
 }

@@ -93,6 +93,12 @@ function computeLevel(xp: number): number {
   return level;
 }
 
+function generateReferralCode(name: string, id: number): string {
+  const base = name.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 4).padEnd(4, "X");
+  const suffix = String(id).padStart(4, "0");
+  return `${base}${suffix}`;
+}
+
 function toProfile(
   user: typeof usersTable.$inferSelect,
   stats: { eventsAttended: number; medalsEarned: number; ringsEarned: number; xp: number; level: number; currentStreak: number; bestStreak: number },
@@ -116,6 +122,8 @@ function toProfile(
     bio: user.bio ?? null,
     isElite: user.isElite,
     eliteSince: user.eliteSince?.toISOString() ?? null,
+    accountType: user.accountType ?? "player",
+    referralCode: user.referralCode ?? null,
   };
 }
 
@@ -156,7 +164,7 @@ const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
 /* ---------- POST /api/auth/register ---------- */
 router.post("/register", async (req, res) => {
-  const { email, password, name } = req.body;
+  const { email, password, name, accountType, referralCode: incomingReferralCode } = req.body;
   if (!email || !password || !name) {
     res.status(400).json({ error: "Missing required fields" });
     return;
@@ -176,12 +184,28 @@ router.post("/register", async (req, res) => {
     return;
   }
 
-  const passwordHash = await bcrypt.hash(password, 10);
-  const [user] = await db.insert(usersTable).values({ email, passwordHash, name }).returning();
+  let referredById: number | undefined;
+  if (incomingReferralCode) {
+    const referrer = await db.query.usersTable.findFirst({ where: eq(usersTable.referralCode, incomingReferralCode.toUpperCase()) });
+    if (referrer) referredById = referrer.id;
+  }
 
-  req.session = { userId: user.id };
+  const passwordHash = await bcrypt.hash(password, 10);
+  const resolvedAccountType = accountType === "supporter" ? "supporter" : "player";
+  const [user] = await db.insert(usersTable).values({
+    email,
+    passwordHash,
+    name,
+    accountType: resolvedAccountType,
+    referredBy: referredById,
+  }).returning();
+
+  const code = generateReferralCode(name, user.id);
+  const [updatedUser] = await db.update(usersTable).set({ referralCode: code }).where(eq(usersTable.id, user.id)).returning();
+
+  req.session = { userId: updatedUser.id };
   const emptyStats = { eventsAttended: 0, medalsEarned: 0, ringsEarned: 0, xp: 0, level: 1, currentStreak: 0, bestStreak: 0 };
-  res.json({ user: toProfile(user, emptyStats), token: String(user.id) });
+  res.json({ user: toProfile(updatedUser, emptyStats), token: String(updatedUser.id) });
 });
 
 /* ---------- POST /api/auth/login ---------- */

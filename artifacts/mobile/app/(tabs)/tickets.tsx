@@ -30,9 +30,12 @@ import {
   getMyTickets,
   createCheckoutSession,
   registerFreeTicket,
+  getEventAttendees,
+  giftTicket,
   Event,
   Ticket,
   CheckoutField,
+  EventAttendee,
 } from "@/lib/api";
 
 function getCountdown(dateStr: string): string | null {
@@ -80,6 +83,9 @@ export default function TicketsScreen() {
 
   const [buyingEventId, setBuyingEventId] = useState<number | null>(null);
   const [checkoutFormEvent, setCheckoutFormEvent] = useState<Event | null>(null);
+  const [giftEvent, setGiftEvent] = useState<Event | null>(null);
+  const [giftEmail, setGiftEmail] = useState("");
+  const [giftingEventId, setGiftingEventId] = useState<number | null>(null);
 
   const needsForm = (event: Event) =>
     (event.checkoutFields?.length ?? 0) > 0 || !!event.waiverText;
@@ -152,6 +158,36 @@ export default function TicketsScreen() {
     setRefreshing(true);
     await Promise.all([refetchEvents(), refetchTickets()]);
     setRefreshing(false);
+  };
+
+  const handleGiftSubmit = async () => {
+    if (!giftEvent || !giftEmail.trim()) return;
+    const emailRx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRx.test(giftEmail.trim())) {
+      Alert.alert("Invalid email", "Please enter a valid email address.");
+      return;
+    }
+    setGiftingEventId(giftEvent.id);
+    try {
+      const result = await giftTicket(giftEvent.id, giftEmail.trim());
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setGiftEvent(null);
+      setGiftEmail("");
+      if (result.checkoutUrl) {
+        await WebBrowser.openBrowserAsync(result.checkoutUrl, {
+          presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
+          dismissButtonStyle: "done",
+          toolbarColor: "#0B5E2F",
+          controlsColor: "#FFD700",
+        });
+      } else {
+        Alert.alert("Ticket Gifted!", `A ticket for ${giftEvent.title} has been sent to ${giftEmail.trim()}.`);
+      }
+    } catch (err: any) {
+      Alert.alert("Error", err.message ?? "Could not gift ticket");
+    } finally {
+      setGiftingEventId(null);
+    }
   };
 
   const upcomingEvents = events?.filter(e => e.isUpcoming) ?? [];
@@ -248,6 +284,7 @@ export default function TicketsScreen() {
                       const t = myTickets?.find(ti => ti.eventId === event.id);
                       if (t) { setSelectedTicket(t); setActiveTab("my"); }
                     }}
+                    onGift={() => { setGiftEvent(event); setGiftEmail(""); }}
                     Colors={Colors}
                   />
                 ))
@@ -265,6 +302,53 @@ export default function TicketsScreen() {
           onClose={() => setSelectedTicket(null)}
         />
       )}
+
+      {/* Gift a Ticket Modal */}
+      <Modal visible={!!giftEvent} transparent animationType="slide" onRequestClose={() => setGiftEvent(null)}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+          <Pressable style={styles.giftOverlay} onPress={() => setGiftEvent(null)} />
+          <View style={styles.giftSheet}>
+            <View style={styles.giftHandle} />
+            <View style={styles.giftHeader}>
+              <Feather name="gift" size={22} color={Colors.primary} />
+              <Text style={styles.giftTitle}>Gift a Ticket</Text>
+              <Pressable onPress={() => setGiftEvent(null)}>
+                <Feather name="x" size={22} color={Colors.textMuted} />
+              </Pressable>
+            </View>
+            {giftEvent && (
+              <Text style={styles.giftSubtitle}>{giftEvent.title}</Text>
+            )}
+            <Text style={styles.giftDesc}>
+              Enter the email address of the person you'd like to gift a ticket to. They'll receive it right in their inbox.
+            </Text>
+            <TextInput
+              style={styles.giftInput}
+              placeholder="friend@example.com"
+              placeholderTextColor={Colors.textMuted}
+              value={giftEmail}
+              onChangeText={setGiftEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <Pressable
+              style={({ pressed }) => [styles.giftSubmitBtn, { opacity: pressed || !!giftingEventId ? 0.75 : 1 }]}
+              onPress={handleGiftSubmit}
+              disabled={!!giftingEventId}
+            >
+              {giftingEventId ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <>
+                  <Feather name="send" size={16} color="#fff" />
+                  <Text style={styles.giftSubmitText}>Send Gift Ticket</Text>
+                </>
+              )}
+            </Pressable>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
 
       {/* Checkout Form & Waiver Modal */}
       {checkoutFormEvent && (
@@ -328,6 +412,7 @@ function EventBuyCard({
   isRegisteringFree,
   onBuy,
   onViewTicket,
+  onGift,
   Colors,
 }: {
   event: Event;
@@ -336,6 +421,7 @@ function EventBuyCard({
   isRegisteringFree: boolean;
   onBuy: () => void;
   onViewTicket: () => void;
+  onGift: () => void;
   Colors: any;
 }) {
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
@@ -351,6 +437,15 @@ function EventBuyCard({
     : isFree
       ? "FREE"
       : `£${event.ticketPrice?.toFixed(2)}`;
+
+  const { data: attendees } = useQuery<EventAttendee[]>({
+    queryKey: ["event-attendees", event.id],
+    queryFn: () => getEventAttendees(event.id),
+    staleTime: 60000,
+  });
+
+  const visibleAttendees = attendees?.slice(0, 5) ?? [];
+  const extraCount = (attendees?.length ?? 0) - visibleAttendees.length;
 
   return (
     <View style={styles.eventCard}>
@@ -383,12 +478,43 @@ function EventBuyCard({
         )}
       </View>
 
+      {/* Who's Going */}
+      {visibleAttendees.length > 0 && (
+        <View style={styles.whoGoingRow}>
+          <View style={styles.whoGoingAvatars}>
+            {visibleAttendees.map((a, i) => (
+              <View key={a.id} style={[styles.whoGoingAvatar, { marginLeft: i === 0 ? 0 : -8, zIndex: 10 - i }]}>
+                <Text style={styles.whoGoingInitial}>{a.name.charAt(0).toUpperCase()}</Text>
+              </View>
+            ))}
+            {extraCount > 0 && (
+              <View style={[styles.whoGoingAvatar, styles.whoGoingExtra, { marginLeft: -8, zIndex: 0 }]}>
+                <Text style={styles.whoGoingExtraText}>+{extraCount}</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.whoGoingLabel}>
+            {attendees!.length === 1
+              ? `${attendees![0].name.split(" ")[0]} is going`
+              : `${visibleAttendees[0].name.split(" ")[0]} & ${attendees!.length - 1} other${attendees!.length - 1 > 1 ? "s" : ""} going`}
+          </Text>
+        </View>
+      )}
+
       {hasTicketing && (
         hasTicket ? (
-          <Pressable style={[styles.buyBtn, styles.buyBtnOwned]} onPress={onViewTicket}>
-            <Feather name="check-circle" size={15} color={Colors.primary} />
-            <Text style={[styles.buyBtnText, { color: Colors.primary }]}>View My Ticket</Text>
-          </Pressable>
+          <View style={styles.ticketOwnerRow}>
+            <Pressable style={[styles.buyBtn, styles.buyBtnOwned, { flex: 1, marginHorizontal: 0, marginBottom: 0 }]} onPress={onViewTicket}>
+              <Feather name="check-circle" size={15} color={Colors.primary} />
+              <Text style={[styles.buyBtnText, { color: Colors.primary }]}>View My Ticket</Text>
+            </Pressable>
+            <Pressable
+              style={styles.giftBtn}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onGift(); }}
+            >
+              <Feather name="gift" size={16} color={Colors.primary} />
+            </Pressable>
+          </View>
         ) : (
           <Pressable
             style={({ pressed }) => [styles.buyBtn, { opacity: pressed || isBuying || isRegisteringFree ? 0.7 : 1 }]}
@@ -972,6 +1098,56 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       fontSize: 14,
       color: "#fff",
     },
+    ticketOwnerRow: {
+      flexDirection: "row", alignItems: "center", gap: 10,
+      paddingHorizontal: 16, paddingBottom: 16,
+    },
+    giftBtn: {
+      width: 46, height: 46, borderRadius: 14,
+      borderWidth: 1, borderColor: Colors.primary,
+      backgroundColor: `${Colors.primary}10`,
+      alignItems: "center", justifyContent: "center", flexShrink: 0,
+    },
+    /* Who's Going */
+    whoGoingRow: {
+      flexDirection: "row", alignItems: "center", gap: 10,
+      paddingHorizontal: 16, paddingBottom: 12,
+    },
+    whoGoingAvatars: { flexDirection: "row" },
+    whoGoingAvatar: {
+      width: 28, height: 28, borderRadius: 14,
+      backgroundColor: Colors.primary,
+      alignItems: "center", justifyContent: "center",
+      borderWidth: 2, borderColor: Colors.surface,
+    },
+    whoGoingInitial: { fontFamily: "Inter_700Bold", fontSize: 12, color: "#fff" },
+    whoGoingExtra: { backgroundColor: Colors.surface2 },
+    whoGoingExtraText: { fontFamily: "Inter_700Bold", fontSize: 10, color: Colors.textSecondary },
+    whoGoingLabel: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textSecondary, flex: 1 },
+    /* Gift modal */
+    giftOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)" },
+    giftSheet: {
+      backgroundColor: Colors.background, borderTopLeftRadius: 28, borderTopRightRadius: 28,
+      padding: 24, paddingBottom: 40, gap: 14,
+    },
+    giftHandle: {
+      width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.border,
+      alignSelf: "center", marginBottom: 6,
+    },
+    giftHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
+    giftTitle: { fontFamily: "Poppins_800ExtraBold", fontSize: 20, color: Colors.text, flex: 1 },
+    giftSubtitle: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.primary },
+    giftDesc: { fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.textSecondary, lineHeight: 20 },
+    giftInput: {
+      backgroundColor: Colors.surface, borderRadius: 14, padding: 14,
+      color: Colors.text, fontFamily: "Inter_400Regular", fontSize: 15,
+      borderWidth: 1, borderColor: Colors.border,
+    },
+    giftSubmitBtn: {
+      flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+      backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 15,
+    },
+    giftSubmitText: { fontFamily: "Inter_700Bold", fontSize: 15, color: "#fff" },
     /* QR modal */
     modalContainer: { flex: 1 },
     modalHeader: {

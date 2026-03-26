@@ -728,6 +728,68 @@ router.post("/notify", async (req, res) => {
   res.json({ sent });
 });
 
+/* POST /api/admin/notify-event-reminders — send 48h reminders for events happening in the next 24–52h */
+router.post("/notify-event-reminders", async (_req, res) => {
+  const now = new Date();
+  const windowStart = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  const windowEnd = new Date(now.getTime() + 52 * 60 * 60 * 1000);
+
+  const upcomingEvents = await db
+    .select()
+    .from(eventsTable)
+    .where(and(eq(eventsTable.isPublished, true), gte(eventsTable.date, windowStart), lte(eventsTable.date, windowEnd)));
+
+  if (upcomingEvents.length === 0) {
+    res.json({ sent: 0, events: 0, message: "No events in the 48h window" });
+    return;
+  }
+
+  let totalSent = 0;
+  for (const event of upcomingEvents) {
+    const ticketHolders = await db
+      .select({ userId: ticketsTable.userId })
+      .from(ticketsTable)
+      .where(and(eq(ticketsTable.eventId, event.id), sql`${ticketsTable.status} IN ('paid', 'free')`));
+
+    if (ticketHolders.length === 0) continue;
+
+    const holderIds = ticketHolders.map(t => t.userId);
+    const users = await db.query.usersTable.findMany({
+      where: (u, { and: a, eq: e, isNotNull, inArray: inA }) =>
+        a(e(u.notificationsEnabled, true), isNotNull(u.pushToken)) as ReturnType<typeof a>,
+    });
+
+    const tokens = users
+      .filter(u => holderIds.includes(u.id))
+      .map(u => u.pushToken)
+      .filter((t): t is string => !!t && t.startsWith("ExponentPushToken["));
+
+    if (tokens.length === 0) continue;
+
+    const eventDate = new Date(event.date);
+    const hoursUntil = Math.round((eventDate.getTime() - now.getTime()) / 3600000);
+    const messages = tokens.map(to => ({
+      to,
+      title: `⏰ ${event.title} is tomorrow!`,
+      body: `Your spot is confirmed — see you in ${hoursUntil} hours at ${event.location}.`,
+      data: { eventId: String(event.id) },
+      sound: "default" as const,
+      priority: "high" as const,
+    }));
+
+    for (let i = 0; i < messages.length; i += 100) {
+      await fetch("https://exp.host/--/api/v2/push/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify(messages.slice(i, i + 100)),
+      }).catch(() => null);
+      totalSent += messages.slice(i, i + 100).length;
+    }
+  }
+
+  res.json({ sent: totalSent, events: upcomingEvents.length });
+});
+
 /* ========== LIVE USERS ========== */
 
 /* GET /api/admin/live-users — users active in the last 5 minutes */

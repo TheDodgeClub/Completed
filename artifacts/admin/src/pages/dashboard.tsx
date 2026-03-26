@@ -102,6 +102,21 @@ export default function Dashboard() {
   const [notifSending, setNotifSending] = useState(false);
   const [notifResult, setNotifResult] = useState<{ sent: number; failed: number } | null>(null);
   const notifRef = useRef<HTMLDivElement>(null);
+  const [reminderSending, setReminderSending] = useState(false);
+  const [reminderResult, setReminderResult] = useState<{ sent: number; skipped: number } | null>(null);
+
+  const handleSendEventReminders = async () => {
+    setReminderSending(true);
+    setReminderResult(null);
+    try {
+      const data = await fetchApi<{ sent: number; skipped: number }>("/api/admin/notify-event-reminders", { method: "POST" });
+      setReminderResult({ sent: data.sent ?? 0, skipped: data.skipped ?? 0 });
+    } catch {
+      setReminderResult({ sent: 0, skipped: 0 });
+    } finally {
+      setReminderSending(false);
+    }
+  };
 
   const handleSendNotification = async () => {
     if (!notifTitle.trim() || !notifBody.trim()) return;
@@ -520,6 +535,47 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </div>
+
+          {/* 48h Event Reminders */}
+          <Card className="bg-card border-primary/20 shadow-lg shadow-black/20">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                  <Clock className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-base">48h Event Reminders</CardTitle>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Notify ticket holders of events starting in ~48 hours
+                  </p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {reminderResult !== null && (
+                <div className={`flex items-center gap-2 p-3 rounded-xl text-sm font-medium ${reminderResult.sent > 0 ? "bg-green-500/10 text-green-400 border border-green-500/20" : "bg-muted/50 text-muted-foreground border border-border"}`}>
+                  <CheckCircle className="w-4 h-4 shrink-0" />
+                  {reminderResult.sent > 0
+                    ? `Sent ${reminderResult.sent} reminder${reminderResult.sent !== 1 ? "s" : ""}${reminderResult.skipped > 0 ? ` (${reminderResult.skipped} already sent)` : ""}`
+                    : reminderResult.skipped > 0
+                      ? `No new reminders needed — ${reminderResult.skipped} already sent`
+                      : "No upcoming events within 48 hours"}
+                </div>
+              )}
+              <Button
+                variant="outline"
+                className="w-full font-bold gap-2 border-primary/30 text-primary hover:bg-primary/10"
+                onClick={handleSendEventReminders}
+                disabled={reminderSending}
+              >
+                {reminderSending ? (
+                  <>Checking events…</>
+                ) : (
+                  <><Bell className="w-4 h-4" /> Send 48h Reminders Now</>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
 
           {/* Engagement stats — compact 2x2 mini cards */}
           <Card className="bg-card border-border/50 shadow-lg shadow-black/20">
