@@ -436,6 +436,19 @@ export async function listMembers(): Promise<MemberSummary[]> {
   return apiFetch<MemberSummary[]>("/users");
 }
 
+export type LeaderboardEntry = {
+  id: number;
+  name: string;
+  avatarUrl: string | null;
+  username: string | null;
+  isElite: boolean;
+  xp: number;
+};
+
+export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
+  return apiFetch<LeaderboardEntry[]>("/users/leaderboard");
+}
+
 export async function getMemberProfile(id: number): Promise<UserProfile> {
   return apiFetch<UserProfile>(`/users/${id}/profile`);
 }

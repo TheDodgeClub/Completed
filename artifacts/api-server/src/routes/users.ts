@@ -57,6 +57,45 @@ function toProfile(user: typeof usersTable.$inferSelect, stats: Awaited<ReturnTy
   };
 }
 
+/* GET /api/users/leaderboard — top 5 members by XP */
+router.get("/leaderboard", async (_req, res) => {
+  const [users, allAttendance, allAwards] = await Promise.all([
+    db.query.usersTable.findMany({
+      columns: { id: true, name: true, avatarUrl: true, username: true, bonusXp: true, gameXp: true, isElite: true },
+    }),
+    db.query.attendanceTable.findMany({ columns: { userId: true } }),
+    db.query.awardsTable.findMany({ columns: { userId: true, type: true } }),
+  ]);
+
+  const attendanceByUser = new Map<number, number>();
+  for (const a of allAttendance) attendanceByUser.set(a.userId, (attendanceByUser.get(a.userId) ?? 0) + 1);
+
+  const medalsByUser = new Map<number, number>();
+  const ringsByUser = new Map<number, number>();
+  for (const a of allAwards) {
+    if (a.type === "medal") medalsByUser.set(a.userId, (medalsByUser.get(a.userId) ?? 0) + 1);
+    if (a.type === "ring") ringsByUser.set(a.userId, (ringsByUser.get(a.userId) ?? 0) + 1);
+  }
+
+  const withXp = users.map(u => ({
+    id: u.id,
+    name: u.name,
+    avatarUrl: u.avatarUrl ?? null,
+    username: u.username ?? null,
+    isElite: u.isElite ?? false,
+    xp: computeXP(
+      attendanceByUser.get(u.id) ?? 0,
+      medalsByUser.get(u.id) ?? 0,
+      ringsByUser.get(u.id) ?? 0,
+      u.bonusXp ?? 0,
+      u.gameXp ?? 0,
+    ),
+  }));
+
+  const top5 = withXp.sort((a, b) => b.xp - a.xp).slice(0, 5);
+  res.json(top5);
+});
+
 /* GET /api/users — member directory (public) */
 router.get("/", async (_req, res) => {
   const users = await db.query.usersTable.findMany({

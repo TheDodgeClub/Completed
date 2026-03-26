@@ -22,8 +22,8 @@ import { useColors } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import { resolveImageUrl } from "@/constants/api";
 import {
-  listMembers, getMemberProfile,
-  MemberSummary, UserProfile,
+  listMembers, getMemberProfile, getLeaderboard,
+  MemberSummary, UserProfile, LeaderboardEntry,
 } from "@/lib/api";
 
 const LEVEL_NAMES = ["Rookie", "Player", "Contender", "Competitor", "Veteran", "Elite", "Pro", "Champion", "Legend", "Icon"];
@@ -46,6 +46,106 @@ function Avatar({ avatarUrl, name, size = 44, Colors }: { avatarUrl: string | nu
   return (
     <View style={{ width: size, height: size, borderRadius: radius, backgroundColor: `${Colors.primary}30`, alignItems: "center", justifyContent: "center" }}>
       <Text style={{ fontFamily: "Inter_700Bold", fontSize: size * 0.38, color: Colors.primary }}>{name.charAt(0).toUpperCase()}</Text>
+    </View>
+  );
+}
+
+const RANK_COLORS = ["#FFD700", "#C0C0C0", "#CD7F32"];
+
+function LeaderboardCard({ entry, rank, Colors }: { entry: LeaderboardEntry; rank: number; Colors: any }) {
+  const isTop3 = rank <= 3;
+  const rankColor = RANK_COLORS[rank - 1] ?? Colors.textMuted;
+  const uri = resolveImageUrl(entry.avatarUrl);
+  const initials = entry.name.charAt(0).toUpperCase();
+
+  return (
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        paddingVertical: isTop3 ? 14 : 10,
+        paddingHorizontal: 16,
+        backgroundColor: isTop3 ? `${rankColor}12` : "transparent",
+        borderRadius: isTop3 ? 14 : 0,
+        borderWidth: isTop3 ? 1 : 0,
+        borderColor: `${rankColor}30`,
+        marginBottom: isTop3 ? 8 : 0,
+      }}
+    >
+      {/* Rank number */}
+      <View style={{ width: 30, alignItems: "center" }}>
+        {rank <= 3 ? (
+          <Text style={{ fontSize: 18, fontFamily: "Poppins_800ExtraBold", color: rankColor }}>
+            {rank === 1 ? "🥇" : rank === 2 ? "🥈" : "🥉"}
+          </Text>
+        ) : (
+          <Text style={{ fontFamily: "Inter_700Bold", fontSize: 13, color: Colors.textMuted }}>{rank}</Text>
+        )}
+      </View>
+
+      {/* Avatar */}
+      <View style={{ position: "relative", marginLeft: 10, marginRight: 12 }}>
+        {uri ? (
+          <Image source={{ uri }} style={{ width: 38, height: 38, borderRadius: 19, borderWidth: isTop3 ? 2 : 0, borderColor: rankColor }} />
+        ) : (
+          <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: `${Colors.primary}30`, alignItems: "center", justifyContent: "center", borderWidth: isTop3 ? 2 : 0, borderColor: rankColor }}>
+            <Text style={{ fontFamily: "Inter_700Bold", fontSize: 15, color: Colors.primary }}>{initials}</Text>
+          </View>
+        )}
+        {entry.isElite && (
+          <View style={{ position: "absolute", bottom: -2, right: -2, width: 14, height: 14, borderRadius: 7, backgroundColor: "#FFC107", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#0D0D0D" }}>
+            <Text style={{ fontFamily: "Poppins_800ExtraBold", fontSize: 7, color: "#0D0D0D", lineHeight: 10 }}>E</Text>
+          </View>
+        )}
+      </View>
+
+      {/* Name */}
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: isTop3 ? 15 : 14, color: Colors.text }} numberOfLines={1}>
+          {entry.name}
+        </Text>
+        {entry.username ? (
+          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.textMuted }}>@{entry.username}</Text>
+        ) : null}
+      </View>
+
+      {/* XP */}
+      <View style={{ alignItems: "flex-end" }}>
+        <Text style={{ fontFamily: "Poppins_800ExtraBold", fontSize: isTop3 ? 16 : 13, color: isTop3 ? rankColor : Colors.textSecondary }}>
+          {entry.xp.toLocaleString()}
+        </Text>
+        <Text style={{ fontFamily: "Inter_400Regular", fontSize: 10, color: Colors.textMuted }}>XP</Text>
+      </View>
+    </View>
+  );
+}
+
+function Leaderboard({ Colors }: { Colors: any }) {
+  const { data: entries, isLoading } = useQuery({
+    queryKey: ["leaderboard"],
+    queryFn: getLeaderboard,
+    staleTime: 60 * 1000,
+  });
+
+  return (
+    <View style={{ marginBottom: 24 }}>
+      {/* Title */}
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 14 }}>
+        <Text style={{ fontSize: 20, lineHeight: 24 }}>🏆</Text>
+        <Text style={{ fontFamily: "Poppins_800ExtraBold", fontSize: 20, color: Colors.text }}>XP Leaderboard</Text>
+      </View>
+
+      {isLoading ? (
+        <ActivityIndicator color={Colors.primary} />
+      ) : !entries || entries.length === 0 ? (
+        <Text style={{ fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.textMuted }}>No data yet</Text>
+      ) : (
+        <View style={{ backgroundColor: Colors.surface, borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: Colors.border, padding: 12, gap: 2 }}>
+          {entries.map((entry, i) => (
+            <LeaderboardCard key={entry.id} entry={entry} rank={i + 1} Colors={Colors} />
+          ))}
+        </View>
+      )}
     </View>
   );
 }
@@ -278,6 +378,9 @@ export default function CommunityScreen() {
           data={filtered}
           keyExtractor={m => String(m.id)}
           contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 24 }]}
+          ListHeaderComponent={
+            <Leaderboard Colors={Colors} />
+          }
           renderItem={({ item }) => (
             <MemberRow
               member={item}
