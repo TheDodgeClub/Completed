@@ -505,15 +505,10 @@ export default function MemberScreen() {
       {/* ── Stats Bar ── */}
       <View style={styles.statsSection}>
         <View style={styles.statBlock}>
-          <Text style={[styles.statValue, { color: Colors.primary }]}>{user.eventsAttended ?? 0}</Text>
-          <Text style={styles.statLabel}>Events</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statBlock}>
           <Text style={[styles.statValue, { color: currentStreak > 0 ? "#FF6B35" : Colors.textMuted }]}>
             {currentStreak > 0 ? `🔥${currentStreak}` : "–"}
           </Text>
-          <Text style={styles.statLabel}>Streak</Text>
+          <Text style={styles.statLabel}>Event Streak</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statBlock}>
