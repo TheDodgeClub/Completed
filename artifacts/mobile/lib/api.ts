@@ -450,7 +450,7 @@ export type LeaderboardEntry = {
 export type LeaderboardData = {
   xp: LeaderboardEntry[];
   medals: LeaderboardEntry[];
-  hallOfFame: LeaderboardEntry[];
+  rings: LeaderboardEntry[];
 };
 
 export async function getLeaderboard(): Promise<LeaderboardData> {

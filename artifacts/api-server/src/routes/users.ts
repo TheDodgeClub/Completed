@@ -108,9 +108,9 @@ router.get("/leaderboard", async (_req, res) => {
 
   const topXp = [...allUsers].sort((a, b) => b.xp - a.xp).slice(0, 5);
   const topMedals = [...allUsers].sort((a, b) => b.medals - a.medals).filter(u => u.medals > 0).slice(0, 5);
-  const hallOfFame = [...allUsers].sort((a, b) => b.rings - a.rings).filter(u => u.rings > 0).slice(0, 5);
+  const topRings = [...allUsers].sort((a, b) => b.rings - a.rings).filter(u => u.rings > 0).slice(0, 5);
 
-  res.json({ xp: topXp, medals: topMedals, hallOfFame });
+  res.json({ xp: topXp, medals: topMedals, rings: topRings });
 });
 
 /* GET /api/users — member directory (public) */

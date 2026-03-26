@@ -52,18 +52,18 @@ function Avatar({ avatarUrl, name, size = 44, Colors }: { avatarUrl: string | nu
 
 const RANK_COLORS = ["#FFD700", "#C0C0C0", "#CD7F32"];
 
-type LeaderboardTab = "xp" | "medals" | "hallOfFame";
+type LeaderboardTab = "xp" | "medals" | "rings";
 
 const TABS: { key: LeaderboardTab; label: string; icon: string }[] = [
   { key: "xp", label: "XP", icon: "⚡" },
   { key: "medals", label: "Medals", icon: "🏅" },
-  { key: "hallOfFame", label: "Hall of Fame", icon: "🏆" },
+  { key: "rings", label: "Rings", icon: "🏆" },
 ];
 
 function LeaderboardCard({
-  entry, rank, tab, Colors,
+  entry, rank, tab, Colors, onPress,
 }: {
-  entry: LeaderboardEntry; rank: number; tab: LeaderboardTab; Colors: any;
+  entry: LeaderboardEntry; rank: number; tab: LeaderboardTab; Colors: any; onPress: () => void;
 }) {
   const isTop3 = rank <= 3;
   const rankColor = RANK_COLORS[rank - 1] ?? Colors.textMuted;
@@ -76,8 +76,9 @@ function LeaderboardCard({
   const statLabel = tab === "xp" ? "XP" : tab === "medals" ? "medals" : "rings";
 
   return (
-    <View
-      style={{
+    <Pressable
+      onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onPress(); }}
+      style={({ pressed }) => ({
         flexDirection: "row",
         alignItems: "center",
         paddingVertical: isTop3 ? 14 : 10,
@@ -87,16 +88,15 @@ function LeaderboardCard({
         borderWidth: isTop3 ? 1 : 0,
         borderColor: `${rankColor}30`,
         marginBottom: isTop3 ? 8 : 0,
-      }}
+        opacity: pressed ? 0.75 : 1,
+      })}
     >
-      <View style={{ width: 30, alignItems: "center" }}>
-        {rank <= 3 ? (
-          <Text style={{ fontSize: 18 }}>
-            {rank === 1 ? "🥇" : rank === 2 ? "🥈" : "🥉"}
-          </Text>
-        ) : (
-          <Text style={{ fontFamily: "Inter_700Bold", fontSize: 13, color: Colors.textMuted }}>{rank}</Text>
-        )}
+      <View style={{ width: 28, alignItems: "center" }}>
+        <Text style={{
+          fontFamily: "Poppins_800ExtraBold",
+          fontSize: isTop3 ? 16 : 13,
+          color: isTop3 ? rankColor : Colors.textMuted,
+        }}>{rank}</Text>
       </View>
 
       <View style={{ position: "relative", marginLeft: 10, marginRight: 12 }}>
@@ -129,11 +129,11 @@ function LeaderboardCard({
         </Text>
         <Text style={{ fontFamily: "Inter_400Regular", fontSize: 10, color: Colors.textMuted }}>{statLabel}</Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
-function Leaderboard({ Colors }: { Colors: any }) {
+function Leaderboard({ Colors, onMemberPress }: { Colors: any; onMemberPress: (entry: LeaderboardEntry) => void }) {
   const [activeTab, setActiveTab] = useState<LeaderboardTab>("xp");
 
   const { data, isLoading } = useQuery<LeaderboardData>({
@@ -194,16 +194,16 @@ function Leaderboard({ Colors }: { Colors: any }) {
       ) : !entries || entries.length === 0 ? (
         <View style={{ backgroundColor: Colors.surface, borderRadius: 16, borderWidth: 1, borderColor: Colors.border, padding: 24, alignItems: "center" }}>
           <Text style={{ fontSize: 28, marginBottom: 8 }}>
-            {activeTab === "hallOfFame" ? "🏆" : activeTab === "medals" ? "🏅" : "⚡"}
+            {activeTab === "rings" ? "🏆" : activeTab === "medals" ? "🏅" : "⚡"}
           </Text>
           <Text style={{ fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.textMuted, textAlign: "center" }}>
-            {activeTab === "hallOfFame" ? "No ring holders yet" : activeTab === "medals" ? "No medals earned yet" : "No XP data yet"}
+            {activeTab === "rings" ? "No ring holders yet" : activeTab === "medals" ? "No medals earned yet" : "No XP data yet"}
           </Text>
         </View>
       ) : (
         <View style={{ backgroundColor: Colors.surface, borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: Colors.border, padding: 12, gap: 2 }}>
           {entries.map((entry, i) => (
-            <LeaderboardCard key={entry.id} entry={entry} rank={i + 1} tab={activeTab} Colors={Colors} />
+            <LeaderboardCard key={entry.id} entry={entry} rank={i + 1} tab={activeTab} Colors={Colors} onPress={() => onMemberPress(entry)} />
           ))}
         </View>
       )}
@@ -400,7 +400,6 @@ export default function CommunityScreen() {
         <View style={styles.headerRow}>
           <View>
             <Text style={styles.headerTitle}>Community</Text>
-            <Text style={styles.headerSubtitle}>{members?.length ?? 0} members</Text>
           </View>
           {isAuthenticated && (
             <Pressable
@@ -440,7 +439,21 @@ export default function CommunityScreen() {
           keyExtractor={m => String(m.id)}
           contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 24 }]}
           ListHeaderComponent={
-            <Leaderboard Colors={Colors} />
+            <Leaderboard
+              Colors={Colors}
+              onMemberPress={(entry) => {
+                setSelected({
+                  id: entry.id,
+                  name: entry.name,
+                  avatarUrl: entry.avatarUrl,
+                  username: entry.username,
+                  bio: null,
+                  preferredRole: null,
+                  memberSince: new Date().toISOString(),
+                  isElite: entry.isElite,
+                });
+              }}
+            />
           }
           renderItem={({ item }) => (
             <MemberRow
