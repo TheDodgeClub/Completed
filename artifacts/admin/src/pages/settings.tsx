@@ -1,32 +1,96 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Video, Mail, Send, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Video, Mail, Send, CheckCircle2, Loader2, Eye, Pencil, Link2, Image as ImageIcon, Type } from "lucide-react";
 import { Link } from "wouter";
 import { fetchApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { ImageUploader } from "@/components/image-uploader";
+import { cn } from "@/lib/utils";
 
 const TEMPLATE_VARS = [
-  { key: "{{userName}}", desc: "Member's name" },
-  { key: "{{eventName}}", desc: "Event title" },
-  { key: "{{eventDate}}", desc: "Formatted date" },
-  { key: "{{eventLocation}}", desc: "Venue / location" },
-  { key: "{{ticketCode}}", desc: "Unique ticket code" },
+  { key: "{{userName}}", desc: "Member's name", label: "Name" },
+  { key: "{{eventName}}", desc: "Event title", label: "Event" },
+  { key: "{{eventDate}}", desc: "Formatted date", label: "Date" },
+  { key: "{{eventLocation}}", desc: "Venue", label: "Location" },
+  { key: "{{ticketCode}}", desc: "Unique code", label: "Code" },
 ];
 
 const DEFAULT_SUBJECT = "Your ticket is confirmed! 🎉";
 const DEFAULT_FROM_NAME = "The Dodge Club";
-const DEFAULT_FROM_EMAIL = "noreply@dodgeclub.com";
+const DEFAULT_FROM_EMAIL = "info@thedodgeclub.co.uk";
+const DEFAULT_BODY = `Hey {{userName}},
 
-interface EmailSettings {
-  emailFromName: string;
-  emailFromAddress: string;
-  emailSubject: string;
-  emailBodyHtml: string;
+You're in! Here are your ticket details below. Show your ticket code at the door and we'll see you on the court! 🎯`;
+
+function buildPreviewHtml(opts: {
+  headerImageUrl: string;
+  bodyText: string;
+  ctaText: string;
+  ctaUrl: string;
+}) {
+  const { headerImageUrl, bodyText, ctaText, ctaUrl } = opts;
+
+  const headerImageBlock = headerImageUrl
+    ? `<img src="${headerImageUrl}" alt="Event" style="width:100%;display:block;" />`
+    : "";
+
+  const bodyLines = (bodyText || DEFAULT_BODY)
+    .split("\n")
+    .map((l) =>
+      l.trim() === ""
+        ? `<br/>`
+        : `<p style="margin:0 0 12px;color:rgba(255,255,255,0.85);font-size:15px;line-height:1.6;">${l}</p>`
+    )
+    .join("\n");
+
+  const ctaBlock =
+    ctaText && ctaUrl
+      ? `<div style="text-align:center;margin:28px 0 8px;">
+          <a href="${ctaUrl}" style="display:inline-block;background:#0B5E2F;color:#FFD700;text-decoration:none;font-weight:700;font-size:15px;padding:14px 32px;border-radius:8px;">${ctaText}</a>
+        </div>`
+      : "";
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"/></head>
+<body style="margin:0;padding:16px;background:#0D0D0D;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <div style="max-width:480px;margin:0 auto;background:#151515;border-radius:12px;overflow:hidden;">
+    ${headerImageBlock}
+    <div style="background:#0B5E2F;padding:24px 28px 18px;text-align:center;">
+      <h1 style="margin:0;font-size:22px;color:#FFD700;">The Dodge Club</h1>
+      <p style="margin:5px 0 0;color:rgba(255,255,255,0.7);font-size:13px;">Your ticket is confirmed</p>
+    </div>
+    <div style="padding:28px;">
+      ${bodyLines}
+      <div style="background:rgba(11,94,47,0.13);border:1px solid #0B5E2F;border-radius:10px;padding:18px 22px;margin:22px 0;">
+        <p style="font-size:10px;text-transform:uppercase;letter-spacing:0.8px;color:rgba(255,255,255,0.4);margin:0 0 3px;">Event</p>
+        <p style="font-size:14px;color:#fff;font-weight:500;margin:0 0 12px;">April Thrills 🎯</p>
+        <p style="font-size:10px;text-transform:uppercase;letter-spacing:0.8px;color:rgba(255,255,255,0.4);margin:0 0 3px;">Date</p>
+        <p style="font-size:14px;color:#fff;font-weight:500;margin:0 0 12px;">Saturday, 12 April 2025</p>
+        <p style="font-size:10px;text-transform:uppercase;letter-spacing:0.8px;color:rgba(255,255,255,0.4);margin:0 0 3px;">Location</p>
+        <p style="font-size:14px;color:#fff;font-weight:500;margin:0;">Dodge Club Arena, London</p>
+      </div>
+      <div style="background:#0D0D0D;border:1px dashed #FFD700;border-radius:8px;padding:14px;text-align:center;margin:20px 0;">
+        <p style="font-size:11px;color:rgba(255,255,255,0.5);letter-spacing:0.8px;text-transform:uppercase;margin:0 0 5px;">Your Ticket Code</p>
+        <p style="font-family:'Courier New',monospace;font-size:20px;font-weight:bold;color:#FFD700;letter-spacing:3px;margin:0;">DEMO-0001</p>
+      </div>
+      ${ctaBlock}
+      <p style="font-size:12px;color:rgba(255,255,255,0.35);text-align:center;margin:18px 0 0;">Show this code at the door. See you on the court!</p>
+    </div>
+    <div style="padding:16px 28px;text-align:center;font-size:11px;color:rgba(255,255,255,0.2);border-top:1px solid #222;">
+      The Dodge Club &bull; Automated confirmation email
+    </div>
+  </div>
+</body></html>`;
+}
+
+function resolveImageUrl(url: string): string {
+  if (!url) return url;
+  if (url.startsWith("http")) return url;
+  return `${window.location.origin}${url.startsWith("/") ? "" : "/"}${url}`;
 }
 
 export default function SettingsPage() {
@@ -34,11 +98,20 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [activeTab, setActiveTab] = useState<"edit" | "preview">("edit");
 
   const [fromName, setFromName] = useState(DEFAULT_FROM_NAME);
   const [fromEmail, setFromEmail] = useState(DEFAULT_FROM_EMAIL);
   const [subject, setSubject] = useState(DEFAULT_SUBJECT);
-  const [bodyHtml, setBodyHtml] = useState("");
+  const [headerImageUrl, setHeaderImageUrl] = useState("");
+  const [bodyText, setBodyText] = useState(DEFAULT_BODY);
+  const [ctaText, setCtaText] = useState("");
+  const [ctaUrl, setCtaUrl] = useState("");
+
+  const previewHtml = useMemo(
+    () => buildPreviewHtml({ headerImageUrl: resolveImageUrl(headerImageUrl), bodyText, ctaText, ctaUrl }),
+    [headerImageUrl, bodyText, ctaText, ctaUrl]
+  );
 
   const load = useCallback(async () => {
     try {
@@ -46,7 +119,10 @@ export default function SettingsPage() {
       setFromName(data.emailFromName ?? DEFAULT_FROM_NAME);
       setFromEmail(data.emailFromAddress ?? DEFAULT_FROM_EMAIL);
       setSubject(data.emailSubject ?? DEFAULT_SUBJECT);
-      setBodyHtml(data.emailBodyHtml ?? "");
+      setHeaderImageUrl(data.emailHeaderImageUrl ?? "");
+      setBodyText(data.emailBodyText ?? DEFAULT_BODY);
+      setCtaText(data.emailCtaText ?? "");
+      setCtaUrl(data.emailCtaUrl ?? "");
     } catch {
       // ignore
     } finally {
@@ -55,6 +131,10 @@ export default function SettingsPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  function insertVar(varKey: string) {
+    setBodyText((prev) => prev + (prev.endsWith(" ") || prev === "" ? "" : " ") + varKey + " ");
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -65,10 +145,14 @@ export default function SettingsPage() {
           emailFromName: fromName,
           emailFromAddress: fromEmail,
           emailSubject: subject,
-          emailBodyHtml: bodyHtml || null,
+          emailHeaderImageUrl: headerImageUrl || null,
+          emailBodyText: bodyText || null,
+          emailCtaText: ctaText || null,
+          emailCtaUrl: ctaUrl || null,
+          emailBodyHtml: null,
         }),
       });
-      toast({ title: "Email template saved", description: "Changes will apply to all new ticket purchases." });
+      toast({ title: "Email template saved", description: "New look applies to all future ticket purchases." });
     } catch (err: any) {
       toast({ title: "Save failed", description: err.message, variant: "destructive" });
     } finally {
@@ -80,7 +164,7 @@ export default function SettingsPage() {
     setTesting(true);
     try {
       const result = await fetchApi<{ sentTo: string }>("/api/settings/admin/test-email", { method: "POST" });
-      toast({ title: "Test email sent!", description: `Check your inbox at ${result.sentTo}` });
+      toast({ title: "Test email sent!", description: `Check inbox at ${result.sentTo}` });
     } catch (err: any) {
       toast({ title: "Failed to send test email", description: err.message, variant: "destructive" });
     } finally {
@@ -89,124 +173,249 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="p-8 space-y-8 max-w-2xl">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">App Settings</h1>
-          <p className="text-muted-foreground mt-1">Configure global settings for the mobile app.</p>
-        </div>
-
-        {/* Hero Video */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Video className="w-5 h-5 text-primary" />
-              <CardTitle>Home Screen Hero Video</CardTitle>
-            </div>
-            <CardDescription>
-              The hero video that plays at the top of the mobile home screen is managed from the{" "}
-              <Link href="/videos" className="text-primary underline underline-offset-4">Videos tab</Link>.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link href="/videos">
-              <span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline cursor-pointer">
-                Go to Videos →
-              </span>
-            </Link>
-          </CardContent>
-        </Card>
-
-        {/* Email Confirmation Template */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Mail className="w-5 h-5 text-primary" />
-              <CardTitle>Ticket Confirmation Email</CardTitle>
-            </div>
-            <CardDescription>
-              Customise the email sent to members when they register for an event. Leave the HTML body blank to use the built-in default template.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            {loading ? (
-              <div className="flex items-center gap-2 text-muted-foreground text-sm py-4">
-                <Loader2 className="w-4 h-4 animate-spin" /> Loading settings…
-              </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="fromName">Sender Name</Label>
-                    <Input
-                      id="fromName"
-                      value={fromName}
-                      onChange={(e) => setFromName(e.target.value)}
-                      placeholder={DEFAULT_FROM_NAME}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="fromEmail">From Email</Label>
-                    <Input
-                      id="fromEmail"
-                      type="email"
-                      value={fromEmail}
-                      onChange={(e) => setFromEmail(e.target.value)}
-                      placeholder={DEFAULT_FROM_EMAIL}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="subject">Subject Line</Label>
-                  <Input
-                    id="subject"
-                    value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
-                    placeholder={DEFAULT_SUBJECT}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="bodyHtml">HTML Email Body</Label>
-                    <span className="text-xs text-muted-foreground">Optional — leave blank for the default template</span>
-                  </div>
-                  <Textarea
-                    id="bodyHtml"
-                    value={bodyHtml}
-                    onChange={(e) => setBodyHtml(e.target.value)}
-                    placeholder={"<!DOCTYPE html>\n<html>…</html>"}
-                    className="font-mono text-xs min-h-[220px] resize-y"
-                  />
-                </div>
-
-                {/* Template variables reference */}
-                <div className="rounded-lg border border-dashed p-4 space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Available variables</p>
-                  <div className="flex flex-wrap gap-2">
-                    {TEMPLATE_VARS.map(({ key, desc }) => (
-                      <div key={key} className="flex items-center gap-1.5">
-                        <Badge variant="outline" className="font-mono text-xs cursor-default">{key}</Badge>
-                        <span className="text-xs text-muted-foreground">{desc}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 pt-1">
-                  <Button onClick={handleSave} disabled={saving}>
-                    {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
-                    Save Template
-                  </Button>
-                  <Button variant="outline" onClick={handleTestEmail} disabled={testing}>
-                    {testing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
-                    Send Test Email
-                  </Button>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+    <div className="p-8 space-y-8 max-w-5xl">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">App Settings</h1>
+        <p className="text-muted-foreground mt-1">Configure global settings for the mobile app.</p>
       </div>
+
+      {/* Hero Video */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Video className="w-5 h-5 text-primary" />
+            <CardTitle>Home Screen Hero Video</CardTitle>
+          </div>
+          <CardDescription>
+            The hero video that plays at the top of the mobile home screen is managed from the{" "}
+            <Link href="/videos" className="text-primary underline underline-offset-4">Videos tab</Link>.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Link href="/videos">
+            <span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline cursor-pointer">
+              Go to Videos →
+            </span>
+          </Link>
+        </CardContent>
+      </Card>
+
+      {/* Email Confirmation Builder */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Mail className="w-5 h-5 text-primary" />
+            <CardTitle>Ticket Confirmation Email</CardTitle>
+          </div>
+          <CardDescription>
+            Design the email members receive when they buy a ticket. Event details and the buyer's name are filled in automatically.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex items-center gap-2 text-muted-foreground text-sm py-6">
+              <Loader2 className="w-4 h-4 animate-spin" /> Loading settings…
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Sender row */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="fromName">Sender Name</Label>
+                  <Input
+                    id="fromName"
+                    value={fromName}
+                    onChange={(e) => setFromName(e.target.value)}
+                    placeholder={DEFAULT_FROM_NAME}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="fromEmail">From Email</Label>
+                  <Input
+                    id="fromEmail"
+                    type="email"
+                    value={fromEmail}
+                    onChange={(e) => setFromEmail(e.target.value)}
+                    placeholder={DEFAULT_FROM_EMAIL}
+                  />
+                </div>
+              </div>
+
+              {/* Subject */}
+              <div className="space-y-1.5">
+                <Label htmlFor="subject">Subject Line</Label>
+                <Input
+                  id="subject"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  placeholder={DEFAULT_SUBJECT}
+                />
+              </div>
+
+              {/* Edit / Preview tabs */}
+              <div className="border border-border/50 rounded-xl overflow-hidden">
+                {/* Tab bar */}
+                <div className="flex border-b border-border/50 bg-muted/30">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("edit")}
+                    className={cn(
+                      "flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors border-r border-border/50",
+                      activeTab === "edit" ? "bg-background text-foreground" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <Pencil className="w-3.5 h-3.5" /> Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("preview")}
+                    className={cn(
+                      "flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors",
+                      activeTab === "preview" ? "bg-background text-foreground" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <Eye className="w-3.5 h-3.5" /> Preview
+                  </button>
+                </div>
+
+                {activeTab === "edit" ? (
+                  <div className="p-5 space-y-6">
+                    {/* Header image */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <ImageIcon className="w-3.5 h-3.5 text-muted-foreground" />
+                        <Label>Header Banner Image</Label>
+                        <span className="text-xs text-muted-foreground">(optional)</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-2">
+                        Appears at the top of the email — great for event artwork or club branding.
+                      </p>
+                      <ImageUploader
+                        value={headerImageUrl}
+                        onChange={setHeaderImageUrl}
+                        label="Banner"
+                      />
+                    </div>
+
+                    {/* Body message */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-1.5">
+                        <Type className="w-3.5 h-3.5 text-muted-foreground" />
+                        <Label>Message</Label>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Write your personalised message. The event details and unique ticket code are added automatically below this.
+                      </p>
+                      {/* Variable chip row */}
+                      <div className="flex flex-wrap gap-1.5 py-1">
+                        <span className="text-xs text-muted-foreground self-center mr-0.5">Insert:</span>
+                        {TEMPLATE_VARS.map(({ key, label, desc }) => (
+                          <button
+                            key={key}
+                            type="button"
+                            title={desc}
+                            onClick={() => insertVar(key)}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20 text-primary text-xs font-medium hover:bg-primary/20 transition-colors cursor-pointer"
+                          >
+                            + {label}
+                          </button>
+                        ))}
+                      </div>
+                      <Textarea
+                        value={bodyText}
+                        onChange={(e) => setBodyText(e.target.value)}
+                        placeholder={DEFAULT_BODY}
+                        className="min-h-[140px] resize-y text-sm"
+                      />
+                    </div>
+
+                    {/* CTA button */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-1.5">
+                        <Link2 className="w-3.5 h-3.5 text-muted-foreground" />
+                        <Label>Button / Link</Label>
+                        <span className="text-xs text-muted-foreground">(optional)</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Add a call-to-action button — link to your website, social page, or event info.
+                      </p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="ctaText" className="text-xs text-muted-foreground">Button label</Label>
+                          <Input
+                            id="ctaText"
+                            value={ctaText}
+                            onChange={(e) => setCtaText(e.target.value)}
+                            placeholder="e.g. Visit our website"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="ctaUrl" className="text-xs text-muted-foreground">URL (paste link here)</Label>
+                          <Input
+                            id="ctaUrl"
+                            type="url"
+                            value={ctaUrl}
+                            onChange={(e) => setCtaUrl(e.target.value)}
+                            placeholder="https://thedodgeclub.co.uk"
+                          />
+                        </div>
+                      </div>
+                      {ctaText && ctaUrl && (
+                        <div className="flex items-center gap-2 text-xs text-primary bg-primary/10 border border-primary/20 rounded-lg px-3 py-2">
+                          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                          Button set: "{ctaText}" → {ctaUrl}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Auto-filled info box */}
+                    <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 p-4 space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Auto-filled for every ticket</p>
+                      <p className="text-xs text-muted-foreground">
+                        The event name, date, location, the buyer's name, and a unique ticket code are always added automatically — you don't need to include them in your message.
+                      </p>
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {TEMPLATE_VARS.map(({ key, desc }) => (
+                          <div key={key} className="flex items-center gap-1.5">
+                            <Badge variant="outline" className="font-mono text-xs">{key}</Badge>
+                            <span className="text-xs text-muted-foreground">{desc}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-[#0D0D0D] p-4">
+                    <p className="text-xs text-center text-muted-foreground mb-3">Live preview — showing example event data</p>
+                    <iframe
+                      srcDoc={previewHtml}
+                      className="w-full rounded-lg border border-border/30"
+                      style={{ height: 700, background: "#0D0D0D" }}
+                      title="Email preview"
+                      sandbox="allow-same-origin"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex items-center gap-3 pt-1">
+                <Button onClick={handleSave} disabled={saving}>
+                  {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
+                  Save Template
+                </Button>
+                <Button variant="outline" onClick={handleTestEmail} disabled={testing}>
+                  {testing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
+                  Send Test Email
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  Test email sends to your admin inbox
+                </span>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
