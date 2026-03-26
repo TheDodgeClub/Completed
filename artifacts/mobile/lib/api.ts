@@ -622,3 +622,23 @@ export async function resetPassword(email: string, code: string, newPassword: st
     body: JSON.stringify({ email, code, newPassword }),
   });
 }
+
+export type MyRank = { xpRank: number | null; totalMembers: number };
+
+export async function getMyRank(): Promise<MyRank> {
+  return apiFetch<MyRank>("/users/me/rank");
+}
+
+export type ActivityItem = {
+  id: string;
+  type: string;
+  userId: number;
+  userName: string;
+  userAvatar: string | null;
+  text: string;
+  timestamp: string;
+};
+
+export async function getActivity(): Promise<ActivityItem[]> {
+  return apiFetch<ActivityItem[]>("/users/activity");
+}

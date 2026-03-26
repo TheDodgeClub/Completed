@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, usersTable, attendanceTable, eventsTable, awardsTable, teamHistoryTable, eventRegistrationsTable } from "@workspace/db";
-import { eq, gt } from "drizzle-orm";
+import { eq, gt, desc } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -111,6 +111,96 @@ router.get("/leaderboard", async (_req, res) => {
   const topRings = [...allUsers].sort((a, b) => b.rings - a.rings).filter(u => u.rings > 0).slice(0, 5);
 
   res.json({ xp: topXp, medals: topMedals, rings: topRings });
+});
+
+/* GET /api/users/me/rank — authenticated user's XP rank among all members */
+router.get("/me/rank", async (req, res) => {
+  const userId = req.session?.userId;
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const [users, allAttendance, allAwards] = await Promise.all([
+    db.query.usersTable.findMany({
+      columns: { id: true, bonusXp: true, gameXp: true, isAdmin: true },
+      where: eq(usersTable.isAdmin, false),
+    }),
+    db.query.attendanceTable.findMany({ columns: { userId: true, earnedMedal: true } }),
+    db.query.awardsTable.findMany({ columns: { userId: true, type: true } }),
+  ]);
+
+  const attendanceByUser = new Map<number, number>();
+  const attendanceMedalsByUser = new Map<number, number>();
+  for (const a of allAttendance) {
+    attendanceByUser.set(a.userId, (attendanceByUser.get(a.userId) ?? 0) + 1);
+    if (a.earnedMedal) attendanceMedalsByUser.set(a.userId, (attendanceMedalsByUser.get(a.userId) ?? 0) + 1);
+  }
+  const awardMedalsByUser = new Map<number, number>();
+  const ringsByUser = new Map<number, number>();
+  for (const a of allAwards) {
+    if (a.type === "medal") awardMedalsByUser.set(a.userId, (awardMedalsByUser.get(a.userId) ?? 0) + 1);
+    if (a.type === "ring") ringsByUser.set(a.userId, (ringsByUser.get(a.userId) ?? 0) + 1);
+  }
+
+  const allUsers = users.map(u => {
+    const attended = attendanceByUser.get(u.id) ?? 0;
+    const medals = (attendanceMedalsByUser.get(u.id) ?? 0) + (awardMedalsByUser.get(u.id) ?? 0);
+    const rings = ringsByUser.get(u.id) ?? 0;
+    return { id: u.id, xp: computeXP(attended, medals, rings, u.bonusXp ?? 0, u.gameXp ?? 0) };
+  });
+
+  const sortedByXp = [...allUsers].sort((a, b) => b.xp - a.xp);
+  const xpRank = sortedByXp.findIndex(u => u.id === userId) + 1;
+
+  res.json({ xpRank: xpRank > 0 ? xpRank : null, totalMembers: users.length });
+});
+
+/* GET /api/users/activity — recent community activity feed (public) */
+router.get("/activity", async (_req, res) => {
+  const [recentAwards, recentMembers] = await Promise.all([
+    db.query.awardsTable.findMany({
+      with: { user: { columns: { id: true, name: true, avatarUrl: true } } },
+      orderBy: [desc(awardsTable.awardedAt)],
+      limit: 10,
+    }),
+    db.query.usersTable.findMany({
+      columns: { id: true, name: true, avatarUrl: true, createdAt: true, isAdmin: true },
+      orderBy: [desc(usersTable.createdAt)],
+      limit: 6,
+    }),
+  ]);
+
+  const items: Array<{
+    id: string; type: string; userId: number; userName: string;
+    userAvatar: string | null; text: string; timestamp: string;
+  }> = [];
+
+  for (const award of recentAwards) {
+    items.push({
+      id: `award-${award.id}`,
+      type: award.type,
+      userId: award.userId,
+      userName: award.user.name,
+      userAvatar: award.user.avatarUrl ?? null,
+      text: award.type === "ring"
+        ? `${award.user.name} earned a Ring 💍`
+        : `${award.user.name} earned a Medal 🏅`,
+      timestamp: award.awardedAt.toISOString(),
+    });
+  }
+
+  for (const member of recentMembers.filter(m => !m.isAdmin)) {
+    items.push({
+      id: `member-${member.id}`,
+      type: "newMember",
+      userId: member.id,
+      userName: member.name,
+      userAvatar: member.avatarUrl ?? null,
+      text: `${member.name} just joined the Dodge Club 👋`,
+      timestamp: member.createdAt.toISOString(),
+    });
+  }
+
+  items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  res.json(items.slice(0, 10));
 });
 
 /* GET /api/users — member directory (public) */
