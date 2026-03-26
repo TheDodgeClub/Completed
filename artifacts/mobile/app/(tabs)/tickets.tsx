@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useMemo, useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import {
   Platform,
   TouchableOpacity,
   Dimensions,
+  type ScrollView as RNScrollView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -478,11 +479,23 @@ function CheckoutFormModal({
   const insets = useSafeAreaInsets();
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [waiverAgreed, setWaiverAgreed] = useState(false);
+  const scrollRef = useRef<RNScrollView>(null);
+  const fieldYPositions = useRef<Record<string, number>>({});
 
   const fields: CheckoutField[] = event.checkoutFields ?? [];
   const hasWaiver = !!event.waiverText;
 
   const SCREEN_HEIGHT = Dimensions.get("window").height;
+
+  const scrollToField = useCallback((fieldId: string) => {
+    const y = fieldYPositions.current[fieldId];
+    if (y !== undefined) {
+      // Small delay so the keyboard is already animating
+      setTimeout(() => {
+        scrollRef.current?.scrollTo({ y: Math.max(0, y - 12), animated: true });
+      }, 80);
+    }
+  }, []);
 
   const cfStyles = StyleSheet.create({
     backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", flexDirection: "column" },
@@ -540,7 +553,11 @@ function CheckoutFormModal({
   const renderField = (field: CheckoutField) => {
     if (field.type === "select" && field.options?.length) {
       return (
-        <View key={field.id} style={cfStyles.fieldGroup}>
+        <View
+          key={field.id}
+          style={cfStyles.fieldGroup}
+          onLayout={(e) => { fieldYPositions.current[field.id] = e.nativeEvent.layout.y; }}
+        >
           <Text style={cfStyles.fieldLabel}>{field.label}{field.required ? " *" : ""}</Text>
           <View style={cfStyles.chipRow}>
             {field.options.map((opt) => (
@@ -561,12 +578,17 @@ function CheckoutFormModal({
 
     const isMultiline = field.type === "textarea";
     return (
-      <View key={field.id} style={cfStyles.fieldGroup}>
+      <View
+        key={field.id}
+        style={cfStyles.fieldGroup}
+        onLayout={(e) => { fieldYPositions.current[field.id] = e.nativeEvent.layout.y; }}
+      >
         <Text style={cfStyles.fieldLabel}>{field.label}{field.required ? " *" : ""}</Text>
         <TextInput
           style={isMultiline ? cfStyles.inputMulti : cfStyles.input}
           value={formData[field.id] ?? ""}
           onChangeText={(val) => setFormData((d) => ({ ...d, [field.id]: val }))}
+          onFocus={() => scrollToField(field.id)}
           placeholder={field.type === "date" ? "DD/MM/YYYY" : field.type === "email" ? "you@example.com" : field.type === "phone" ? "+44 7000 000000" : ""}
           placeholderTextColor={Colors.textMuted}
           keyboardType={field.type === "email" ? "email-address" : field.type === "phone" ? "phone-pad" : "default"}
@@ -611,10 +633,12 @@ function CheckoutFormModal({
 
             {/* Scrollable form — flexShrink:1 lets it shrink within maxHeight on iOS */}
             <ScrollView
+              ref={scrollRef}
               style={{ flexShrink: 1 }}
               contentContainerStyle={cfStyles.scrollContent}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
+              automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
             >
               {fields.map(renderField)}
 
