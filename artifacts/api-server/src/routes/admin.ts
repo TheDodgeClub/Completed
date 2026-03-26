@@ -393,6 +393,13 @@ router.get("/members", async (_req, res) => {
     awardsByUser.get(a.userId)!.push(a);
   }
 
+  const userNameMap = new Map<number, string>();
+  for (const u of users) userNameMap.set(u.id, u.name);
+  const referralCountMap = new Map<number, number>();
+  for (const u of users) {
+    if (u.referredBy) referralCountMap.set(u.referredBy, (referralCountMap.get(u.referredBy) ?? 0) + 1);
+  }
+
   const result = users.map((u) => {
     const awards = awardsByUser.get(u.id) ?? [];
     const { eventXP, eventsAttended, currentStreak, bestStreak } = computeAttendanceXP(attendanceEventsByUser.get(u.id) ?? new Set(), pastEvents);
@@ -421,6 +428,8 @@ router.get("/members", async (_req, res) => {
       stripeSubscriptionId: u.stripeSubscriptionId ?? null,
       accountType: u.accountType ?? "player",
       referralCode: u.referralCode ?? null,
+      referredByName: u.referredBy ? (userNameMap.get(u.referredBy) ?? null) : null,
+      referralCount: referralCountMap.get(u.id) ?? 0,
     };
   });
   res.json(result);

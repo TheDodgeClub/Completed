@@ -550,8 +550,10 @@ export default function MemberScreen() {
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statBlock}>
-              <Text style={[styles.statValue, { color: Colors.secondary }]}>❤️</Text>
-              <Text style={styles.statLabel}>Supporter</Text>
+              <Text style={[styles.statValue, { color: Colors.primary }]}>
+                {new Date(user.memberSince).getFullYear()}
+              </Text>
+              <Text style={styles.statLabel}>Member Since</Text>
             </View>
           </>
         ) : (
@@ -608,10 +610,13 @@ export default function MemberScreen() {
           </Pressable>
           <Pressable
             style={({ pressed }) => [styles.quickBtn, { opacity: pressed ? 0.8 : 1 }]}
-            onPress={() => router.push("/(tabs)/merch")}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              router.push("/games/dodge");
+            }}
           >
-            <Feather name="shopping-bag" size={20} color={Colors.secondary} />
-            <Text style={styles.quickBtnText}>Merch</Text>
+            <Text style={{ fontSize: 20, lineHeight: 24 }}>🏐</Text>
+            <Text style={styles.quickBtnText}>Play</Text>
           </Pressable>
           <Pressable
             style={({ pressed }) => [styles.quickBtn, user.isElite ? styles.quickBtnElite : {}, { opacity: pressed ? 0.8 : 1 }]}
@@ -676,7 +681,7 @@ export default function MemberScreen() {
         {upcomingEvents && upcomingEvents.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Upcoming Events</Text>
+              <Text style={styles.sectionTitle}>Events You're Going To</Text>
             </View>
             {upcomingEvents.map(event => (
               <UpcomingEventRow key={event.id} event={event} />
@@ -760,7 +765,7 @@ export default function MemberScreen() {
                 </View>
                 <Feather name="gift" size={28} color={Colors.primary} />
               </View>
-              <Text style={styles.referralHint}>Share your code — when a friend signs up with it, you're both connected in the club.</Text>
+              <Text style={styles.referralHint}>Share your code — you earn +25 XP every time a friend signs up using it. Start referring today!</Text>
               <View style={styles.referralBtnRow}>
                 <Pressable
                   style={[styles.referralBtn, { flex: 1 }]}

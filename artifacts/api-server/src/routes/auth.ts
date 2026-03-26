@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
 import { db, usersTable, attendanceTable, awardsTable, eventsTable } from "@workspace/db";
-import { eq, lte } from "drizzle-orm";
+import { eq, lte, sql } from "drizzle-orm";
 
 /* ---------- in-memory OTP store ---------- */
 interface OtpEntry { code: string; expires: number }
@@ -202,6 +202,12 @@ router.post("/register", async (req, res) => {
 
   const code = generateReferralCode(name, user.id);
   const [updatedUser] = await db.update(usersTable).set({ referralCode: code }).where(eq(usersTable.id, user.id)).returning();
+
+  if (referredById) {
+    await db.update(usersTable)
+      .set({ bonusXp: sql`COALESCE(${usersTable.bonusXp}, 0) + 25` })
+      .where(eq(usersTable.id, referredById));
+  }
 
   req.session = { userId: updatedUser.id };
   const emptyStats = { eventsAttended: 0, medalsEarned: 0, ringsEarned: 0, xp: 0, level: 1, currentStreak: 0, bestStreak: 0 };

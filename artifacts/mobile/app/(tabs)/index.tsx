@@ -9,9 +9,9 @@ import {
   RefreshControl,
   Image,
   Alert,
-  Share,
   useWindowDimensions,
 } from "react-native";
+import * as WebBrowser from "expo-web-browser";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -22,8 +22,8 @@ import { useColors, useTheme } from "@/context/ThemeContext";
 import { resolveImageUrl } from "@/constants/api";
 import { useAuth } from "@/context/AuthContext";
 import {
-  listUpcomingEvents, listPosts, getAppSettings, getMyRank, getActivity,
-  Post, ActivityItem,
+  listUpcomingEvents, listPosts, getAppSettings, getMyRank, getActivity, listMerch,
+  Post, ActivityItem, MerchProduct,
 } from "@/lib/api";
 import { EventCard } from "@/components/EventCard";
 import { PostCard } from "@/components/PostCard";
@@ -107,6 +107,12 @@ export default function HomeScreen() {
     staleTime: 2 * 60 * 1000,
   });
 
+  const { data: merch } = useQuery({
+    queryKey: ["merch"],
+    queryFn: listMerch,
+    staleTime: 10 * 60 * 1000,
+  });
+
   const homeVideoUrl = appSettings?.homeVideoUrl ?? null;
 
   const [selectedPost, setSelectedPost] = React.useState<Post | null>(null);
@@ -119,37 +125,7 @@ export default function HomeScreen() {
 
   const publicPosts = posts?.filter(p => !p.isMembersOnly).slice(0, 3) ?? [];
   const nextEvent = events?.[0] ?? null;
-
-  const quickActions = [
-    {
-      icon: "users" as const,
-      label: "Leaderboard",
-      onPress: () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(tabs)/community"); },
-    },
-    {
-      icon: "tag" as const,
-      label: "Tickets",
-      onPress: () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(tabs)/tickets"); },
-    },
-    {
-      icon: isAuthenticated ? "user" as const : "user-plus" as const,
-      label: isAuthenticated ? "My Profile" : "Join Now",
-      onPress: () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        router.push(isAuthenticated ? "/(tabs)/member" : "/(auth)/register");
-      },
-    },
-    {
-      icon: "share-2" as const,
-      label: "Invite",
-      onPress: async () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        try {
-          await Share.share({ message: "Come join me at the Dodge Club! 🏐 The ultimate dodgeball community — download the app and sign up today." });
-        } catch { /* dismissed */ }
-      },
-    },
-  ];
+  const isNewMember = isAuthenticated && (user?.eventsAttended ?? 0) === 0;
 
   /* ── XP progress for logged-in user ── */
   const xpProgress = user ? getLevelProgress(user.xp ?? 0, user.level ?? 1) : null;
@@ -313,24 +289,50 @@ export default function HomeScreen() {
           )
         )}
 
-        {/* ── Feature 4: Quick-action chips ── */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.quickActionsScroll}
-          contentContainerStyle={styles.quickActionsContent}
+        {/* ── Play Dodge game card ── */}
+        <Pressable
+          style={({ pressed }) => [styles.gameCard, { opacity: pressed ? 0.88 : 1 }]}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            router.push("/games/dodge");
+          }}
         >
-          {quickActions.map((action, i) => (
-            <Pressable
-              key={i}
-              style={({ pressed }) => [styles.quickActionChip, { opacity: pressed ? 0.75 : 1 }]}
-              onPress={action.onPress}
-            >
-              <Feather name={action.icon} size={14} color={Colors.primary} />
-              <Text style={styles.quickActionLabel}>{action.label}</Text>
-            </Pressable>
-          ))}
-        </ScrollView>
+          <LinearGradient
+            colors={["#0a3d1f", "#051a0d"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.gameCardGradient}
+          >
+            <View style={styles.gameCardLeft}>
+              <Text style={styles.gameCardEmoji}>🏐</Text>
+            </View>
+            <View style={styles.gameCardBody}>
+              <Text style={styles.gameCardTitle}>DAILY DODGE</Text>
+              <Text style={styles.gameCardSub}>Play today's game — earn up to +50 XP</Text>
+            </View>
+            <View style={styles.gameCardArrow}>
+              <Feather name="play-circle" size={28} color="#FFC107" />
+            </View>
+          </LinearGradient>
+        </Pressable>
+
+        {/* ── Getting Started card — new members only ── */}
+        {isNewMember && (
+          <Pressable
+            style={({ pressed }) => [styles.gettingStartedCard, { opacity: pressed ? 0.88 : 1 }]}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.push("/(tabs)/tickets");
+            }}
+          >
+            <Feather name="zap" size={20} color={Colors.primary} />
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text style={styles.gettingStartedTitle}>Welcome to The Dodge Club!</Text>
+              <Text style={styles.gettingStartedText}>Register for your first event to earn XP and unlock achievements.</Text>
+            </View>
+            <Feather name="chevron-right" size={18} color={Colors.primary} />
+          </Pressable>
+        )}
 
         {/* Upcoming Events */}
         <View style={styles.section}>
@@ -358,6 +360,55 @@ export default function HomeScreen() {
             </View>
           )}
         </View>
+
+        {/* ── Club Shop row ── */}
+        {merch && merch.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Club Shop</Text>
+              <Pressable onPress={() => router.push("/(tabs)/merch")}>
+                <Text style={styles.seeAll}>Shop All</Text>
+              </Pressable>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.merchRow}
+            >
+              {merch.slice(0, 6).map(item => (
+                <Pressable
+                  key={item.id}
+                  style={({ pressed }) => [styles.merchCard, { opacity: pressed ? 0.82 : 1 }]}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    if (item.buyUrl) WebBrowser.openBrowserAsync(item.buyUrl);
+                  }}
+                >
+                  <View style={styles.merchCardImage}>
+                    {resolveImageUrl(item.imageUrl) ? (
+                      <Image
+                        source={{ uri: resolveImageUrl(item.imageUrl)! }}
+                        style={StyleSheet.absoluteFill}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <Feather name="shopping-bag" size={22} color={Colors.textMuted} />
+                    )}
+                    {!item.inStock && (
+                      <View style={styles.soldOutBadge}>
+                        <Text style={styles.soldOutText}>SOLD OUT</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={styles.merchCardName} numberOfLines={2}>{item.name}</Text>
+                  {item.price != null && (
+                    <Text style={styles.merchCardPrice}>£{Number(item.price).toFixed(2)}</Text>
+                  )}
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        )}
 
         {/* Go Elite Banner */}
         <EliteBanner isElite={user?.isElite ?? false} isAuthenticated={isAuthenticated} />
@@ -671,31 +722,120 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       color: Colors.textMuted,
       marginTop: 2,
     },
-    /* ── Quick-action chips ── */
-    quickActionsScroll: {
-      marginBottom: 20,
-      marginHorizontal: -20,
+    /* ── Game Card ── */
+    gameCard: {
+      borderRadius: 16,
+      overflow: "hidden",
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: "rgba(26,140,78,0.4)",
     },
-    quickActionsContent: {
-      paddingHorizontal: 20,
-      gap: 10,
-      flexDirection: "row",
-    },
-    quickActionChip: {
+    gameCardGradient: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 6,
+      paddingVertical: 18,
+      paddingHorizontal: 18,
+      gap: 14,
+    },
+    gameCardLeft: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: "rgba(255,193,7,0.12)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    gameCardEmoji: { fontSize: 24 },
+    gameCardBody: { flex: 1 },
+    gameCardTitle: {
+      fontFamily: "Poppins_800ExtraBold",
+      fontSize: 15,
+      color: "#FFC107",
+      letterSpacing: 0.6,
+    },
+    gameCardSub: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 12,
+      color: "rgba(255,255,255,0.65)",
+      marginTop: 2,
+    },
+    gameCardArrow: {},
+    /* ── Getting Started Card ── */
+    gettingStartedCard: {
+      flexDirection: "row",
+      alignItems: "center",
       backgroundColor: Colors.card,
-      borderRadius: 20,
-      paddingHorizontal: 14,
-      paddingVertical: 9,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: Colors.primary + "40",
+      padding: 16,
+      marginBottom: 16,
+      gap: 4,
+    },
+    gettingStartedTitle: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 14,
+      color: Colors.text,
+      marginBottom: 2,
+    },
+    gettingStartedText: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 12,
+      color: Colors.textMuted,
+      lineHeight: 17,
+    },
+    /* ── Merch Row ── */
+    merchRow: {
+      gap: 12,
+      paddingRight: 4,
+    },
+    merchCard: {
+      width: 120,
+      backgroundColor: Colors.card,
+      borderRadius: 14,
       borderWidth: 1,
       borderColor: Colors.border,
+      overflow: "hidden",
     },
-    quickActionLabel: {
+    merchCardImage: {
+      width: "100%",
+      height: 100,
+      backgroundColor: Colors.surface,
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+      position: "relative",
+    },
+    soldOutBadge: {
+      position: "absolute",
+      bottom: 6,
+      left: 6,
+      backgroundColor: "rgba(0,0,0,0.72)",
+      borderRadius: 4,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+    },
+    soldOutText: {
       fontFamily: "Inter_600SemiBold",
-      fontSize: 12,
+      fontSize: 8,
+      color: "#fff",
+      letterSpacing: 0.5,
+    },
+    merchCardName: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 11,
       color: Colors.text,
+      paddingHorizontal: 8,
+      paddingTop: 8,
+      paddingBottom: 2,
+      lineHeight: 15,
+    },
+    merchCardPrice: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 11,
+      color: Colors.textMuted,
+      paddingHorizontal: 8,
+      paddingBottom: 10,
     },
     /* ── Community Pulse ── */
     pulseCard: {

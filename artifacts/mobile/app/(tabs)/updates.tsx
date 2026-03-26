@@ -7,9 +7,9 @@ import {
   ActivityIndicator,
   RefreshControl,
   Pressable,
-  Linking,
   Image,
 } from "react-native";
+import * as WebBrowser from "expo-web-browser";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -30,7 +30,7 @@ function VideoCard({ video }: { video: VideoClip }) {
   return (
     <Pressable
       style={({ pressed }) => [styles.videoCard, { opacity: pressed ? 0.85 : 1 }]}
-      onPress={() => Linking.openURL(video.url).catch(() => {})}
+      onPress={() => WebBrowser.openBrowserAsync(video.url)}
     >
       <View style={styles.videoThumb}>
         {video.thumbnailUrl ? (

@@ -282,6 +282,20 @@ function MemberDetailSheet({ member, onClose }: { member: AdminMember | null; on
                     <p className="text-lg font-display font-bold text-blue-400">{(member.xp ?? 0).toLocaleString()}</p>
                   </div>
                 </div>
+                {(member.referredByName || (member.referralCount ?? 0) > 0) && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {member.referredByName && (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400 font-medium">
+                        Referred by {member.referredByName}
+                      </span>
+                    )}
+                    {(member.referralCount ?? 0) > 0 && (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs text-primary font-medium">
+                        {member.referralCount} referral{member.referralCount !== 1 ? "s" : ""} made
+                      </span>
+                    )}
+                  </div>
+                )}
               </SheetHeader>
             </div>
 

@@ -21,6 +21,8 @@ export interface AdminMember {
   stripeSubscriptionId: string | null;
   accountType: string;
   referralCode: string | null;
+  referredByName: string | null;
+  referralCount: number;
 }
 
 export interface AdminTeamHistory {
