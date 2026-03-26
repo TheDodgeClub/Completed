@@ -419,6 +419,8 @@ router.get("/members", async (_req, res) => {
       isElite: u.isElite,
       eliteSince: u.eliteSince?.toISOString() ?? null,
       stripeSubscriptionId: u.stripeSubscriptionId ?? null,
+      accountType: u.accountType ?? "player",
+      referralCode: u.referralCode ?? null,
     };
   });
   res.json(result);

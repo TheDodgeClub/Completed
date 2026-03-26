@@ -19,6 +19,8 @@ export interface AdminMember {
   isElite: boolean;
   eliteSince: string | null;
   stripeSubscriptionId: string | null;
+  accountType: string;
+  referralCode: string | null;
 }
 
 export interface AdminTeamHistory {

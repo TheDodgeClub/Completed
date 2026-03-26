@@ -27,15 +27,16 @@ export default function Members() {
   const [selectedMember, setSelectedMember] = useState<AdminMember | null>(null);
 
   const filteredMembers = members?.filter(m =>
-    m.name.toLowerCase().includes(search.toLowerCase()) ||
-    m.email.toLowerCase().includes(search.toLowerCase())
+    (m.accountType === "player" || !m.accountType) &&
+    (m.name.toLowerCase().includes(search.toLowerCase()) ||
+    m.email.toLowerCase().includes(search.toLowerCase()))
   );
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
-        <h1 className="text-3xl font-display font-bold text-foreground">Club Members</h1>
-        <p className="text-muted-foreground mt-1">Manage members, view attendance, and award medals & rings.</p>
+        <h1 className="text-3xl font-display font-bold text-foreground">Player Members</h1>
+        <p className="text-muted-foreground mt-1">Manage players, view attendance, and award medals & rings.</p>
       </div>
 
       <div className="flex items-center space-x-2 bg-card border border-border/50 rounded-xl px-4 py-2 shadow-lg shadow-black/5 w-full max-w-md">
@@ -72,7 +73,7 @@ export default function Members() {
               ) : filteredMembers?.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-                    No members found matching &quot;{search}&quot;
+                    No players found matching &quot;{search}&quot;
                   </TableCell>
                 </TableRow>
               ) : (
