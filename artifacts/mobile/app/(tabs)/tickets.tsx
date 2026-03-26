@@ -479,6 +479,7 @@ function CheckoutFormModal({
   const insets = useSafeAreaInsets();
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [waiverAgreed, setWaiverAgreed] = useState(false);
+  const [waiverExpanded, setWaiverExpanded] = useState(false);
   const scrollRef = useRef<RNScrollView>(null);
   const fieldYPositions = useRef<Record<string, number>>({});
 
@@ -522,7 +523,11 @@ function CheckoutFormModal({
     optionChipText: { fontSize: 14, color: Colors.textMuted },
     optionChipTextActive: { color: Colors.primary, fontWeight: "600" as const },
     waiverBox: { backgroundColor: Colors.background, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, padding: 14, marginBottom: 16 },
-    waiverTitle: { fontSize: 13, fontWeight: "700" as const, color: Colors.textMuted, marginBottom: 8, textTransform: "uppercase" as const, letterSpacing: 0.5 },
+    waiverToggleRow: { flexDirection: "row" as const, alignItems: "center" as const, justifyContent: "space-between" as const },
+    waiverTitle: { fontSize: 13, fontWeight: "700" as const, color: Colors.textMuted, textTransform: "uppercase" as const, letterSpacing: 0.5 },
+    waiverCollapsedHint: { fontSize: 12, color: Colors.textMuted, opacity: 0.6, marginTop: 2 },
+    waiverAgreedBadge: { flexDirection: "row" as const, alignItems: "center" as const, gap: 5, marginTop: 8 },
+    waiverAgreedText: { fontSize: 12, color: Colors.primary, fontWeight: "600" as const },
     waiverText: { fontSize: 13, color: Colors.textMuted, lineHeight: 19 },
     waiverCheck: { flexDirection: "row" as const, alignItems: "flex-start" as const, marginTop: 14 },
     waiverCheckBox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: Colors.primary, alignItems: "center" as const, justifyContent: "center" as const, backgroundColor: "transparent", marginRight: 12, marginTop: 1 },
@@ -644,18 +649,49 @@ function CheckoutFormModal({
 
               {hasWaiver && (
                 <View style={cfStyles.waiverBox}>
-                  <Text style={cfStyles.waiverTitle}>Waiver & Agreement</Text>
-                  <Text style={cfStyles.waiverText}>{event.waiverText}</Text>
+                  {/* Collapsible header row */}
                   <TouchableOpacity
-                    style={cfStyles.waiverCheck}
-                    onPress={() => setWaiverAgreed((v) => !v)}
+                    style={cfStyles.waiverToggleRow}
+                    onPress={() => setWaiverExpanded((v) => !v)}
                     activeOpacity={0.7}
                   >
-                    <View style={[cfStyles.waiverCheckBox, waiverAgreed && cfStyles.waiverCheckBoxChecked]}>
-                      {waiverAgreed && <Feather name="check" size={14} color="#fff" />}
+                    <View style={{ flex: 1 }}>
+                      <Text style={cfStyles.waiverTitle}>Waiver & Agreement</Text>
+                      {!waiverExpanded && (
+                        <Text style={cfStyles.waiverCollapsedHint}>Tap to read before agreeing</Text>
+                      )}
                     </View>
-                    <Text style={cfStyles.waiverCheckLabel}>I have read and agree to the waiver above</Text>
+                    <Feather
+                      name={waiverExpanded ? "chevron-up" : "chevron-down"}
+                      size={18}
+                      color={Colors.textMuted}
+                    />
                   </TouchableOpacity>
+
+                  {/* Expanded content */}
+                  {waiverExpanded && (
+                    <>
+                      <Text style={[cfStyles.waiverText, { marginTop: 10 }]}>{event.waiverText}</Text>
+                      <TouchableOpacity
+                        style={cfStyles.waiverCheck}
+                        onPress={() => setWaiverAgreed((v) => !v)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={[cfStyles.waiverCheckBox, waiverAgreed && cfStyles.waiverCheckBoxChecked]}>
+                          {waiverAgreed && <Feather name="check" size={14} color="#fff" />}
+                        </View>
+                        <Text style={cfStyles.waiverCheckLabel}>I have read and agree to the waiver above</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+
+                  {/* Agreed indicator when collapsed */}
+                  {!waiverExpanded && waiverAgreed && (
+                    <View style={cfStyles.waiverAgreedBadge}>
+                      <Feather name="check-circle" size={13} color={Colors.primary} />
+                      <Text style={cfStyles.waiverAgreedText}>Agreed</Text>
+                    </View>
+                  )}
                 </View>
               )}
             </ScrollView>
