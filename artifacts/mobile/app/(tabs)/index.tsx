@@ -87,7 +87,7 @@ export default function HomeScreen() {
           <View style={{ flex: 1, alignItems: "flex-start" }}>
             <Image
               source={require("@/assets/images/tdc-logo.png")}
-              style={{ height: logoHeight, width: screenWidth * 0.63 * 1.2, marginLeft: -22 }}
+              style={{ height: logoHeight, width: screenWidth * 0.63 * 1.2, marginLeft: -32 }}
               resizeMode="contain"
             />
           </View>
