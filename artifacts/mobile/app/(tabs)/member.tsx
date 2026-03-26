@@ -618,13 +618,15 @@ export default function MemberScreen() {
             <Text style={{ fontSize: 20, lineHeight: 24 }}>🏐</Text>
             <Text style={styles.quickBtnText}>Play</Text>
           </Pressable>
-          <Pressable
-            style={({ pressed }) => [styles.quickBtn, user.isElite ? styles.quickBtnElite : {}, { opacity: pressed ? 0.8 : 1 }]}
-            onPress={() => router.push("/elite")}
-          >
-            <Text style={{ fontFamily: "Poppins_800ExtraBold", fontSize: 18, color: Colors.accent, lineHeight: 22 }}>E</Text>
-            <Text style={styles.quickBtnText}>{user.isElite ? "Elite" : "Go Elite"}</Text>
-          </Pressable>
+          {user.accountType !== "supporter" && (
+            <Pressable
+              style={({ pressed }) => [styles.quickBtn, user.isElite ? styles.quickBtnElite : {}, { opacity: pressed ? 0.8 : 1 }]}
+              onPress={() => router.push("/elite")}
+            >
+              <Text style={{ fontFamily: "Poppins_800ExtraBold", fontSize: 18, color: Colors.accent, lineHeight: 22 }}>E</Text>
+              <Text style={styles.quickBtnText}>{user.isElite ? "Elite" : "Go Elite"}</Text>
+            </Pressable>
+          )}
         </View>
 
         {/* ── Achievement Progress — players only ── */}
@@ -723,8 +725,10 @@ export default function MemberScreen() {
           </View>
         )}
 
-        {/* ── Go Elite Banner ── */}
-        <EliteBanner isElite={user.isElite ?? false} isAuthenticated={true} />
+        {/* ── Go Elite Banner — players only ── */}
+        {user.accountType !== "supporter" && (
+          <EliteBanner isElite={user.isElite ?? false} isAuthenticated={true} />
+        )}
 
         {/* ── Event History — players only ── */}
         {user.accountType !== "supporter" && (
