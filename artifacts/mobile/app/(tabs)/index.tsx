@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   RefreshControl,
   Image,
-  Alert,
   useWindowDimensions,
 } from "react-native";
 import * as WebBrowser from "expo-web-browser";
@@ -18,7 +17,7 @@ import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
-import { useColors, useTheme } from "@/context/ThemeContext";
+import { useColors } from "@/context/ThemeContext";
 import { resolveImageUrl } from "@/constants/api";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -30,7 +29,7 @@ import { PostCard } from "@/components/PostCard";
 import { PostDetailModal } from "@/components/PostDetailModal";
 import { VideoHero } from "@/components/VideoHero";
 import { EliteBanner } from "@/components/EliteBanner";
-import { usePushNotifications } from "@/hooks/usePushNotifications";
+
 
 /* ── Level constants ── */
 const LEVEL_THRESHOLDS = [0, 300, 800, 1600, 2500, 5000, 10000, 20000, 40000, 80000];
@@ -73,9 +72,7 @@ export default function HomeScreen() {
   const { width: screenWidth } = useWindowDimensions();
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
-  const { isDark, toggleTheme } = useTheme();
   const { user, isAuthenticated } = useAuth();
-  const { notificationsEnabled, toggleNotifications } = usePushNotifications(isAuthenticated);
   const logoHeight = screenWidth * 0.084 * 1.2;
 
   const { data: events, isLoading: eventsLoading, refetch: refetchEvents } = useQuery({
@@ -155,32 +152,6 @@ export default function HomeScreen() {
               style={{ height: logoHeight, width: screenWidth * 0.63 * 1.2, marginLeft: -52 }}
               resizeMode="contain"
             />
-          </View>
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            <Pressable
-              style={[styles.notifBtn, notificationsEnabled && { borderWidth: 1, borderColor: "rgba(255,255,255,0.5)" }]}
-              onPress={async () => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                const ok = await toggleNotifications(!notificationsEnabled);
-                if (!notificationsEnabled && !ok) {
-                  Alert.alert(
-                    "Notifications Blocked",
-                    "Allow notifications in your device settings to receive Dodge Club alerts.",
-                  );
-                }
-              }}
-            >
-              <Feather name={notificationsEnabled ? "bell" : "bell-off"} size={18} color={notificationsEnabled ? "#FFC107" : "rgba(255,255,255,0.7)"} />
-            </Pressable>
-            <Pressable
-              style={styles.notifBtn}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                toggleTheme();
-              }}
-            >
-              <Feather name={isDark ? "sun" : "moon"} size={18} color="rgba(255,255,255,0.85)" />
-            </Pressable>
           </View>
         </View>
 
@@ -526,14 +497,6 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       justifyContent: "space-between",
       alignItems: "center",
       marginBottom: 20,
-    },
-    notifBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: "rgba(255,255,255,0.15)",
-      alignItems: "center",
-      justifyContent: "center",
     },
     heroTagline: {
       fontFamily: "Inter_600SemiBold",

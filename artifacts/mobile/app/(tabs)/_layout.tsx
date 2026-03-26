@@ -5,10 +5,52 @@ import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
 import { SymbolView } from "expo-symbols";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { Alert, Platform, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useColors } from "@/context/ThemeContext";
+import { useColors, useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
+import * as Haptics from "expo-haptics";
+
+function HeaderControls() {
+  const { isDark, toggleTheme } = useTheme();
+  const Colors = useColors();
+  const { isAuthenticated } = useAuth();
+  const { notificationsEnabled, toggleNotifications } = usePushNotifications(isAuthenticated);
+
+  return (
+    <View style={{ flexDirection: "row", gap: 4, marginRight: 12 }}>
+      <Pressable
+        style={{ padding: 8 }}
+        onPress={async () => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          const ok = await toggleNotifications(!notificationsEnabled);
+          if (!notificationsEnabled && !ok) {
+            Alert.alert(
+              "Notifications Blocked",
+              "Allow notifications in your device settings to receive Dodge Club alerts.",
+            );
+          }
+        }}
+      >
+        <Feather
+          name={notificationsEnabled ? "bell" : "bell-off"}
+          size={18}
+          color={notificationsEnabled ? Colors.accent : Colors.textMuted}
+        />
+      </Pressable>
+      <Pressable
+        style={{ padding: 8 }}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          toggleTheme();
+        }}
+      >
+        <Feather name={isDark ? "sun" : "moon"} size={18} color={Colors.textMuted} />
+      </Pressable>
+    </View>
+  );
+}
 
 function NativeTabLayout({ isAdmin }: { isAdmin: boolean }) {
   return (
@@ -48,13 +90,20 @@ function ClassicTabLayout({ isAdmin }: { isAdmin: boolean }) {
   const isWeb = Platform.OS === "web";
   const safeAreaInsets = useSafeAreaInsets();
   const Colors = useColors();
+  const { isDark } = useTheme();
+
+  const headerControls = () => <HeaderControls />;
 
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.tabIconDefault,
-        headerShown: false,
+        headerShown: true,
+        headerRight: headerControls,
+        headerStyle: { backgroundColor: Colors.surface },
+        headerTintColor: Colors.text,
+        headerShadowVisible: false,
         tabBarStyle: {
           position: "absolute",
           backgroundColor: isIOS ? "transparent" : Colors.surface,
@@ -76,7 +125,9 @@ function ClassicTabLayout({ isAdmin }: { isAdmin: boolean }) {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
+          title: "",
+          headerTransparent: true,
+          headerRight: headerControls,
           tabBarIcon: ({ color }) =>
             isIOS ? <SymbolView name="house" tintColor={color} size={22} /> : <Feather name="home" size={21} color={color} />,
         }}
@@ -89,7 +140,7 @@ function ClassicTabLayout({ isAdmin }: { isAdmin: boolean }) {
             isIOS ? <SymbolView name="ticket" tintColor={color} size={22} /> : <Feather name="tag" size={21} color={color} />,
         }}
       />
-      <Tabs.Screen name="merch" options={{ href: null }} />
+      <Tabs.Screen name="merch" options={{ href: null, headerShown: false }} />
       <Tabs.Screen
         name="updates"
         options={{
