@@ -1,4 +1,5 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   View,
   Text,
@@ -74,6 +75,18 @@ export default function HomeScreen() {
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const { user, isAuthenticated } = useAuth();
   const logoHeight = screenWidth * 0.084 * 1.2;
+
+  const ONBOARD_KEY = user ? `supporter_onboarding_dismissed_${user.id}` : null;
+  const [onboardDismissed, setOnboardDismissed] = useState(true);
+  useEffect(() => {
+    if (!ONBOARD_KEY || user?.accountType !== "supporter") return;
+    AsyncStorage.getItem(ONBOARD_KEY).then(val => { setOnboardDismissed(val === "1"); });
+  }, [ONBOARD_KEY, user?.accountType]);
+  const dismissOnboarding = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setOnboardDismissed(true);
+    if (ONBOARD_KEY) await AsyncStorage.setItem(ONBOARD_KEY, "1");
+  };
 
   const { data: events, isLoading: eventsLoading, refetch: refetchEvents } = useQuery({
     queryKey: ["upcoming-events"],
@@ -226,6 +239,58 @@ export default function HomeScreen() {
       {homeVideoUrl ? <VideoHero uri={homeVideoUrl} /> : null}
 
       <View style={styles.body}>
+
+        {/* ── Supporter Onboarding Card ── */}
+        {isAuthenticated && user?.accountType === "supporter" && !onboardDismissed && (
+          <View style={styles.onboardCard}>
+            <View style={styles.onboardCardHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.onboardCardTitle}>Welcome to The Dodge Club 👋</Text>
+                <Text style={styles.onboardCardSub}>Here's how to get started as a supporter</Text>
+              </View>
+              <Pressable style={styles.onboardCloseBtn} onPress={dismissOnboarding}>
+                <Feather name="x" size={16} color={Colors.textMuted} />
+              </Pressable>
+            </View>
+            <Pressable
+              style={({ pressed }) => [styles.onboardStep, { opacity: pressed ? 0.85 : 1 }]}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(tabs)/tickets"); }}
+            >
+              <View style={styles.onboardBadge}><Text style={styles.onboardBadgeText}>1</Text></View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.onboardStepTitle}>Find an event & secure your spot</Text>
+                <Text style={styles.onboardStepSub}>Browse upcoming sessions and grab a ticket</Text>
+              </View>
+              <Feather name="chevron-right" size={15} color={Colors.textMuted} />
+            </Pressable>
+            <View style={styles.onboardDivider} />
+            <Pressable
+              style={({ pressed }) => [styles.onboardStep, { opacity: pressed ? 0.85 : 1 }]}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(tabs)/updates"); }}
+            >
+              <View style={styles.onboardBadge}><Text style={styles.onboardBadgeText}>2</Text></View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.onboardStepTitle}>Watch the rules video</Text>
+                <Text style={styles.onboardStepSub}>Know the game before you arrive</Text>
+              </View>
+              <Feather name="play-circle" size={16} color={Colors.accent} />
+            </Pressable>
+            <View style={styles.onboardDivider} />
+            <View style={styles.onboardStep}>
+              <View style={styles.onboardBadge}><Text style={styles.onboardBadgeText}>3</Text></View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.onboardStepTitle}>Show up & rep the club</Text>
+                <Text style={styles.onboardStepSub}>Attend your first session, then grab some merch!</Text>
+              </View>
+              <Pressable
+                style={({ pressed }) => [styles.onboardMerchBtn, { opacity: pressed ? 0.8 : 1 }]}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(tabs)/merch"); }}
+              >
+                <Text style={styles.onboardMerchBtnText}>Shop 👕</Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
 
         {/* Next Upcoming Event Banner — guests only */}
         {!isAuthenticated && nextEvent && (
@@ -732,6 +797,57 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       color: Colors.textMuted,
       marginTop: 2,
     },
+    /* ── Supporter Onboarding Card ── */
+    onboardCard: {
+      backgroundColor: Colors.surface,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: `${Colors.primary}40`,
+      overflow: "hidden",
+      marginBottom: 8,
+    },
+    onboardCardHeader: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      paddingHorizontal: 16,
+      paddingTop: 14,
+      paddingBottom: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: Colors.border,
+      gap: 8,
+    },
+    onboardCardTitle: { fontFamily: "Poppins_800ExtraBold", fontSize: 14, color: Colors.text },
+    onboardCardSub: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.textMuted, marginTop: 1 },
+    onboardCloseBtn: { padding: 4 },
+    onboardStep: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 13,
+    },
+    onboardBadge: {
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      backgroundColor: Colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    onboardBadgeText: { fontFamily: "Poppins_800ExtraBold", fontSize: 11, color: "#fff" },
+    onboardStepTitle: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.text },
+    onboardStepSub: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.textMuted, marginTop: 1 },
+    onboardDivider: { height: 1, backgroundColor: Colors.border, marginHorizontal: 16 },
+    onboardMerchBtn: {
+      backgroundColor: `${Colors.primary}22`,
+      borderRadius: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderWidth: 1,
+      borderColor: `${Colors.primary}44`,
+    },
+    onboardMerchBtnText: { fontFamily: "Inter_700Bold", fontSize: 11, color: Colors.primary },
+
     /* ── Game Card ── */
     gameCard: {
       borderRadius: 16,
