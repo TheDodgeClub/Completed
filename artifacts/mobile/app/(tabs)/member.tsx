@@ -13,7 +13,6 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
-  Switch,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -22,7 +21,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
-import { useColors, useTheme } from "@/context/ThemeContext";
+import { useColors } from "@/context/ThemeContext";
 import { resolveImageUrl, API_BASE } from "@/constants/api";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -39,7 +38,6 @@ import {
   UpcomingEvent,
 } from "@/lib/api";
 import { getToken } from "@/lib/api";
-import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { EliteBanner } from "@/components/EliteBanner";
 
 const PLAYER_ROLES = ["Thrower", "Catcher", "Dodger", "All-Rounder"] as const;
@@ -333,9 +331,7 @@ export default function MemberScreen() {
   const insets = useSafeAreaInsets();
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
-  const { isDark, toggleTheme } = useTheme();
   const { user, isAuthenticated, isLoading, logout, refreshUser } = useAuth();
-  const { notificationsEnabled, toggleNotifications, loading: notifLoading } = usePushNotifications(isAuthenticated);
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = React.useState(false);
   const [editVisible, setEditVisible] = React.useState(false);
@@ -669,69 +665,6 @@ export default function MemberScreen() {
           )}
         </View>
 
-        {/* ── Settings ── */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Settings</Text>
-          </View>
-          <View style={styles.prefCard}>
-            <View style={styles.prefRow}>
-              <View style={styles.prefIconWrap}>
-                <Feather name="bell" size={18} color={notificationsEnabled ? Colors.primary : Colors.textMuted} />
-              </View>
-              <View style={styles.prefInfo}>
-                <Text style={styles.prefLabel}>Push Notifications</Text>
-                <Text style={styles.prefHint}>
-                  {notificationsEnabled
-                    ? "You'll receive event alerts & club updates"
-                    : "Enable to get event reminders & club news"}
-                </Text>
-              </View>
-              {notifLoading ? (
-                <ActivityIndicator size="small" color={Colors.primary} />
-              ) : (
-                <Switch
-                  value={notificationsEnabled}
-                  onValueChange={async (val) => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    const ok = await toggleNotifications(val);
-                    if (val && !ok) {
-                      Alert.alert(
-                        "Permission Denied",
-                        "Please allow notifications in your device settings to receive Dodge Club alerts.",
-                      );
-                    }
-                  }}
-                  trackColor={{ false: Colors.border, true: Colors.primary + "88" }}
-                  thumbColor={notificationsEnabled ? Colors.primary : Colors.textMuted}
-                  ios_backgroundColor={Colors.border}
-                />
-              )}
-            </View>
-
-            <View style={styles.prefDivider} />
-
-            <View style={styles.prefRow}>
-              <View style={styles.prefIconWrap}>
-                <Feather name={isDark ? "sun" : "moon"} size={18} color={Colors.accent} />
-              </View>
-              <View style={styles.prefInfo}>
-                <Text style={styles.prefLabel}>{isDark ? "Dark Mode" : "Light Mode"}</Text>
-                <Text style={styles.prefHint}>Toggle the app appearance</Text>
-              </View>
-              <Switch
-                value={isDark}
-                onValueChange={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  toggleTheme();
-                }}
-                trackColor={{ false: Colors.border, true: Colors.accent + "66" }}
-                thumbColor={isDark ? Colors.accent : Colors.textMuted}
-                ios_backgroundColor={Colors.border}
-              />
-            </View>
-          </View>
-        </View>
       </View>
 
       <EditProfileModal
