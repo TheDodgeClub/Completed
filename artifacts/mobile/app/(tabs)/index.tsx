@@ -221,28 +221,30 @@ export default function HomeScreen() {
 
         <View style={styles.heroCTARow}>
           <Pressable
-            style={({ pressed }) => [styles.heroBtn, styles.heroBtnPrimary, { opacity: pressed ? 0.85 : 1 }]}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              if (isAuthenticated) {
-                router.push("/(tabs)/member");
-              } else {
-                router.push("/(auth)/register");
-              }
-            }}
-          >
-            <Feather name="shield" size={13} color="#fff" />
-            <Text style={styles.heroBtnPrimaryText}>Member Zone</Text>
-          </Pressable>
-          <Pressable
             style={({ pressed }) => [styles.heroBtn, styles.heroBtnSecondary, { opacity: pressed ? 0.85 : 1 }]}
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               router.push("/(tabs)/tickets");
             }}
           >
-            <Feather name="tag" size={13} color="#fff" />
+            <Feather name="tag" size={13} color="#0D0D0D" />
             <Text style={styles.heroBtnSecondaryText}>Get Tickets</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [
+              styles.heroBtn,
+              user?.isElite ? styles.heroBtnEliteActive : styles.heroBtnElite,
+              { opacity: pressed ? 0.85 : 1 },
+            ]}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              router.push("/elite");
+            }}
+          >
+            <Text style={{ fontSize: 12, lineHeight: 14 }}>⚡</Text>
+            <Text style={user?.isElite ? styles.heroBtnEliteActiveText : styles.heroBtnEliteText}>
+              {user?.isElite ? "You're Elite" : "Go Elite"}
+            </Text>
           </Pressable>
         </View>
       </LinearGradient>
@@ -638,6 +640,26 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       fontFamily: "Inter_600SemiBold",
       fontSize: 11,
       color: "#0D0D0D",
+    },
+    heroBtnElite: {
+      backgroundColor: "rgba(255,255,255,0.15)",
+      borderWidth: 1,
+      borderColor: "rgba(255,193,7,0.6)",
+    },
+    heroBtnEliteText: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 11,
+      color: "#FFC107",
+    },
+    heroBtnEliteActive: {
+      backgroundColor: "rgba(255,193,7,0.18)",
+      borderWidth: 1,
+      borderColor: "rgba(255,193,7,0.5)",
+    },
+    heroBtnEliteActiveText: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 11,
+      color: "#FFD54F",
     },
     body: { padding: 20, gap: 8 },
     section: { marginBottom: 28 },
