@@ -556,6 +556,9 @@ export default function MemberScreen() {
                   <Text style={styles.xpStreakHint}>Earn XP by referring friends or playing Daily Dodge</Text>
                 </>
               )}
+              {currentStreak >= 2 && (
+                <Text style={styles.xpStreakHint}>🔥 {currentStreak}-event streak — keep it going!</Text>
+              )}
             </View>
           );
         })() : (
