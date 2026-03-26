@@ -245,7 +245,7 @@ function MemberRow({ member, onPress }: { member: MemberSummary; onPress: () => 
           )}
         </View>
         <Text style={styles.memberMeta}>
-          {member.username ? `@${member.username}` : member.preferredRole ?? "Member"}
+          {member.username ? `@${member.username}` : "Member"}
         </Text>
       </View>
       <Feather name="chevron-right" size={16} color={Colors.textMuted} />
@@ -328,14 +328,6 @@ function ProfileModal({ member, onClose, currentUserId }: {
                 </View>
               ) : null}
 
-              {/* Role */}
-              {profile.preferredRole ? (
-                <View style={styles.roleRow}>
-                  <Feather name="crosshair" size={14} color={Colors.primary} />
-                  <Text style={styles.roleText}>Preferred role: {profile.preferredRole}</Text>
-                </View>
-              ) : null}
-
               {/* Member since */}
               <View style={styles.roleRow}>
                 <Feather name="calendar" size={14} color={Colors.textMuted} />
@@ -382,8 +374,7 @@ export default function CommunityScreen() {
     if (!q) return members;
     return members.filter(m =>
       m.name.toLowerCase().includes(q) ||
-      (m.username?.toLowerCase().includes(q)) ||
-      (m.preferredRole?.toLowerCase().includes(q))
+      (m.username?.toLowerCase().includes(q))
     );
   }, [members, search]);
 

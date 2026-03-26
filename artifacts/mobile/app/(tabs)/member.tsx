@@ -41,7 +41,6 @@ import {
 import { getToken } from "@/lib/api";
 import { EliteBanner } from "@/components/EliteBanner";
 
-const PLAYER_ROLES = ["Thrower", "Catcher", "Dodger", "All-Rounder"] as const;
 const LEVEL_THRESHOLDS = [0, 300, 800, 1600, 2500, 5000, 10000, 20000, 40000, 80000];
 const LEVEL_NAMES = ["Beginner", "Developing", "Experienced", "Skilled", "Advanced", "Pro", "League", "Expert", "Master", "Icon"];
 
@@ -75,22 +74,6 @@ function LevelBadge({ level }: { level: number }) {
   );
 }
 
-function RoleBadge({ role }: { role: string }) {
-  const Colors = useColors();
-  const styles = useMemo(() => makeStyles(Colors), [Colors]);
-  const icons: Record<string, string> = {
-    "Thrower": "target",
-    "Catcher": "hands",
-    "Dodger": "zap",
-    "All-Rounder": "star",
-  };
-  return (
-    <View style={styles.roleBadge}>
-      <Feather name={(icons[role] ?? "user") as any} size={11} color={Colors.accent} />
-      <Text style={styles.roleBadgeText}>{role}</Text>
-    </View>
-  );
-}
 
 function AchievementBadge({ achievement }: { achievement: Achievement }) {
   const Colors = useColors();
@@ -239,7 +222,6 @@ function EditProfileModal({
   const [name, setName] = React.useState(user?.name ?? "");
   const [username, setUsername] = React.useState(user?.username ?? "");
   const [bio, setBio] = React.useState(user?.bio ?? "");
-  const [preferredRole, setPreferredRole] = React.useState(user?.preferredRole ?? "");
   const [saving, setSaving] = React.useState(false);
 
   React.useEffect(() => {
@@ -247,14 +229,13 @@ function EditProfileModal({
       setName(user?.name ?? "");
       setUsername(user?.username ?? "");
       setBio(user?.bio ?? "");
-      setPreferredRole(user?.preferredRole ?? "");
     }
   }, [visible, user]);
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      await onSave({ name, username, bio, preferredRole });
+      await onSave({ name, username, bio });
       onClose();
     } finally {
       setSaving(false);
@@ -312,26 +293,6 @@ function EditProfileModal({
                 multiline
                 numberOfLines={4}
               />
-            </View>
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Preferred Role</Text>
-              <View style={styles.roleGrid}>
-                {PLAYER_ROLES.map(role => (
-                  <Pressable
-                    key={role}
-                    style={({ pressed }) => [
-                      styles.roleOption,
-                      preferredRole === role && styles.roleOptionSelected,
-                      { opacity: pressed ? 0.8 : 1 },
-                    ]}
-                    onPress={() => setPreferredRole(preferredRole === role ? "" : role)}
-                  >
-                    <Text style={[styles.roleOptionText, preferredRole === role && styles.roleOptionTextSelected]}>
-                      {role}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
             </View>
           </ScrollView>
         </View>
@@ -528,7 +489,6 @@ export default function MemberScreen() {
         <View style={styles.badgeRow}>
           <LevelBadge level={level} />
           <Text style={styles.levelNameText}>{levelName}</Text>
-          {user.preferredRole && <RoleBadge role={user.preferredRole} />}
           {user.isElite && (
             <View style={styles.eliteBadge}>
               <Text style={{ fontFamily: "Poppins_800ExtraBold", fontSize: 10, color: "#0D0D0D", lineHeight: 14 }}>E</Text>

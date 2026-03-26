@@ -117,9 +117,6 @@ export default function ChatScreen() {
         </Pressable>
         <View style={{ flex: 1 }}>
           <Text style={{ fontFamily: "Inter_700Bold", fontSize: 17, color: Colors.text }}>{partner?.name ?? "…"}</Text>
-          {partner?.preferredRole && (
-            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textMuted }}>{partner.preferredRole}</Text>
-          )}
         </View>
         <Pressable
           onPress={() => {}}

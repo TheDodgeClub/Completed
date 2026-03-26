@@ -11,10 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Trophy, CalendarCheck, Trash2, ShieldCheck, Loader2, CircleDot, Star, Pencil, Check } from "lucide-react";
+import { Search, Trophy, CalendarCheck, Trash2, ShieldCheck, Loader2, CircleDot, Pencil, Check } from "lucide-react";
 
-const PLAYER_ROLES = ["Thrower", "Catcher", "Dodger", "All-Rounder"] as const;
 const LEVEL_NAMES = ["Beginner", "Developing", "Experienced", "Skilled", "Advanced", "Pro", "League", "Expert", "Master", "Icon"];
 
 function resolveAvatarUrl(url: string | null | undefined): string | undefined {
@@ -135,9 +133,6 @@ export default function Members() {
                     </TableCell>
                     <TableCell className="px-6 text-sm text-muted-foreground text-right">
                       <div>{formatDateTime(member.memberSince).split(" at ")[0]}</div>
-                      {member.preferredRole && (
-                        <div className="text-xs text-primary/70 font-medium mt-0.5">{member.preferredRole}</div>
-                      )}
                     </TableCell>
                   </TableRow>
                 ))
@@ -175,7 +170,6 @@ function MemberDetailSheet({ member, onClose }: { member: AdminMember | null; on
   const [editName, setEditName] = useState("");
   const [editUsername, setEditUsername] = useState("");
   const [editBio, setEditBio] = useState("");
-  const [editRole, setEditRole] = useState("");
   const [profileExpanded, setProfileExpanded] = useState(false);
 
   const handleAddAttendance = (e: React.FormEvent) => {
@@ -213,7 +207,7 @@ function MemberDetailSheet({ member, onClose }: { member: AdminMember | null; on
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
     if (!member) return;
-    updateMember({ id: member.id, data: { name: editName, username: editUsername || undefined, bio: editBio || undefined, preferredRole: editRole || undefined } }, {
+    updateMember({ id: member.id, data: { name: editName, username: editUsername || undefined, bio: editBio || undefined } }, {
       onSuccess: () => { toast({ title: "Profile updated" }); setProfileExpanded(false); },
       onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
     });
@@ -263,11 +257,6 @@ function MemberDetailSheet({ member, onClose }: { member: AdminMember | null; on
                     </div>
                     {member.username && <p className="text-xs text-primary/70 font-medium">@{member.username}</p>}
                     <SheetDescription className="text-muted-foreground text-xs truncate">{member.email}</SheetDescription>
-                    {member.preferredRole && (
-                      <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
-                        <Star className="w-2.5 h-2.5" /> {member.preferredRole}
-                      </span>
-                    )}
                   </div>
                 </div>
                 {member.bio && (
@@ -305,7 +294,6 @@ function MemberDetailSheet({ member, onClose }: { member: AdminMember | null; on
                       setEditName(member.name);
                       setEditUsername(member.username ?? "");
                       setEditBio(member.bio ?? "");
-                      setEditRole(member.preferredRole ?? "");
                     }
                   }}
                   className="w-full flex items-center justify-between text-left"
@@ -330,18 +318,6 @@ function MemberDetailSheet({ member, onClose }: { member: AdminMember | null; on
                     <div className="space-y-1">
                       <Label className="text-xs">Bio</Label>
                       <Textarea value={editBio} onChange={e => setEditBio(e.target.value)} placeholder="Member bio..." rows={2} className="bg-background border-border rounded-xl text-sm resize-none" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Preferred Role</Label>
-                      <Select value={editRole || "_none"} onValueChange={v => setEditRole(v === "_none" ? "" : v)}>
-                        <SelectTrigger className="bg-background border-border rounded-xl text-sm">
-                          <SelectValue placeholder="Select role..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="_none">No preference</SelectItem>
-                          {PLAYER_ROLES.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
                     </div>
                     <Button type="submit" disabled={updatingProfile} className="w-full rounded-xl bg-primary hover:bg-primary/90 text-white">
                       {updatingProfile ? "Saving..." : "Save Profile"}
