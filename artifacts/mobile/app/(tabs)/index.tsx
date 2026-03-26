@@ -87,7 +87,7 @@ export default function HomeScreen() {
           <View style={{ flex: 1, alignItems: "flex-start" }}>
             <Image
               source={require("@/assets/images/tdc-logo.png")}
-              style={{ height: logoHeight, width: screenWidth * 0.63 * 1.2, marginLeft: -6 }}
+              style={{ height: logoHeight, width: screenWidth * 0.63 * 1.2, marginLeft: -8 }}
               resizeMode="contain"
             />
           </View>
@@ -253,7 +253,8 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       backgroundColor: Colors.background,
     },
     hero: {
-      paddingHorizontal: 24,
+      paddingLeft: 8,
+      paddingRight: 24,
       paddingBottom: 32,
     },
     heroTopRow: {
