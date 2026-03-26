@@ -61,7 +61,8 @@ function toProfile(user: typeof usersTable.$inferSelect, stats: Awaited<ReturnTy
 router.get("/leaderboard", async (_req, res) => {
   const [users, allAttendance, allAwards] = await Promise.all([
     db.query.usersTable.findMany({
-      columns: { id: true, name: true, avatarUrl: true, username: true, bonusXp: true, gameXp: true, isElite: true },
+      columns: { id: true, name: true, avatarUrl: true, username: true, bonusXp: true, gameXp: true, isElite: true, isAdmin: true },
+      where: eq(usersTable.isAdmin, false),
     }),
     db.query.attendanceTable.findMany({ columns: { userId: true, earnedMedal: true } }),
     db.query.awardsTable.findMany({ columns: { userId: true, type: true } }),
