@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Search, Trophy, CalendarCheck, Trash2, ShieldCheck, Loader2, CircleDot, Pencil, Check } from "lucide-react";
+import { Search, Trophy, CalendarCheck, Trash2, ShieldCheck, Loader2, CircleDot, Pencil, Check, Star } from "lucide-react";
 
 const LEVEL_NAMES = ["Beginner", "Developing", "Experienced", "Skilled", "Advanced", "Pro", "League", "Expert", "Master", "Icon"];
 

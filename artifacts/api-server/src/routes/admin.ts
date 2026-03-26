@@ -341,7 +341,7 @@ router.delete("/merch/:id", async (req, res) => {
 /* ========== MEMBERS ========== */
 
 const LEVEL_THRESHOLDS = [0, 300, 800, 1600, 2500, 5000, 10000, 20000, 40000, 80000];
-function computeXP(events: number, medals: number, rings: number, bonus: number = 0) { return events * 50 + medals * 300 + rings * 1000 + bonus; }
+function computeXP(events: number, medals: number, rings: number, bonus: number = 0, isElite: boolean = false) { return events * 50 + medals * 300 + rings * 1000 + bonus + (isElite ? 500 : 0); }
 function computeLevel(xp: number) {
   let level = 1;
   for (let i = 1; i < LEVEL_THRESHOLDS.length; i++) {
@@ -376,7 +376,7 @@ router.get("/members", async (_req, res) => {
     const eventsAttended = records.length;
     const medalsEarned = records.filter(r => r.earnedMedal).length + awards.filter(a => a.type === "medal").length;
     const ringsEarned = awards.filter(a => a.type === "ring").length;
-    const xp = computeXP(eventsAttended, medalsEarned, ringsEarned, u.bonusXp ?? 0);
+    const xp = computeXP(eventsAttended, medalsEarned, ringsEarned, u.bonusXp ?? 0, u.isElite ?? false);
     return {
       id: u.id,
       name: u.name,
@@ -417,7 +417,7 @@ router.put("/members/:id", async (req, res) => {
   const eventsAttended = records.length;
   const medalsEarned = records.filter(r => r.earnedMedal).length + awards.filter(a => a.type === "medal").length;
   const ringsEarned = awards.filter(a => a.type === "ring").length;
-  const xp = computeXP(eventsAttended, medalsEarned, ringsEarned, user.bonusXp ?? 0);
+  const xp = computeXP(eventsAttended, medalsEarned, ringsEarned, user.bonusXp ?? 0, user.isElite ?? false);
   res.json({
     id: user.id, name: user.name, email: user.email, isAdmin: user.isAdmin,
     memberSince: (user.memberSince ?? user.createdAt).toISOString(), eventsAttended, medalsEarned, ringsEarned, xp,
@@ -813,12 +813,10 @@ router.post("/elite/grant", async (req: any, res) => {
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
   if (!user) { res.status(404).json({ error: "User not found" }); return; }
 
-  const grantBonus = !user.isElite;
   await db.update(usersTable)
     .set({
       isElite: true,
       eliteSince: user.eliteSince ?? new Date(),
-      ...(grantBonus ? { bonusXp: 500 } : {}),
     })
     .where(eq(usersTable.id, userId));
 

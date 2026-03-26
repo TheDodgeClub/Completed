@@ -59,8 +59,8 @@ const router: IRouter = Router();
 /* ---------- helpers ---------- */
 const LEVEL_THRESHOLDS = [0, 300, 800, 1600, 2500, 5000, 10000, 20000, 40000, 80000];
 
-function computeXP(eventsAttended: number, medalsEarned: number, ringsEarned: number, bonusXp: number = 0): number {
-  return eventsAttended * 50 + medalsEarned * 300 + ringsEarned * 1000 + bonusXp;
+function computeXP(eventsAttended: number, medalsEarned: number, ringsEarned: number, bonusXp: number = 0, isElite: boolean = false): number {
+  return eventsAttended * 50 + medalsEarned * 300 + ringsEarned * 1000 + bonusXp + (isElite ? 500 : 0);
 }
 
 function computeLevel(xp: number): number {
@@ -78,7 +78,7 @@ function toProfile(
   medalsEarned: number,
   ringsEarned: number,
 ) {
-  const xp = computeXP(eventsAttended, medalsEarned, ringsEarned, user.bonusXp ?? 0);
+  const xp = computeXP(eventsAttended, medalsEarned, ringsEarned, user.bonusXp ?? 0, user.isElite ?? false);
   const level = computeLevel(xp);
   return {
     id: user.id,

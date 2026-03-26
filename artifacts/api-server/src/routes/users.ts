@@ -8,8 +8,8 @@ const router: IRouter = Router();
 
 const LEVEL_THRESHOLDS = [0, 300, 800, 1600, 2500, 5000, 10000, 20000, 40000, 80000];
 
-function computeXP(eventsAttended: number, medalsEarned: number, ringsEarned: number, bonusXp: number = 0, gameXp: number = 0): number {
-  return eventsAttended * 50 + medalsEarned * 300 + ringsEarned * 1000 + bonusXp + gameXp;
+function computeXP(eventsAttended: number, medalsEarned: number, ringsEarned: number, bonusXp: number = 0, gameXp: number = 0, isElite: boolean = false): number {
+  return eventsAttended * 50 + medalsEarned * 300 + ringsEarned * 1000 + bonusXp + gameXp + (isElite ? 500 : 0);
 }
 
 function computeLevel(xp: number): number {
@@ -28,7 +28,7 @@ function xpForNextLevel(xp: number): { current: number; next: number; level: num
   return { current: xp - currentThreshold, next: nextThreshold - currentThreshold, level };
 }
 
-async function getUserStats(userId: number, bonusXp: number = 0, gameXp: number = 0) {
+async function getUserStats(userId: number, bonusXp: number = 0, gameXp: number = 0, isElite: boolean = false) {
   const [records, awards] = await Promise.all([
     db.query.attendanceTable.findMany({ where: eq(attendanceTable.userId, userId) }),
     db.query.awardsTable.findMany({ where: eq(awardsTable.userId, userId) }),
@@ -36,7 +36,7 @@ async function getUserStats(userId: number, bonusXp: number = 0, gameXp: number 
   const eventsAttended = records.length;
   const medalsEarned = records.filter(r => r.earnedMedal).length + awards.filter(a => a.type === "medal").length;
   const ringsEarned = awards.filter(a => a.type === "ring").length;
-  const xp = computeXP(eventsAttended, medalsEarned, ringsEarned, bonusXp, gameXp);
+  const xp = computeXP(eventsAttended, medalsEarned, ringsEarned, bonusXp, gameXp, isElite);
   const level = computeLevel(xp);
   const xpProgress = xpForNextLevel(xp);
   return { eventsAttended, medalsEarned, ringsEarned, xp, level, xpProgress };
@@ -103,6 +103,7 @@ router.get("/leaderboard", async (_req, res) => {
       ringsByUser.get(u.id) ?? 0,
       u.bonusXp ?? 0,
       u.gameXp ?? 0,
+      u.isElite ?? false,
     ),
   }));
 
@@ -120,7 +121,7 @@ router.get("/me/rank", async (req, res) => {
 
   const [users, allAttendance, allAwards] = await Promise.all([
     db.query.usersTable.findMany({
-      columns: { id: true, bonusXp: true, gameXp: true, isAdmin: true },
+      columns: { id: true, bonusXp: true, gameXp: true, isElite: true, isAdmin: true },
       where: eq(usersTable.isAdmin, false),
     }),
     db.query.attendanceTable.findMany({ columns: { userId: true, earnedMedal: true } }),
@@ -144,7 +145,7 @@ router.get("/me/rank", async (req, res) => {
     const attended = attendanceByUser.get(u.id) ?? 0;
     const medals = (attendanceMedalsByUser.get(u.id) ?? 0) + (awardMedalsByUser.get(u.id) ?? 0);
     const rings = ringsByUser.get(u.id) ?? 0;
-    return { id: u.id, xp: computeXP(attended, medals, rings, u.bonusXp ?? 0, u.gameXp ?? 0) };
+    return { id: u.id, xp: computeXP(attended, medals, rings, u.bonusXp ?? 0, u.gameXp ?? 0, u.isElite ?? false) };
   });
 
   const sortedByXp = [...allUsers].sort((a, b) => b.xp - a.xp);
@@ -225,7 +226,7 @@ router.get("/", async (_req, res) => {
 router.get("/:id/profile", async (req, res) => {
   const user = await db.query.usersTable.findFirst({ where: eq(usersTable.id, Number(req.params.id)) });
   if (!user) { res.status(404).json({ error: "Not found" }); return; }
-  const stats = await getUserStats(user.id, user.bonusXp ?? 0, user.gameXp ?? 0);
+  const stats = await getUserStats(user.id, user.bonusXp ?? 0, user.gameXp ?? 0, user.isElite ?? false);
   res.json(toProfile(user, stats));
 });
 
@@ -348,7 +349,7 @@ router.put("/me", async (req, res) => {
   const [user] = await db.update(usersTable).set(updates).where(eq(usersTable.id, userId)).returning();
   if (!user) { res.status(404).json({ error: "Not found" }); return; }
 
-  const stats = await getUserStats(user.id, user.bonusXp ?? 0, user.gameXp ?? 0);
+  const stats = await getUserStats(user.id, user.bonusXp ?? 0, user.gameXp ?? 0, user.isElite ?? false);
   res.json(toProfile(user, stats));
 });
 
