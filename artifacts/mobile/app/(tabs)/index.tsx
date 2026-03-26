@@ -277,33 +277,53 @@ export default function HomeScreen() {
       <View style={styles.body}>
 
         {/* Next Upcoming Event Banner with countdown */}
-        {nextEvent && nextEvent.imageUrl ? (
-          <Pressable
-            style={styles.eventBanner}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.push("/(tabs)/tickets");
-            }}
-          >
-            <Image source={{ uri: resolveImageUrl(nextEvent.imageUrl) ?? nextEvent.imageUrl }} style={styles.eventBannerImage} resizeMode="cover" />
-            <LinearGradient
-              colors={["transparent", "rgba(0,0,0,0.72)"]}
-              style={styles.eventBannerOverlay}
+        {nextEvent && (
+          nextEvent.imageUrl ? (
+            /* Full image banner */
+            <Pressable
+              style={styles.eventBanner}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(tabs)/tickets"); }}
             >
-              <Text style={styles.eventBannerTitle} numberOfLines={2}>{nextEvent.title}</Text>
-              <Text style={styles.eventBannerDate}>
-                {new Date(nextEvent.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
-              </Text>
-            </LinearGradient>
-            {/* ── Feature 2: Countdown chip ── */}
-            {countdown && (
-              <View style={styles.countdownChip}>
-                <Feather name="clock" size={11} color="#FFC107" />
-                <Text style={styles.countdownText}>{countdown}</Text>
+              <Image source={{ uri: resolveImageUrl(nextEvent.imageUrl) ?? nextEvent.imageUrl }} style={styles.eventBannerImage} resizeMode="cover" />
+              <LinearGradient
+                colors={["transparent", "rgba(0,0,0,0.72)"]}
+                style={styles.eventBannerOverlay}
+              >
+                <Text style={styles.eventBannerTitle} numberOfLines={2}>{nextEvent.title}</Text>
+                <Text style={styles.eventBannerDate}>
+                  {new Date(nextEvent.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                </Text>
+              </LinearGradient>
+              {/* ── Feature 2: Countdown chip ── */}
+              {countdown && (
+                <View style={styles.countdownChip}>
+                  <Feather name="clock" size={11} color="#FFC107" />
+                  <Text style={styles.countdownText}>{countdown}</Text>
+                </View>
+              )}
+            </Pressable>
+          ) : (
+            /* Text-only card when no image is set */
+            <Pressable
+              style={styles.eventTextCard}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(tabs)/tickets"); }}
+            >
+              <Feather name="calendar" size={18} color={Colors.primary} style={{ marginRight: 12 }} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.eventTextCardTitle} numberOfLines={1}>{nextEvent.title}</Text>
+                <Text style={styles.eventTextCardDate}>
+                  {new Date(nextEvent.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                </Text>
               </View>
-            )}
-          </Pressable>
-        ) : null}
+              {countdown && (
+                <View style={styles.countdownChipInline}>
+                  <Feather name="clock" size={11} color="#FFC107" />
+                  <Text style={styles.countdownText}>{countdown}</Text>
+                </View>
+              )}
+            </Pressable>
+          )
+        )}
 
         {/* ── Feature 4: Quick-action chips ── */}
         <ScrollView
@@ -612,10 +632,44 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       borderWidth: 1,
       borderColor: "rgba(255,193,7,0.5)",
     },
+    countdownChipInline: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      backgroundColor: "rgba(255,193,7,0.12)",
+      borderRadius: 20,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderWidth: 1,
+      borderColor: "rgba(255,193,7,0.4)",
+    },
     countdownText: {
       fontFamily: "Inter_600SemiBold",
       fontSize: 11,
       color: "#FFC107",
+    },
+    /* ── Text-only event card ── */
+    eventTextCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: Colors.card,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: Colors.border,
+      padding: 16,
+      marginBottom: 20,
+    },
+    eventTextCardTitle: {
+      fontFamily: "Poppins_800ExtraBold",
+      fontSize: 15,
+      color: Colors.text,
+      lineHeight: 20,
+    },
+    eventTextCardDate: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 12,
+      color: Colors.textMuted,
+      marginTop: 2,
     },
     /* ── Quick-action chips ── */
     quickActionsScroll: {
