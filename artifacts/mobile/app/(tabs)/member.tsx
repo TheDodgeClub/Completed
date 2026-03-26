@@ -46,6 +46,29 @@ import { EliteBanner } from "@/components/EliteBanner";
 const LEVEL_THRESHOLDS = [0, 300, 800, 1600, 2500, 5000, 10000, 20000, 40000, 80000];
 const LEVEL_NAMES = ["Beginner", "Developing", "Experienced", "Skilled", "Advanced", "Pro", "League", "Expert", "Master", "Icon"];
 
+const SUPPORTER_TIERS = [
+  { name: "Club Friend",  emoji: "🤝", minXp: 0,    perk: "Welcome to The Dodge Club!" },
+  { name: "Loud Fan",     emoji: "📣", minXp: 75,   perk: "Priority event updates" },
+  { name: "Die Hard",     emoji: "🔥", minXp: 200,  perk: "Shoutout at events" },
+  { name: "Club Legend",  emoji: "⭐", minXp: 500,  perk: "VIP supporter status" },
+  { name: "Superfan",     emoji: "🏆", minXp: 1000, perk: "Name on the club wall" },
+] as const;
+
+function getSupporterProgress(xp: number) {
+  let tierIdx = 0;
+  for (let i = 0; i < SUPPORTER_TIERS.length; i++) {
+    if (xp >= SUPPORTER_TIERS[i].minXp) tierIdx = i;
+  }
+  const current = SUPPORTER_TIERS[tierIdx];
+  const next = SUPPORTER_TIERS[tierIdx + 1] ?? null;
+  const isMax = next === null;
+  const start = current.minXp;
+  const end = next?.minXp ?? start;
+  const progress = isMax ? 1 : Math.min(1, Math.max(0, (xp - start) / (end - start)));
+  const xpToNext = isMax ? 0 : end - xp;
+  return { current, next, isMax, progress, xpToNext };
+}
+
 function getLevelProgress(xp: number, level: number) {
   const currentThreshold = LEVEL_THRESHOLDS[level - 1] ?? 0;
   const nextThreshold = LEVEL_THRESHOLDS[level];
@@ -509,30 +532,58 @@ export default function MemberScreen() {
           Member since {new Date(user.memberSince).toLocaleDateString("en-GB", { month: "long", year: "numeric" })}
         </Text>
 
-        {/* XP Progress — players only */}
-        {user.accountType !== "supporter" && <View style={styles.xpSection}>
-          <View style={styles.xpLabelRow}>
-            <Text style={styles.xpProgressLabel}>Your Progress</Text>
-            <Text style={styles.xpLabel}>{xp.toLocaleString()} XP</Text>
-          </View>
-          <View style={styles.xpLevelNameRow}>
-            <Text style={styles.xpLevelNameDisplay}>{levelName}</Text>
-          </View>
-          <View style={styles.xpTrack}>
-            <View style={[styles.xpFill, { width: `${Math.round(progress * 100)}%` }]} />
-          </View>
-          <Text style={styles.xpHintText}>
-            {isMax ? "Maximum level reached 🏆" : `${xpToNext.toLocaleString()} XP needed to reach ${nextLevelName}`}
-          </Text>
-          {nextMilestone && (
-            <Text style={styles.xpMilestoneHint}>
-              🎯 {nextMilestone.events - (user.eventsAttended ?? 0)} more event{nextMilestone.events - (user.eventsAttended ?? 0) !== 1 ? "s" : ""} for your {nextMilestone.events}th milestone (+{nextMilestone.bonus} XP)
+        {/* XP Progress — players / supporter-specific tier bar */}
+        {user.accountType === "supporter" ? (() => {
+          const sp = getSupporterProgress(xp);
+          return (
+            <View style={styles.xpSection}>
+              <View style={styles.xpLabelRow}>
+                <Text style={styles.xpProgressLabel}>Supporter Journey</Text>
+                <Text style={styles.xpLabel}>{xp.toLocaleString()} XP</Text>
+              </View>
+              <View style={styles.xpLevelNameRow}>
+                <Text style={styles.xpLevelNameDisplay}>{sp.current.emoji} {sp.current.name}</Text>
+              </View>
+              <View style={styles.xpTrack}>
+                <View style={[styles.xpFillSupporter, { width: `${Math.round(sp.progress * 100)}%` }]} />
+              </View>
+              {sp.isMax ? (
+                <Text style={styles.xpHintText}>Superfan status reached 🏆 You're a club legend!</Text>
+              ) : (
+                <>
+                  <Text style={styles.xpHintText}>
+                    {sp.xpToNext} XP to unlock {sp.next!.emoji} {sp.next!.name} — {sp.next!.perk}
+                  </Text>
+                  <Text style={styles.xpStreakHint}>Earn XP by referring friends or playing Daily Dodge</Text>
+                </>
+              )}
+            </View>
+          );
+        })() : (
+          <View style={styles.xpSection}>
+            <View style={styles.xpLabelRow}>
+              <Text style={styles.xpProgressLabel}>Your Progress</Text>
+              <Text style={styles.xpLabel}>{xp.toLocaleString()} XP</Text>
+            </View>
+            <View style={styles.xpLevelNameRow}>
+              <Text style={styles.xpLevelNameDisplay}>{levelName}</Text>
+            </View>
+            <View style={styles.xpTrack}>
+              <View style={[styles.xpFill, { width: `${Math.round(progress * 100)}%` }]} />
+            </View>
+            <Text style={styles.xpHintText}>
+              {isMax ? "Maximum level reached 🏆" : `${xpToNext.toLocaleString()} XP needed to reach ${nextLevelName}`}
             </Text>
-          )}
-          {currentStreak >= 2 && (
-            <Text style={styles.xpStreakHint}>🔥 {currentStreak}-event streak — bonus XP active!</Text>
-          )}
-        </View>}
+            {nextMilestone && (
+              <Text style={styles.xpMilestoneHint}>
+                🎯 {nextMilestone.events - (user.eventsAttended ?? 0)} more event{nextMilestone.events - (user.eventsAttended ?? 0) !== 1 ? "s" : ""} for your {nextMilestone.events}th milestone (+{nextMilestone.bonus} XP)
+              </Text>
+            )}
+            {currentStreak >= 2 && (
+              <Text style={styles.xpStreakHint}>🔥 {currentStreak}-event streak — bonus XP active!</Text>
+            )}
+          </View>
+        )}
       </LinearGradient>
 
       {/* ── Stats Bar ── */}
@@ -894,6 +945,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     xpLevelNameDisplay: { fontFamily: "Poppins_800ExtraBold", fontSize: 14, color: "#FFC107", lineHeight: 20 },
     xpTrack: { height: 6, backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 3, overflow: "hidden" },
     xpFill: { height: "100%", backgroundColor: Colors.accent, borderRadius: 3 },
+    xpFillSupporter: { height: "100%", backgroundColor: "#FFC107", borderRadius: 3 },
     xpHintText: { fontFamily: "Inter_400Regular", fontSize: 10, color: "rgba(255,255,255,0.45)", marginTop: 5 },
     xpMilestoneHint: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: "rgba(255,193,7,0.8)", marginTop: 4 },
     xpStreakHint: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: "#FF6B35", marginTop: 3 },
