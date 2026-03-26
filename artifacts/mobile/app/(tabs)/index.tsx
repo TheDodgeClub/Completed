@@ -159,8 +159,8 @@ export default function HomeScreen() {
           Come alone. Win together.
         </Text>
 
-        {/* ── Feature 1: XP Progress Bar ── */}
-        {isAuthenticated && user && xpProgress && (
+        {/* ── Feature 1: XP Progress Bar — players only ── */}
+        {isAuthenticated && user && xpProgress && user.accountType !== "supporter" && (
           <View style={styles.xpSection}>
             <View style={styles.xpTopRow}>
               <Text style={styles.xpSectionLabel}>Your Progress</Text>

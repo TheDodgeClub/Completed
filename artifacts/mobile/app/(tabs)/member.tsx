@@ -600,10 +600,10 @@ export default function MemberScreen() {
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statBlock}>
-              <Text style={[styles.statValue, { color: Colors.primary }]}>
-                {new Date(user.memberSince).getFullYear()}
+              <Text style={[styles.statValue, { color: currentStreak > 0 ? "#FF6B35" : Colors.textMuted }]}>
+                {currentStreak > 0 ? `🔥${currentStreak}` : "–"}
               </Text>
-              <Text style={styles.statLabel}>Member Since</Text>
+              <Text style={styles.statLabel}>Attendance Streak</Text>
             </View>
           </>
         ) : (
@@ -780,30 +780,28 @@ export default function MemberScreen() {
           <EliteBanner isElite={user.isElite ?? false} isAuthenticated={true} />
         )}
 
-        {/* ── Event History — players only ── */}
-        {user.accountType !== "supporter" && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Event History</Text>
-            </View>
-            {attendance && attendance.length > 0 ? (
-              attendance.slice(0, 10).map(record => (
-                <AttendanceRow key={record.id} record={record} />
-              ))
-            ) : (
-              <View style={styles.empty}>
-                <Feather name="calendar" size={32} color={Colors.textMuted} />
-                <Text style={styles.emptyText}>No events attended yet</Text>
-                <Pressable
-                  style={({ pressed }) => [styles.exploreBtn, { opacity: pressed ? 0.85 : 1 }]}
-                  onPress={() => router.push("/(tabs)/tickets")}
-                >
-                  <Text style={styles.exploreBtnText}>Find Events</Text>
-                </Pressable>
-              </View>
-            )}
+        {/* ── Event History ── */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Event History</Text>
           </View>
-        )}
+          {attendance && attendance.length > 0 ? (
+            attendance.slice(0, 10).map(record => (
+              <AttendanceRow key={record.id} record={record} />
+            ))
+          ) : (
+            <View style={styles.empty}>
+              <Feather name="calendar" size={32} color={Colors.textMuted} />
+              <Text style={styles.emptyText}>No events attended yet</Text>
+              <Pressable
+                style={({ pressed }) => [styles.exploreBtn, { opacity: pressed ? 0.85 : 1 }]}
+                onPress={() => router.push("/(tabs)/tickets")}
+              >
+                <Text style={styles.exploreBtnText}>Find Events</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
 
         {/* ── Referral Code ── */}
         {user.referralCode && (
