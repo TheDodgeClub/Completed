@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, usersTable, attendanceTable, eventsTable, awardsTable, teamHistoryTable, eventRegistrationsTable } from "@workspace/db";
-import { eq, gt, desc } from "drizzle-orm";
+import { eq, gt, desc, lte } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -8,8 +8,40 @@ const router: IRouter = Router();
 
 const LEVEL_THRESHOLDS = [0, 300, 800, 1600, 2500, 5000, 10000, 20000, 40000, 80000];
 
-function computeXP(eventsAttended: number, medalsEarned: number, ringsEarned: number, bonusXp: number = 0, gameXp: number = 0, isElite: boolean = false): number {
-  return eventsAttended * 50 + medalsEarned * 300 + ringsEarned * 1000 + bonusXp + gameXp + (isElite ? 500 : 0);
+const ATTENDANCE_MILESTONES = [
+  { events: 5,  bonus: 100  },
+  { events: 10, bonus: 250  },
+  { events: 25, bonus: 500  },
+  { events: 50, bonus: 1000 },
+];
+
+function computeAttendanceXP(
+  attendedEventIds: Set<number>,
+  pastEvents: { id: number }[],
+): { eventXP: number; currentStreak: number; bestStreak: number; eventsAttended: number } {
+  let streak = 0;
+  let bestStreak = 0;
+  let eventXP = 0;
+  let attendedCount = 0;
+  for (const event of pastEvents) {
+    if (attendedEventIds.has(event.id)) {
+      streak++;
+      attendedCount++;
+      const streakBonus = streak >= 8 ? 50 : streak >= 4 ? 25 : streak >= 2 ? 10 : 0;
+      eventXP += 50 + streakBonus;
+      for (const m of ATTENDANCE_MILESTONES) {
+        if (attendedCount === m.events) { eventXP += m.bonus; break; }
+      }
+      if (streak > bestStreak) bestStreak = streak;
+    } else {
+      streak = 0;
+    }
+  }
+  return { eventXP, currentStreak: streak, bestStreak, eventsAttended: attendedCount };
+}
+
+function computeXP(eventXP: number, medalsEarned: number, ringsEarned: number, bonusXp: number = 0, gameXp: number = 0, isElite: boolean = false): number {
+  return eventXP + medalsEarned * 300 + ringsEarned * 1000 + bonusXp + gameXp + (isElite ? 500 : 0);
 }
 
 function computeLevel(xp: number): number {
@@ -29,17 +61,19 @@ function xpForNextLevel(xp: number): { current: number; next: number; level: num
 }
 
 async function getUserStats(userId: number, bonusXp: number = 0, gameXp: number = 0, isElite: boolean = false) {
-  const [records, awards] = await Promise.all([
+  const [records, awards, pastEvents] = await Promise.all([
     db.query.attendanceTable.findMany({ where: eq(attendanceTable.userId, userId) }),
     db.query.awardsTable.findMany({ where: eq(awardsTable.userId, userId) }),
+    db.select({ id: eventsTable.id }).from(eventsTable).where(lte(eventsTable.date, new Date())).orderBy(eventsTable.date),
   ]);
-  const eventsAttended = records.length;
+  const attendedIds = new Set(records.map(r => r.eventId));
+  const { eventXP, currentStreak, bestStreak, eventsAttended } = computeAttendanceXP(attendedIds, pastEvents);
   const medalsEarned = records.filter(r => r.earnedMedal).length + awards.filter(a => a.type === "medal").length;
   const ringsEarned = awards.filter(a => a.type === "ring").length;
-  const xp = computeXP(eventsAttended, medalsEarned, ringsEarned, bonusXp, gameXp, isElite);
+  const xp = computeXP(eventXP, medalsEarned, ringsEarned, bonusXp, gameXp, isElite);
   const level = computeLevel(xp);
   const xpProgress = xpForNextLevel(xp);
-  return { eventsAttended, medalsEarned, ringsEarned, xp, level, xpProgress };
+  return { eventsAttended, medalsEarned, ringsEarned, xp, level, xpProgress, currentStreak, bestStreak };
 }
 
 function toProfile(user: typeof usersTable.$inferSelect, stats: Awaited<ReturnType<typeof getUserStats>>) {
@@ -59,19 +93,21 @@ function toProfile(user: typeof usersTable.$inferSelect, stats: Awaited<ReturnTy
 
 /* GET /api/users/leaderboard — top 5 members by XP */
 router.get("/leaderboard", async (_req, res) => {
-  const [users, allAttendance, allAwards] = await Promise.all([
+  const [users, allAttendance, allAwards, pastEvents] = await Promise.all([
     db.query.usersTable.findMany({
       columns: { id: true, name: true, avatarUrl: true, username: true, bonusXp: true, gameXp: true, isElite: true, isAdmin: true },
       where: eq(usersTable.isAdmin, false),
     }),
-    db.query.attendanceTable.findMany({ columns: { userId: true, earnedMedal: true } }),
+    db.query.attendanceTable.findMany({ columns: { userId: true, eventId: true, earnedMedal: true } }),
     db.query.awardsTable.findMany({ columns: { userId: true, type: true } }),
+    db.select({ id: eventsTable.id }).from(eventsTable).where(lte(eventsTable.date, new Date())).orderBy(eventsTable.date),
   ]);
 
-  const attendanceByUser = new Map<number, number>();
+  const attendanceEventsByUser = new Map<number, Set<number>>();
   const attendanceMedalsByUser = new Map<number, number>();
   for (const a of allAttendance) {
-    attendanceByUser.set(a.userId, (attendanceByUser.get(a.userId) ?? 0) + 1);
+    if (!attendanceEventsByUser.has(a.userId)) attendanceEventsByUser.set(a.userId, new Set());
+    attendanceEventsByUser.get(a.userId)!.add(a.eventId);
     if (a.earnedMedal) attendanceMedalsByUser.set(a.userId, (attendanceMedalsByUser.get(a.userId) ?? 0) + 1);
   }
 
@@ -82,30 +118,27 @@ router.get("/leaderboard", async (_req, res) => {
     if (a.type === "ring") ringsByUser.set(a.userId, (ringsByUser.get(a.userId) ?? 0) + 1);
   }
 
-  // medals = attendance medals + direct award medals (matches getUserStats + admin dashboard)
-  const medalsByUser = new Map<number, number>();
   const allUserIds = new Set([...attendanceMedalsByUser.keys(), ...awardMedalsByUser.keys()]);
+  const medalsByUser = new Map<number, number>();
   for (const uid of allUserIds) {
     medalsByUser.set(uid, (attendanceMedalsByUser.get(uid) ?? 0) + (awardMedalsByUser.get(uid) ?? 0));
   }
 
-  const allUsers = users.map(u => ({
-    id: u.id,
-    name: u.name,
-    avatarUrl: u.avatarUrl ?? null,
-    username: u.username ?? null,
-    isElite: u.isElite ?? false,
-    medals: medalsByUser.get(u.id) ?? 0,
-    rings: ringsByUser.get(u.id) ?? 0,
-    xp: computeXP(
-      attendanceByUser.get(u.id) ?? 0,
-      medalsByUser.get(u.id) ?? 0,
-      ringsByUser.get(u.id) ?? 0,
-      u.bonusXp ?? 0,
-      u.gameXp ?? 0,
-      u.isElite ?? false,
-    ),
-  }));
+  const allUsers = users.map(u => {
+    const { eventXP } = computeAttendanceXP(attendanceEventsByUser.get(u.id) ?? new Set(), pastEvents);
+    const medals = medalsByUser.get(u.id) ?? 0;
+    const rings = ringsByUser.get(u.id) ?? 0;
+    return {
+      id: u.id,
+      name: u.name,
+      avatarUrl: u.avatarUrl ?? null,
+      username: u.username ?? null,
+      isElite: u.isElite ?? false,
+      medals,
+      rings,
+      xp: computeXP(eventXP, medals, rings, u.bonusXp ?? 0, u.gameXp ?? 0, u.isElite ?? false),
+    };
+  });
 
   const topXp = [...allUsers].sort((a, b) => b.xp - a.xp).slice(0, 5);
   const topMedals = [...allUsers].sort((a, b) => b.medals - a.medals).filter(u => u.medals > 0).slice(0, 5);
@@ -119,19 +152,21 @@ router.get("/me/rank", async (req, res) => {
   const userId = req.session?.userId;
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
 
-  const [users, allAttendance, allAwards] = await Promise.all([
+  const [users, allAttendance, allAwards, pastEvents] = await Promise.all([
     db.query.usersTable.findMany({
       columns: { id: true, bonusXp: true, gameXp: true, isElite: true, isAdmin: true },
       where: eq(usersTable.isAdmin, false),
     }),
-    db.query.attendanceTable.findMany({ columns: { userId: true, earnedMedal: true } }),
+    db.query.attendanceTable.findMany({ columns: { userId: true, eventId: true, earnedMedal: true } }),
     db.query.awardsTable.findMany({ columns: { userId: true, type: true } }),
+    db.select({ id: eventsTable.id }).from(eventsTable).where(lte(eventsTable.date, new Date())).orderBy(eventsTable.date),
   ]);
 
-  const attendanceByUser = new Map<number, number>();
+  const attendanceEventsByUser = new Map<number, Set<number>>();
   const attendanceMedalsByUser = new Map<number, number>();
   for (const a of allAttendance) {
-    attendanceByUser.set(a.userId, (attendanceByUser.get(a.userId) ?? 0) + 1);
+    if (!attendanceEventsByUser.has(a.userId)) attendanceEventsByUser.set(a.userId, new Set());
+    attendanceEventsByUser.get(a.userId)!.add(a.eventId);
     if (a.earnedMedal) attendanceMedalsByUser.set(a.userId, (attendanceMedalsByUser.get(a.userId) ?? 0) + 1);
   }
   const awardMedalsByUser = new Map<number, number>();
@@ -142,10 +177,10 @@ router.get("/me/rank", async (req, res) => {
   }
 
   const allUsers = users.map(u => {
-    const attended = attendanceByUser.get(u.id) ?? 0;
+    const { eventXP } = computeAttendanceXP(attendanceEventsByUser.get(u.id) ?? new Set(), pastEvents);
     const medals = (attendanceMedalsByUser.get(u.id) ?? 0) + (awardMedalsByUser.get(u.id) ?? 0);
     const rings = ringsByUser.get(u.id) ?? 0;
-    return { id: u.id, xp: computeXP(attended, medals, rings, u.bonusXp ?? 0, u.gameXp ?? 0, u.isElite ?? false) };
+    return { id: u.id, xp: computeXP(eventXP, medals, rings, u.bonusXp ?? 0, u.gameXp ?? 0, u.isElite ?? false) };
   });
 
   const sortedByXp = [...allUsers].sort((a, b) => b.xp - a.xp);

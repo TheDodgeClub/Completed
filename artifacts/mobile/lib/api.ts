@@ -16,6 +16,8 @@ export type UserProfile = {
   xp: number;
   level: number;
   xpProgress?: { current: number; next: number; level: number };
+  currentStreak: number;
+  bestStreak: number;
   avatarUrl: string | null;
   username: string | null;
   preferredRole: string | null;

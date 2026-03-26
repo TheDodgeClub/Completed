@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
-import { db, usersTable, attendanceTable, awardsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, usersTable, attendanceTable, awardsTable, eventsTable } from "@workspace/db";
+import { eq, lte } from "drizzle-orm";
 
 /* ---------- in-memory OTP store ---------- */
 interface OtpEntry { code: string; expires: number }
@@ -59,8 +59,29 @@ const router: IRouter = Router();
 /* ---------- helpers ---------- */
 const LEVEL_THRESHOLDS = [0, 300, 800, 1600, 2500, 5000, 10000, 20000, 40000, 80000];
 
-function computeXP(eventsAttended: number, medalsEarned: number, ringsEarned: number, bonusXp: number = 0, isElite: boolean = false): number {
-  return eventsAttended * 50 + medalsEarned * 300 + ringsEarned * 1000 + bonusXp + (isElite ? 500 : 0);
+const ATTENDANCE_MILESTONES = [
+  { events: 5,  bonus: 100  },
+  { events: 10, bonus: 250  },
+  { events: 25, bonus: 500  },
+  { events: 50, bonus: 1000 },
+];
+
+function computeAttendanceXP(attendedEventIds: Set<number>, pastEvents: { id: number }[]) {
+  let streak = 0, bestStreak = 0, eventXP = 0, attendedCount = 0;
+  for (const event of pastEvents) {
+    if (attendedEventIds.has(event.id)) {
+      streak++;
+      attendedCount++;
+      eventXP += 50 + (streak >= 8 ? 50 : streak >= 4 ? 25 : streak >= 2 ? 10 : 0);
+      for (const m of ATTENDANCE_MILESTONES) { if (attendedCount === m.events) { eventXP += m.bonus; break; } }
+      if (streak > bestStreak) bestStreak = streak;
+    } else { streak = 0; }
+  }
+  return { eventXP, currentStreak: streak, bestStreak, eventsAttended: attendedCount };
+}
+
+function computeXP(eventXP: number, medalsEarned: number, ringsEarned: number, bonusXp: number = 0, gameXp: number = 0, isElite: boolean = false): number {
+  return eventXP + medalsEarned * 300 + ringsEarned * 1000 + bonusXp + gameXp + (isElite ? 500 : 0);
 }
 
 function computeLevel(xp: number): number {
@@ -74,23 +95,21 @@ function computeLevel(xp: number): number {
 
 function toProfile(
   user: typeof usersTable.$inferSelect,
-  eventsAttended: number,
-  medalsEarned: number,
-  ringsEarned: number,
+  stats: { eventsAttended: number; medalsEarned: number; ringsEarned: number; xp: number; level: number; currentStreak: number; bestStreak: number },
 ) {
-  const xp = computeXP(eventsAttended, medalsEarned, ringsEarned, user.bonusXp ?? 0, user.isElite ?? false);
-  const level = computeLevel(xp);
   return {
     id: user.id,
     email: user.email,
     name: user.name,
     isAdmin: user.isAdmin,
     memberSince: (user.memberSince ?? user.createdAt).toISOString(),
-    eventsAttended,
-    medalsEarned,
-    ringsEarned,
-    xp,
-    level,
+    eventsAttended: stats.eventsAttended,
+    medalsEarned: stats.medalsEarned,
+    ringsEarned: stats.ringsEarned,
+    xp: stats.xp,
+    level: stats.level,
+    currentStreak: stats.currentStreak,
+    bestStreak: stats.bestStreak,
     avatarUrl: user.avatarUrl ?? null,
     username: user.username ?? null,
     preferredRole: user.preferredRole ?? null,
@@ -100,15 +119,19 @@ function toProfile(
   };
 }
 
-async function getUserStats(userId: number) {
-  const [records, awards] = await Promise.all([
+async function getUserStats(userId: number, bonusXp: number = 0, gameXp: number = 0, isElite: boolean = false) {
+  const [records, awards, pastEvents] = await Promise.all([
     db.select().from(attendanceTable).where(eq(attendanceTable.userId, userId)),
     db.select().from(awardsTable).where(eq(awardsTable.userId, userId)),
+    db.select({ id: eventsTable.id }).from(eventsTable).where(lte(eventsTable.date, new Date())).orderBy(eventsTable.date),
   ]);
-  const eventsAttended = records.length;
+  const attendedIds = new Set(records.map(r => r.eventId));
+  const { eventXP, currentStreak, bestStreak, eventsAttended } = computeAttendanceXP(attendedIds, pastEvents);
   const medalsEarned = records.filter(r => r.earnedMedal).length + awards.filter(a => a.type === "medal").length;
   const ringsEarned = awards.filter(a => a.type === "ring").length;
-  return { eventsAttended, medalsEarned, ringsEarned };
+  const xp = computeXP(eventXP, medalsEarned, ringsEarned, bonusXp, gameXp, isElite);
+  const level = computeLevel(xp);
+  return { eventsAttended, medalsEarned, ringsEarned, xp, level, currentStreak, bestStreak };
 }
 
 /* ---------- GET /api/auth/me ---------- */
@@ -125,8 +148,8 @@ router.get("/me", async (req, res) => {
     return;
   }
 
-  const { eventsAttended, medalsEarned, ringsEarned } = await getUserStats(user.id);
-  res.json(toProfile(user, eventsAttended, medalsEarned, ringsEarned));
+  const stats = await getUserStats(user.id, user.bonusXp ?? 0, user.gameXp ?? 0, user.isElite ?? false);
+  res.json(toProfile(user, stats));
 });
 
 const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
@@ -157,7 +180,8 @@ router.post("/register", async (req, res) => {
   const [user] = await db.insert(usersTable).values({ email, passwordHash, name }).returning();
 
   req.session = { userId: user.id };
-  res.json({ user: toProfile(user, 0, 0, 0), token: String(user.id) });
+  const emptyStats = { eventsAttended: 0, medalsEarned: 0, ringsEarned: 0, xp: 0, level: 1, currentStreak: 0, bestStreak: 0 };
+  res.json({ user: toProfile(user, emptyStats), token: String(user.id) });
 });
 
 /* ---------- POST /api/auth/login ---------- */
@@ -180,9 +204,9 @@ router.post("/login", async (req, res) => {
     return;
   }
 
-  const { eventsAttended, medalsEarned, ringsEarned } = await getUserStats(user.id);
+  const stats = await getUserStats(user.id, user.bonusXp ?? 0, user.gameXp ?? 0, user.isElite ?? false);
   req.session = { userId: user.id };
-  res.json({ user: toProfile(user, eventsAttended, medalsEarned, ringsEarned), token: String(user.id) });
+  res.json({ user: toProfile(user, stats), token: String(user.id) });
 });
 
 /* ---------- POST /api/auth/logout ---------- */

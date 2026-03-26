@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, eventsTable, postsTable, merchTable, usersTable, attendanceTable, awardsTable, videosTable, teamHistoryTable, eventRegistrationsTable, userSessionsTable, ticketsTable } from "@workspace/db";
-import { eq, desc, and, avg, count, sum, gte, sql } from "drizzle-orm";
+import { eq, desc, and, avg, count, sum, gte, sql, lte } from "drizzle-orm";
 import { getUncachableStripeClient } from "../stripeClient";
 import { requireAdmin } from "../middlewares/requireAdmin";
 
@@ -341,7 +341,25 @@ router.delete("/merch/:id", async (req, res) => {
 /* ========== MEMBERS ========== */
 
 const LEVEL_THRESHOLDS = [0, 300, 800, 1600, 2500, 5000, 10000, 20000, 40000, 80000];
-function computeXP(events: number, medals: number, rings: number, bonus: number = 0, isElite: boolean = false) { return events * 50 + medals * 300 + rings * 1000 + bonus + (isElite ? 500 : 0); }
+const ATTENDANCE_MILESTONES = [
+  { events: 5,  bonus: 100  },
+  { events: 10, bonus: 250  },
+  { events: 25, bonus: 500  },
+  { events: 50, bonus: 1000 },
+];
+function computeAttendanceXP(attendedEventIds: Set<number>, pastEvents: { id: number }[]) {
+  let streak = 0, bestStreak = 0, eventXP = 0, attendedCount = 0;
+  for (const ev of pastEvents) {
+    if (attendedEventIds.has(ev.id)) {
+      streak++; attendedCount++;
+      eventXP += 50 + (streak >= 8 ? 50 : streak >= 4 ? 25 : streak >= 2 ? 10 : 0);
+      for (const m of ATTENDANCE_MILESTONES) { if (attendedCount === m.events) { eventXP += m.bonus; break; } }
+      if (streak > bestStreak) bestStreak = streak;
+    } else { streak = 0; }
+  }
+  return { eventXP, currentStreak: streak, bestStreak, eventsAttended: attendedCount };
+}
+function computeXP(eventXP: number, medals: number, rings: number, bonus: number = 0, gameXp: number = 0, isElite: boolean = false) { return eventXP + medals * 300 + rings * 1000 + bonus + gameXp + (isElite ? 500 : 0); }
 function computeLevel(xp: number) {
   let level = 1;
   for (let i = 1; i < LEVEL_THRESHOLDS.length; i++) {
@@ -352,17 +370,19 @@ function computeLevel(xp: number) {
 
 /* GET /api/admin/members — list all users */
 router.get("/members", async (_req, res) => {
-  // 3 queries total instead of 2N+1 — fetch everything then group in memory
-  const [users, allAttendance, allAwards] = await Promise.all([
+  const [users, allAttendance, allAwards, pastEvents] = await Promise.all([
     db.select().from(usersTable).orderBy(usersTable.name),
     db.select().from(attendanceTable),
     db.select().from(awardsTable),
+    db.select({ id: eventsTable.id }).from(eventsTable).where(lte(eventsTable.date, new Date())).orderBy(eventsTable.date),
   ]);
 
-  const attendanceByUser = new Map<number, typeof allAttendance>();
+  const attendanceEventsByUser = new Map<number, Set<number>>();
+  const attendanceMedalsByUser = new Map<number, number>();
   for (const r of allAttendance) {
-    if (!attendanceByUser.has(r.userId)) attendanceByUser.set(r.userId, []);
-    attendanceByUser.get(r.userId)!.push(r);
+    if (!attendanceEventsByUser.has(r.userId)) attendanceEventsByUser.set(r.userId, new Set());
+    attendanceEventsByUser.get(r.userId)!.add(r.eventId);
+    if (r.earnedMedal) attendanceMedalsByUser.set(r.userId, (attendanceMedalsByUser.get(r.userId) ?? 0) + 1);
   }
   const awardsByUser = new Map<number, typeof allAwards>();
   for (const a of allAwards) {
@@ -371,12 +391,11 @@ router.get("/members", async (_req, res) => {
   }
 
   const result = users.map((u) => {
-    const records = attendanceByUser.get(u.id) ?? [];
     const awards = awardsByUser.get(u.id) ?? [];
-    const eventsAttended = records.length;
-    const medalsEarned = records.filter(r => r.earnedMedal).length + awards.filter(a => a.type === "medal").length;
+    const { eventXP, eventsAttended, currentStreak, bestStreak } = computeAttendanceXP(attendanceEventsByUser.get(u.id) ?? new Set(), pastEvents);
+    const medalsEarned = (attendanceMedalsByUser.get(u.id) ?? 0) + awards.filter(a => a.type === "medal").length;
     const ringsEarned = awards.filter(a => a.type === "ring").length;
-    const xp = computeXP(eventsAttended, medalsEarned, ringsEarned, u.bonusXp ?? 0, u.isElite ?? false);
+    const xp = computeXP(eventXP, medalsEarned, ringsEarned, u.bonusXp ?? 0, u.gameXp ?? 0, u.isElite ?? false);
     return {
       id: u.id,
       name: u.name,
@@ -388,6 +407,8 @@ router.get("/members", async (_req, res) => {
       ringsEarned,
       xp,
       level: computeLevel(xp),
+      currentStreak,
+      bestStreak,
       avatarUrl: u.avatarUrl ?? null,
       username: u.username ?? null,
       preferredRole: u.preferredRole ?? null,
@@ -412,16 +433,20 @@ router.put("/members/:id", async (req, res) => {
   const [user] = await db.update(usersTable).set(updates).where(eq(usersTable.id, Number(req.params.id))).returning();
   if (!user) { res.status(404).json({ error: "Not found" }); return; }
 
-  const records = await db.select().from(attendanceTable).where(eq(attendanceTable.userId, user.id));
-  const awards = await db.select().from(awardsTable).where(eq(awardsTable.userId, user.id));
-  const eventsAttended = records.length;
+  const [records, awards, pastEvents] = await Promise.all([
+    db.select().from(attendanceTable).where(eq(attendanceTable.userId, user.id)),
+    db.select().from(awardsTable).where(eq(awardsTable.userId, user.id)),
+    db.select({ id: eventsTable.id }).from(eventsTable).where(lte(eventsTable.date, new Date())).orderBy(eventsTable.date),
+  ]);
+  const attendedIds = new Set(records.map(r => r.eventId));
+  const { eventXP, eventsAttended, currentStreak, bestStreak } = computeAttendanceXP(attendedIds, pastEvents);
   const medalsEarned = records.filter(r => r.earnedMedal).length + awards.filter(a => a.type === "medal").length;
   const ringsEarned = awards.filter(a => a.type === "ring").length;
-  const xp = computeXP(eventsAttended, medalsEarned, ringsEarned, user.bonusXp ?? 0, user.isElite ?? false);
+  const xp = computeXP(eventXP, medalsEarned, ringsEarned, user.bonusXp ?? 0, user.gameXp ?? 0, user.isElite ?? false);
   res.json({
     id: user.id, name: user.name, email: user.email, isAdmin: user.isAdmin,
     memberSince: (user.memberSince ?? user.createdAt).toISOString(), eventsAttended, medalsEarned, ringsEarned, xp,
-    level: computeLevel(xp), avatarUrl: user.avatarUrl ?? null,
+    level: computeLevel(xp), currentStreak, bestStreak, avatarUrl: user.avatarUrl ?? null,
     username: user.username ?? null, preferredRole: user.preferredRole ?? null, bio: user.bio ?? null,
   });
 });

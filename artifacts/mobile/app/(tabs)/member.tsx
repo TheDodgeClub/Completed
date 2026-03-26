@@ -400,6 +400,12 @@ export default function MemberScreen() {
   const levelName = LEVEL_NAMES[level - 1] ?? "Player";
   const { progress, isMax, xpToNext } = getLevelProgress(xp, level);
   const nextLevelName = LEVEL_NAMES[level] ?? "Max";
+  const currentStreak = user.currentStreak ?? 0;
+  const MILESTONES_DEF = [
+    { events: 5, bonus: 100 }, { events: 10, bonus: 250 },
+    { events: 25, bonus: 500 }, { events: 50, bonus: 1000 },
+  ];
+  const nextMilestone = MILESTONES_DEF.find(m => m.events > (user.eventsAttended ?? 0));
   const avatarUri = resolveImageUrl(user.avatarUrl);
   return (
     <ScrollView
@@ -485,6 +491,14 @@ export default function MemberScreen() {
           <Text style={styles.xpHintText}>
             {isMax ? "Maximum level reached 🏆" : `${xpToNext.toLocaleString()} XP needed to reach ${nextLevelName}`}
           </Text>
+          {nextMilestone && (
+            <Text style={styles.xpMilestoneHint}>
+              🎯 {nextMilestone.events - (user.eventsAttended ?? 0)} more event{nextMilestone.events - (user.eventsAttended ?? 0) !== 1 ? "s" : ""} for your {nextMilestone.events}th milestone (+{nextMilestone.bonus} XP)
+            </Text>
+          )}
+          {currentStreak >= 2 && (
+            <Text style={styles.xpStreakHint}>🔥 {currentStreak}-event streak — bonus XP active!</Text>
+          )}
         </View>
       </LinearGradient>
 
@@ -493,6 +507,13 @@ export default function MemberScreen() {
         <View style={styles.statBlock}>
           <Text style={[styles.statValue, { color: Colors.primary }]}>{user.eventsAttended ?? 0}</Text>
           <Text style={styles.statLabel}>Events</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statBlock}>
+          <Text style={[styles.statValue, { color: currentStreak > 0 ? "#FF6B35" : Colors.textMuted }]}>
+            {currentStreak > 0 ? `🔥${currentStreak}` : "–"}
+          </Text>
+          <Text style={styles.statLabel}>Streak</Text>
         </View>
         <View style={styles.statDivider} />
         <View style={styles.statBlock}>
@@ -719,6 +740,8 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     xpTrack: { height: 6, backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 3, overflow: "hidden" },
     xpFill: { height: "100%", backgroundColor: Colors.accent, borderRadius: 3 },
     xpHintText: { fontFamily: "Inter_400Regular", fontSize: 10, color: "rgba(255,255,255,0.45)", marginTop: 5 },
+    xpMilestoneHint: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: "rgba(255,193,7,0.8)", marginTop: 4 },
+    xpStreakHint: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: "#FF6B35", marginTop: 3 },
     /* ── Countdown bar ── */
     countdownBar: {
       flexDirection: "row",
