@@ -89,6 +89,28 @@ router.get("/upcoming", async (_req, res) => {
   res.json(events.map(e => toEvent(e, typesByEvent[e.id] ?? [])));
 });
 
+/* GET /api/events/checkin-active — events currently in check-in window (admin, for scanner) */
+/* MUST be registered before /:id to avoid Express matching "checkin-active" as an id param */
+router.get("/checkin-active", requireAdmin, async (_req, res) => {
+  const now = new Date();
+  const windowStart = new Date(now.getTime() - CHECK_IN_AFTER_MS);
+  const windowEnd = new Date(now.getTime() + CHECK_IN_BEFORE_MS);
+  const events = await db.select().from(eventsTable)
+    .where(and(
+      eq(eventsTable.isPublished, true),
+      gte(eventsTable.date, windowStart),
+      lte(eventsTable.date, windowEnd),
+    ))
+    .orderBy(eventsTable.date);
+  res.json(events.map(e => ({
+    id: e.id,
+    title: e.title,
+    date: e.date.toISOString(),
+    location: e.location,
+    checkInPin: e.checkInPin ?? null,
+  })));
+});
+
 /* GET /api/events/:id */
 router.get("/:id", async (req, res) => {
   const event = await db.query.eventsTable.findFirst({
@@ -125,27 +147,6 @@ router.post("/", async (req, res) => {
     .values({ title, description, date: new Date(date), location, ticketUrl, imageUrl })
     .returning();
   res.status(201).json(toEvent(event, []));
-});
-
-/* GET /api/events/checkin-active — events currently in check-in window (admin, for scanner) */
-router.get("/checkin-active", requireAdmin, async (_req, res) => {
-  const now = new Date();
-  const windowStart = new Date(now.getTime() - CHECK_IN_AFTER_MS);
-  const windowEnd = new Date(now.getTime() + CHECK_IN_BEFORE_MS);
-  const events = await db.select().from(eventsTable)
-    .where(and(
-      eq(eventsTable.isPublished, true),
-      gte(eventsTable.date, windowStart),
-      lte(eventsTable.date, windowEnd),
-    ))
-    .orderBy(eventsTable.date);
-  res.json(events.map(e => ({
-    id: e.id,
-    title: e.title,
-    date: e.date.toISOString(),
-    location: e.location,
-    checkInPin: e.checkInPin ?? null,
-  })));
 });
 
 /* POST /api/events/:id/checkin — member PIN self check-in */
