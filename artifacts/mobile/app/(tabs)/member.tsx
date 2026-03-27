@@ -32,6 +32,7 @@ import {
   getUserUpcomingEvents,
   getUserAchievements,
   listUpcomingEvents,
+  checkEventIn,
   updateProfile,
   updateAvatar,
   requestUploadUrl,
@@ -74,6 +75,14 @@ function getLevelProgress(xp: number, level: number) {
   const safNext = nextThreshold ?? LEVEL_THRESHOLDS[LEVEL_THRESHOLDS.length - 1];
   const progress = safNext === currentThreshold ? 1 : (xp - currentThreshold) / (safNext - currentThreshold);
   return { progress: Math.min(1, Math.max(0, progress)), nextThreshold: safNext, currentThreshold, isMax, xpToNext: isMax ? 0 : safNext - xp };
+}
+
+const CHECK_IN_BEFORE_MS = 30 * 60 * 1000;
+const CHECK_IN_AFTER_MS  = 2  * 60 * 60 * 1000;
+function isCheckInWindowOpen(dateStr: string) {
+  const t = new Date(dateStr).getTime();
+  const now = Date.now();
+  return now >= t - CHECK_IN_BEFORE_MS && now <= t + CHECK_IN_AFTER_MS;
 }
 
 function getCountdown(dateStr: string): string | null {
@@ -336,6 +345,13 @@ export default function MemberScreen() {
   const [refreshing, setRefreshing] = React.useState(false);
   const [editVisible, setEditVisible] = React.useState(false);
   const [uploadingAvatar, setUploadingAvatar] = React.useState(false);
+  const [achievementsCollapsed, setAchievementsCollapsed] = React.useState(true);
+  const [checkInPinVisible, setCheckInPinVisible] = React.useState(false);
+  const [checkInPin, setCheckInPin] = React.useState("");
+  const [checkInLoading, setCheckInLoading] = React.useState(false);
+  const [checkInError, setCheckInError] = React.useState<string | null>(null);
+  const [checkInXpGained, setCheckInXpGained] = React.useState<number | null>(null);
+  const [checkedInEventId, setCheckedInEventId] = React.useState<number | null>(null);
 
   const userId = user?.id ?? 0;
   const { announcements } = useAnnouncements();
@@ -379,6 +395,35 @@ export default function MemberScreen() {
       Alert.alert("Error", err.message ?? "Could not save profile");
     },
   });
+
+  // First upcoming event with an open check-in window
+  const checkInEvent = upcomingEvents?.find(e => isCheckInWindowOpen(e.date)) ?? null;
+  const isCheckedIn = checkInEvent ? checkedInEventId === checkInEvent.id : false;
+
+  async function handleCheckIn() {
+    if (!checkInEvent || !checkInPin.trim()) return;
+    setCheckInLoading(true);
+    setCheckInError(null);
+    try {
+      const result = await checkEventIn(checkInEvent.id, checkInPin.trim().toUpperCase());
+      if (result.alreadyCheckedIn) {
+        setCheckedInEventId(checkInEvent.id);
+        setCheckInPinVisible(false);
+      } else if (result.success) {
+        setCheckedInEventId(checkInEvent.id);
+        setCheckInPinVisible(false);
+        if (result.xpGained) {
+          setCheckInXpGained(result.xpGained);
+          setTimeout(() => setCheckInXpGained(null), 4000);
+        }
+        await refreshUser();
+      }
+    } catch (e: any) {
+      setCheckInError(e?.message ?? "Incorrect PIN. Try again.");
+    } finally {
+      setCheckInLoading(false);
+    }
+  }
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -631,9 +676,6 @@ export default function MemberScreen() {
         )}
       </View>
 
-      {/* ── Member ID QR Card ── */}
-      <MemberQRCard userId={user.id} Colors={Colors} styles={styles} />
-
       {/* ── Next Event Countdown ── */}
       {nextClubEvent && nextClubCountdown && (
         <Pressable
@@ -685,53 +727,62 @@ export default function MemberScreen() {
           </Pressable>
         </View>
 
-        {/* ── Achievement Progress — players only ── */}
+        {/* ── Achievement Progress — players only, collapsible ── */}
         {user.accountType !== "supporter" && achievements && achievements.length > 0 && (
           <View style={styles.section}>
-            <View style={styles.sectionHeader}>
+            <Pressable
+              style={[styles.sectionHeader, { justifyContent: "space-between" }]}
+              onPress={() => {
+                setAchievementsCollapsed(c => !c);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }}
+            >
               <Text style={styles.sectionTitle}>Achievements</Text>
-            </View>
-            <View style={styles.achieveProgressList}>
-              {achievements.map(a => {
-                const pct = a.threshold && a.threshold > 0 ? Math.min((a.current ?? 0) / a.threshold, 1) : 0;
-                return (
-                  <View key={a.id} style={styles.achieveProgressRow}>
-                    <View style={[styles.achieveProgressIcon, a.unlocked && styles.achieveProgressIconUnlocked]}>
-                      <Text style={{ fontSize: 18 }}>
-                        {a.icon === "star" ? "⭐" : a.icon === "award" ? "🏆" : a.icon === "shield" ? "🛡️" : a.icon === "zap" ? "⚡" : a.icon === "medal" ? "🏅" : "🎖️"}
-                      </Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                        <Text style={styles.achieveProgressTitle}>{a.title}</Text>
-                        {a.unlocked ? (
-                          <Pressable
-                            onPress={() => {
-                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                              Share.share({ message: `I just unlocked the "${a.title}" achievement on The Dodge Club! 🏐 ${a.description}` });
-                            }}
-                            style={styles.achieveShareBtn}
-                          >
-                            <Feather name="share-2" size={12} color={Colors.primary} />
-                            <Text style={styles.achieveShareText}>Share</Text>
-                          </Pressable>
-                        ) : (
-                          <Text style={styles.achieveProgressCount}>
-                            {a.current ?? 0}/{a.threshold ?? 0}
-                          </Text>
+              <Feather name={achievementsCollapsed ? "chevron-down" : "chevron-up"} size={18} color={Colors.textMuted} />
+            </Pressable>
+            {!achievementsCollapsed && (
+              <View style={styles.achieveProgressList}>
+                {achievements.map(a => {
+                  const pct = a.threshold && a.threshold > 0 ? Math.min((a.current ?? 0) / a.threshold, 1) : 0;
+                  return (
+                    <View key={a.id} style={styles.achieveProgressRow}>
+                      <View style={[styles.achieveProgressIcon, a.unlocked && styles.achieveProgressIconUnlocked]}>
+                        <Text style={{ fontSize: 18 }}>
+                          {a.icon === "star" ? "⭐" : a.icon === "award" ? "🏆" : a.icon === "shield" ? "🛡️" : a.icon === "zap" ? "⚡" : a.icon === "medal" ? "🏅" : "🎖️"}
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                          <Text style={styles.achieveProgressTitle}>{a.title}</Text>
+                          {a.unlocked ? (
+                            <Pressable
+                              onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                Share.share({ message: `I just unlocked the "${a.title}" achievement on The Dodge Club! 🏐 ${a.description}` });
+                              }}
+                              style={styles.achieveShareBtn}
+                            >
+                              <Feather name="share-2" size={12} color={Colors.primary} />
+                              <Text style={styles.achieveShareText}>Share</Text>
+                            </Pressable>
+                          ) : (
+                            <Text style={styles.achieveProgressCount}>
+                              {a.current ?? 0}/{a.threshold ?? 0}
+                            </Text>
+                          )}
+                        </View>
+                        <View style={styles.achieveProgressTrack}>
+                          <View style={[styles.achieveProgressFill, { width: `${Math.round(pct * 100)}%` }]} />
+                        </View>
+                        {!a.unlocked && (
+                          <Text style={styles.achieveProgressHint}>{a.description}</Text>
                         )}
                       </View>
-                      <View style={styles.achieveProgressTrack}>
-                        <View style={[styles.achieveProgressFill, { width: `${Math.round(pct * 100)}%` }]} />
-                      </View>
-                      {!a.unlocked && (
-                        <Text style={styles.achieveProgressHint}>{a.description}</Text>
-                      )}
                     </View>
-                  </View>
-                );
-              })}
-            </View>
+                  );
+                })}
+              </View>
+            )}
           </View>
         )}
 
@@ -746,6 +797,86 @@ export default function MemberScreen() {
             ))}
           </View>
         )}
+
+        {/* ── Member QR Code ── */}
+        <MemberQRCard userId={user.id} Colors={Colors} styles={styles} />
+
+        {/* ── Check In ── */}
+        {checkInEvent && (
+          <View style={[styles.section, { paddingHorizontal: 0 }]}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.memberCheckInBtn,
+                isCheckedIn && styles.memberCheckInBtnDone,
+                { opacity: pressed ? 0.85 : 1 },
+              ]}
+              onPress={() => {
+                if (!isCheckedIn) {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  setCheckInError(null);
+                  setCheckInPin("");
+                  setCheckInPinVisible(true);
+                }
+              }}
+            >
+              <Feather
+                name={isCheckedIn ? "check-circle" : "log-in"}
+                size={18}
+                color={isCheckedIn ? "#30D158" : "#fff"}
+              />
+              <Text style={[styles.memberCheckInBtnText, isCheckedIn && { color: "#30D158" }]}>
+                {isCheckedIn ? "Checked In ✓" : `Check In — ${checkInEvent.title}`}
+              </Text>
+            </Pressable>
+            {checkInXpGained !== null && (
+              <Text style={{ textAlign: "center", fontSize: 13, color: "#FFD60A", fontWeight: "700", marginTop: 8 }}>
+                ⚡ +{checkInXpGained} XP earned!
+              </Text>
+            )}
+          </View>
+        )}
+
+        {/* PIN Modal */}
+        <Modal
+          visible={checkInPinVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setCheckInPinVisible(false)}
+        >
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.6)", padding: 24 }}
+          >
+            <View style={styles.pinCard}>
+              <Text style={styles.pinTitle}>Check In to {checkInEvent?.title ?? "Event"}</Text>
+              <Text style={styles.pinSubtitle}>Enter the event PIN shown at the door</Text>
+              <TextInput
+                style={styles.pinInput}
+                value={checkInPin}
+                onChangeText={v => { setCheckInPin(v.toUpperCase()); setCheckInError(null); }}
+                placeholder="Enter PIN"
+                placeholderTextColor={Colors.textMuted}
+                autoCapitalize="characters"
+                autoCorrect={false}
+                returnKeyType="done"
+                onSubmitEditing={handleCheckIn}
+              />
+              {checkInError && <Text style={styles.pinError}>{checkInError}</Text>}
+              <Pressable
+                style={({ pressed }) => [styles.pinSubmitBtn, { opacity: pressed || checkInLoading ? 0.7 : 1 }]}
+                onPress={handleCheckIn}
+                disabled={checkInLoading || !checkInPin.trim()}
+              >
+                {checkInLoading
+                  ? <ActivityIndicator color="#fff" />
+                  : <Text style={styles.pinSubmitText}>Check In</Text>}
+              </Pressable>
+              <Pressable onPress={() => setCheckInPinVisible(false)} style={{ marginTop: 12 }}>
+                <Text style={{ color: Colors.textMuted, fontSize: 14, textAlign: "center" }}>Cancel</Text>
+              </Pressable>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
 
         {/* ── Event History ── */}
         <View style={styles.section}>
@@ -1073,6 +1204,37 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       alignItems: "center", justifyContent: "center",
       borderWidth: 1, borderColor: `${Colors.accent}40`,
     },
+
+    /* Member check-in button */
+    memberCheckInBtn: {
+      flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10,
+      backgroundColor: Colors.primary, borderRadius: 16, paddingVertical: 16, paddingHorizontal: 20,
+    },
+    memberCheckInBtnDone: { backgroundColor: `${Colors.primary}20`, borderWidth: 1, borderColor: "#30D158" },
+    memberCheckInBtnText: {
+      fontFamily: "Inter_700Bold", fontSize: 16, color: "#fff",
+    },
+
+    /* PIN modal */
+    pinCard: {
+      backgroundColor: Colors.surface, borderRadius: 24, padding: 28,
+      width: "100%", shadowColor: "#000", shadowOpacity: 0.3, shadowRadius: 20, elevation: 10,
+    },
+    pinTitle: { fontFamily: "Poppins_800ExtraBold", fontSize: 17, color: Colors.text, textAlign: "center", marginBottom: 4 },
+    pinSubtitle: { fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.textSecondary, textAlign: "center", marginBottom: 20 },
+    pinInput: {
+      borderWidth: 1, borderColor: Colors.border, borderRadius: 14,
+      paddingHorizontal: 16, paddingVertical: 14,
+      fontFamily: "Inter_600SemiBold", fontSize: 22, color: Colors.text,
+      textAlign: "center", letterSpacing: 4,
+      backgroundColor: Colors.surface2, marginBottom: 12,
+    },
+    pinError: { fontFamily: "Inter_400Regular", fontSize: 13, color: "#FF3B30", textAlign: "center", marginBottom: 10 },
+    pinSubmitBtn: {
+      backgroundColor: Colors.primary, borderRadius: 14,
+      paddingVertical: 15, alignItems: "center",
+    },
+    pinSubmitText: { fontFamily: "Inter_700Bold", fontSize: 16, color: "#fff" },
 
     /* Preferences */
     prefCard: {
