@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, usersTable, attendanceTable, eventsTable, awardsTable, teamHistoryTable, eventRegistrationsTable, postCommentsTable } from "@workspace/db";
+import { db, usersTable, attendanceTable, eventsTable, awardsTable, eventRegistrationsTable, postCommentsTable } from "@workspace/db";
 import { eq, gt, desc, lte, isNotNull } from "drizzle-orm";
 
 const router: IRouter = Router();
@@ -425,21 +425,6 @@ router.get("/:id/achievements", async (req, res) => {
   });
 
   res.json(result);
-});
-
-/* GET /api/users/:id/team-history */
-router.get("/:id/team-history", async (req, res) => {
-  const history = await db.query.teamHistoryTable.findMany({
-    where: eq(teamHistoryTable.userId, Number(req.params.id)),
-  });
-  res.json(history.map(h => ({
-    id: h.id,
-    teamName: h.teamName,
-    season: h.season,
-    roleInTeam: h.roleInTeam ?? null,
-    notes: h.notes ?? null,
-    createdAt: h.createdAt.toISOString(),
-  })));
 });
 
 /* GET /api/users/:id/upcoming-events */

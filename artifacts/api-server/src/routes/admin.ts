@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, eventsTable, postsTable, merchTable, usersTable, attendanceTable, awardsTable, videosTable, teamHistoryTable, eventRegistrationsTable, userSessionsTable, ticketsTable, announcementsTable, ticketTypesTable, discountCodesTable } from "@workspace/db";
+import { db, eventsTable, postsTable, merchTable, usersTable, attendanceTable, awardsTable, videosTable, eventRegistrationsTable, userSessionsTable, ticketsTable, announcementsTable, ticketTypesTable, discountCodesTable } from "@workspace/db";
 import { eq, desc, and, avg, count, sum, gte, sql, lte, or, isNull } from "drizzle-orm";
 import { getUncachableStripeClient } from "../stripeClient";
 import { requireAdmin } from "../middlewares/requireAdmin";
@@ -634,36 +634,7 @@ router.delete("/members/:id", async (req, res) => {
   const id = Number(req.params.id);
   await db.delete(attendanceTable).where(eq(attendanceTable.userId, id));
   await db.delete(awardsTable).where(eq(awardsTable.userId, id));
-  await db.delete(teamHistoryTable).where(eq(teamHistoryTable.userId, id));
   await db.delete(usersTable).where(eq(usersTable.id, id));
-  res.json({ ok: true });
-});
-
-/* GET /api/admin/members/:id/team-history */
-router.get("/members/:id/team-history", async (req, res) => {
-  const history = await db.query.teamHistoryTable.findMany({
-    where: eq(teamHistoryTable.userId, Number(req.params.id)),
-  });
-  res.json(history.map(h => ({
-    id: h.id, teamName: h.teamName, season: h.season,
-    roleInTeam: h.roleInTeam ?? null, notes: h.notes ?? null,
-    createdAt: h.createdAt.toISOString(),
-  })));
-});
-
-/* POST /api/admin/members/:id/team-history */
-router.post("/members/:id/team-history", async (req, res) => {
-  const { teamName, season, roleInTeam, notes } = req.body;
-  if (!teamName || !season) { res.status(400).json({ error: "teamName and season required" }); return; }
-  const [entry] = await db.insert(teamHistoryTable)
-    .values({ userId: Number(req.params.id), teamName, season, roleInTeam: roleInTeam || null, notes: notes || null })
-    .returning();
-  res.status(201).json({ id: entry.id, teamName: entry.teamName, season: entry.season, roleInTeam: entry.roleInTeam ?? null, notes: entry.notes ?? null, createdAt: entry.createdAt.toISOString() });
-});
-
-/* DELETE /api/admin/team-history/:id */
-router.delete("/team-history/:id", async (req, res) => {
-  await db.delete(teamHistoryTable).where(eq(teamHistoryTable.id, Number(req.params.id)));
   res.json({ ok: true });
 });
 

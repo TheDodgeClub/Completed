@@ -35,14 +35,6 @@ export type EventAttendee = {
   accountType: string;
 };
 
-export type TeamHistory = {
-  id: number;
-  teamName: string;
-  season: string;
-  roleInTeam: string | null;
-  notes: string | null;
-  createdAt: string;
-};
 
 export type UpcomingEvent = {
   id: number;
@@ -261,9 +253,6 @@ export async function getUserAchievements(userId: number): Promise<Achievement[]
   return apiFetch<Achievement[]>(`/users/${userId}/achievements`);
 }
 
-export async function getUserTeamHistory(userId: number): Promise<TeamHistory[]> {
-  return apiFetch<TeamHistory[]>(`/users/${userId}/team-history`);
-}
 
 export async function getUserUpcomingEvents(userId: number): Promise<UpcomingEvent[]> {
   return apiFetch<UpcomingEvent[]>(`/users/${userId}/upcoming-events`);

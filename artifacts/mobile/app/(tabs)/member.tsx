@@ -28,7 +28,6 @@ import { resolveImageUrl, API_BASE } from "@/constants/api";
 import { useAuth } from "@/context/AuthContext";
 import {
   getUserAttendance,
-  getUserTeamHistory,
   getUserUpcomingEvents,
   getUserAchievements,
   listUpcomingEvents,
@@ -36,7 +35,6 @@ import {
   updateAvatar,
   requestUploadUrl,
   AttendanceRecord,
-  TeamHistory,
   UpcomingEvent,
   Achievement,
 } from "@/lib/api";
@@ -154,23 +152,6 @@ function UpcomingEventRow({ event }: { event: UpcomingEvent }) {
       </View>
       <View style={styles.daysChip}>
         <Text style={styles.daysChipText}>{daysUntil}d</Text>
-      </View>
-    </View>
-  );
-}
-
-function TeamHistoryRow({ entry }: { entry: TeamHistory }) {
-  const Colors = useColors();
-  const styles = useMemo(() => makeStyles(Colors), [Colors]);
-  return (
-    <View style={styles.teamRow}>
-      <View style={styles.teamDot} />
-      <View style={{ flex: 1 }}>
-        <Text style={styles.teamName}>{entry.teamName}</Text>
-        <Text style={styles.teamMeta}>
-          {entry.season}{entry.roleInTeam ? ` · ${entry.roleInTeam}` : ""}
-        </Text>
-        {entry.notes && <Text style={styles.teamNotes}>{entry.notes}</Text>}
       </View>
     </View>
   );
@@ -345,12 +326,6 @@ export default function MemberScreen() {
   });
 
 
-  const { data: teamHistory, refetch: refetchTeamHistory } = useQuery({
-    queryKey: ["team-history", userId],
-    queryFn: () => getUserTeamHistory(userId),
-    enabled: !!userId,
-  });
-
   const { data: upcomingEvents, refetch: refetchUpcoming } = useQuery({
     queryKey: ["upcoming-registered", userId],
     queryFn: () => getUserUpcomingEvents(userId),
@@ -379,7 +354,7 @@ export default function MemberScreen() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([refreshUser(), refetchAttendance(), refetchTeamHistory(), refetchUpcoming(), refetchAchievements()]);
+    await Promise.all([refreshUser(), refetchAttendance(), refetchUpcoming(), refetchAchievements()]);
     setRefreshing(false);
   };
 
@@ -748,20 +723,6 @@ export default function MemberScreen() {
           </View>
         )}
 
-        {/* ── Team History ── */}
-        {teamHistory && teamHistory.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Team History</Text>
-            </View>
-            <View style={styles.teamList}>
-              {teamHistory.map(entry => (
-                <TeamHistoryRow key={entry.id} entry={entry} />
-              ))}
-            </View>
-          </View>
-        )}
-
         {/* ── Event History ── */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -1058,23 +1019,6 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       position: "absolute", top: 10, right: 10, width: 8, height: 8,
       borderRadius: 4, backgroundColor: Colors.success,
     },
-
-    /* Team history */
-    teamList: {
-      backgroundColor: Colors.surface, borderRadius: 16,
-      borderWidth: 1, borderColor: Colors.border, overflow: "hidden",
-    },
-    teamRow: {
-      flexDirection: "row", gap: 14, padding: 14,
-      borderBottomWidth: 1, borderBottomColor: Colors.border,
-    },
-    teamDot: {
-      width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.primary,
-      marginTop: 5, flexShrink: 0,
-    },
-    teamName: { fontFamily: "Inter_700Bold", fontSize: 14, color: Colors.text, marginBottom: 2 },
-    teamMeta: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.textSecondary },
-    teamNotes: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textMuted, marginTop: 4 },
 
     /* Attendance */
     attendRow: {
