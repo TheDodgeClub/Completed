@@ -239,6 +239,51 @@ router.post("/login", async (req, res) => {
   res.json({ user: toProfile(user, stats), token: String(user.id) });
 });
 
+/* ---------- POST /api/auth/google ---------- */
+router.post("/google", async (req, res) => {
+  const { accessToken } = req.body;
+  if (!accessToken) {
+    res.status(400).json({ error: "accessToken is required" });
+    return;
+  }
+  let email: string;
+  let name: string;
+  let picture: string | undefined;
+  try {
+    const resp = await fetch("https://www.googleapis.com/userinfo/v2/me", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!resp.ok) throw new Error("Invalid Google token");
+    const info = await resp.json() as { email: string; name: string; picture?: string };
+    email = info.email?.toLowerCase();
+    name = info.name;
+    picture = info.picture;
+    if (!email || !name) throw new Error("Missing profile data from Google");
+  } catch {
+    res.status(401).json({ error: "Invalid Google token" });
+    return;
+  }
+
+  let user = await db.query.usersTable.findFirst({ where: eq(usersTable.email, email) });
+  if (!user) {
+    const passwordHash = await bcrypt.hash(Math.random().toString(36), 10);
+    const [created] = await db.insert(usersTable).values({
+      email,
+      name,
+      passwordHash,
+      accountType: "player",
+      avatarUrl: picture ?? null,
+    }).returning();
+    const code = generateReferralCode(name, created.id);
+    const [withCode] = await db.update(usersTable).set({ referralCode: code }).where(eq(usersTable.id, created.id)).returning();
+    user = withCode;
+  }
+
+  req.session = { userId: user.id };
+  const stats = await getUserStats(user.id, user.bonusXp ?? 0, user.gameXp ?? 0, user.isElite ?? false);
+  res.json({ user: toProfile(user, stats), token: String(user.id) });
+});
+
 /* ---------- POST /api/auth/logout ---------- */
 router.post("/logout", (req, res) => {
   req.session = null;

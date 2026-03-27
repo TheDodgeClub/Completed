@@ -5,6 +5,7 @@ import {
   login as apiLogin,
   register as apiRegister,
   logout as apiLogout,
+  googleLogin as apiGoogleLogin,
   getMe,
   getToken,
 } from "@/lib/api";
@@ -20,6 +21,7 @@ type AuthContextType = AuthState & {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string, accountType?: "player" | "supporter", referralCode?: string) => Promise<void>;
   logout: () => Promise<void>;
+  googleLogin: (accessToken: string) => Promise<void>;
   refreshUser: () => Promise<void>;
 };
 
@@ -65,6 +67,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState({ user: null, token: null, isLoading: false, isAuthenticated: false });
   };
 
+  const googleLogin = async (accessToken: string) => {
+    const data = await apiGoogleLogin(accessToken);
+    setState({ user: data.user, token: data.token, isLoading: false, isAuthenticated: true });
+  };
+
   const refreshUser = async () => {
     try {
       const user = await getMe();
@@ -73,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ ...state, login, register, logout, refreshUser }}>
+    <AuthContext.Provider value={{ ...state, login, register, logout, googleLogin, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
