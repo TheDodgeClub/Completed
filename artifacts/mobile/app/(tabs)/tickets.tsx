@@ -280,7 +280,7 @@ export default function TicketsScreen() {
                 <EmptyState icon="lock" title="Sign in to see your tickets" subtitle="Your purchased tickets will appear here." />
               ) : (myTickets?.length ?? 0) === 0 ? (
                 <EmptyState
-                  icon="ticket"
+                  icon="tag"
                   title="No tickets yet"
                   subtitle="Head to Buy Tickets to get your spot at an upcoming event."
                   action={{ label: "Browse Events", onPress: () => setActiveTab("buy") }}
