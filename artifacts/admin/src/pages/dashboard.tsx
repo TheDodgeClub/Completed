@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   CalendarDays, MessageSquare, Users, Trophy, Zap, CircleDot,
-  Bell, Send, CheckCircle, Clock, Activity, BarChart2, TrendingUp, Wifi,
+  Bell, Send, CheckCircle, Clock, Activity, TrendingUp, Wifi,
   ArrowRight, Plus, FileText,
 } from "lucide-react";
 import { Link } from "wouter";
@@ -684,92 +684,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── SESSION ANALYTICS — full width below ── */}
-      <div>
-        <h2 className="text-lg font-display font-bold text-foreground mb-4 flex items-center gap-2">
-          <BarChart2 className="w-5 h-5 text-primary" />
-          Sessions — Last 7 Days &amp; Top Users
-        </h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-          {/* Daily breakdown bar chart */}
-          <Card className="bg-card border-border/50 shadow-lg shadow-black/20">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <BarChart2 className="w-4 h-4 text-primary" />
-                Daily Session Count
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {sessionLoading ? (
-                <div className="text-sm text-muted-foreground py-6 text-center">Loading…</div>
-              ) : !sessionStats?.dailyBreakdown?.length ? (
-                <div className="text-sm text-muted-foreground py-6 text-center">No session data yet. Data appears once members open the app.</div>
-              ) : (
-                <div className="space-y-2">
-                  {(() => {
-                    const maxSessions = Math.max(...sessionStats.dailyBreakdown.map(d => d.sessions), 1);
-                    return sessionStats.dailyBreakdown.map((d) => {
-                      const pct = Math.max((d.sessions / maxSessions) * 100, 2);
-                      const date = new Date(d.day);
-                      const label = date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
-                      return (
-                        <div key={d.day} className="flex items-center gap-3">
-                          <span className="text-xs text-muted-foreground w-24 shrink-0">{label}</span>
-                          <div className="flex-1 h-5 bg-secondary rounded-full overflow-hidden">
-                            <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pct}%` }} />
-                          </div>
-                          <span className="text-xs font-medium text-foreground w-16 text-right shrink-0">
-                            {d.sessions} · {fmtDuration(d.avgDuration)}
-                          </span>
-                        </div>
-                      );
-                    });
-                  })()}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Top users by time */}
-          <Card className="bg-card border-border/50 shadow-lg shadow-black/20">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Clock className="w-4 h-4 text-primary" />
-                Most Time in App
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-1">
-              {sessionLoading ? (
-                <div className="text-sm text-muted-foreground py-6 text-center">Loading…</div>
-              ) : !sessionStats?.topUsers?.length ? (
-                <div className="text-sm text-muted-foreground py-6 text-center">No session data yet.</div>
-              ) : sessionStats.topUsers.map((u, idx) => {
-                const maxSecs = sessionStats.topUsers[0]?.totalSeconds ?? 1;
-                const pct = maxSecs > 0 ? Math.max((u.totalSeconds / maxSecs) * 100, 2) : 2;
-                return (
-                  <div key={u.userId} className="flex items-center gap-2 p-2 rounded-xl hover:bg-secondary/40 transition-colors">
-                    <span className={`w-5 text-center text-sm font-bold shrink-0 ${idx === 0 ? "text-accent" : idx === 1 ? "text-slate-300" : idx === 2 ? "text-amber-600" : "text-muted-foreground"}`}>{idx + 1}</span>
-                    <MemberAvatar member={u} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="font-semibold text-xs text-foreground truncate">{u.name}</span>
-                        <span className="text-xs text-primary font-bold shrink-0">{fmtDuration(u.totalSeconds)}</span>
-                      </div>
-                      <div className="flex items-center gap-2 mt-1">
-                        <div className="flex-1 h-1 bg-secondary rounded-full overflow-hidden">
-                          <div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />
-                        </div>
-                        <span className="text-xs text-muted-foreground shrink-0">{u.sessions} sessions · {fmtDuration(u.avgDuration)} avg</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
     </div>
   );
 }

@@ -11,8 +11,6 @@ import Events from "@/pages/events";
 import Posts from "@/pages/posts";
 import Merch from "@/pages/merch";
 import Members from "@/pages/members";
-import EliteMembers from "@/pages/elite-members";
-import Supporters from "@/pages/supporters";
 import Videos from "@/pages/videos";
 import SettingsPage from "@/pages/settings";
 import TicketsPage from "@/pages/tickets";
@@ -33,8 +31,6 @@ const ProtectedEvents = makePR(Events);
 const ProtectedPosts = makePR(Posts);
 const ProtectedMerch = makePR(Merch);
 const ProtectedMembers = makePR(Members);
-const ProtectedEliteMembers = makePR(EliteMembers);
-const ProtectedSupporters = makePR(Supporters);
 const ProtectedVideos = makePR(Videos);
 const ProtectedSettings = makePR(SettingsPage);
 const ProtectedTickets = makePR(TicketsPage);
@@ -49,8 +45,6 @@ function Router() {
         <Route path="/posts" component={ProtectedPosts} />
         <Route path="/merch" component={ProtectedMerch} />
         <Route path="/members" component={ProtectedMembers} />
-        <Route path="/supporters" component={ProtectedSupporters} />
-        <Route path="/elite-members" component={ProtectedEliteMembers} />
         <Route path="/videos" component={ProtectedVideos} />
         <Route path="/tickets" component={ProtectedTickets} />
         <Route path="/settings" component={ProtectedSettings} />
