@@ -300,6 +300,8 @@ router.get("/tickets", async (req, res) => {
       eventTitle: eventsTable.title,
       eventDate: eventsTable.date,
       eventLocation: eventsTable.location,
+      checkoutData: ticketsTable.checkoutData,
+      checkoutFields: eventsTable.checkoutFields,
     })
     .from(ticketsTable)
     .innerJoin(usersTable, eq(ticketsTable.userId, usersTable.id))

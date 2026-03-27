@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEvents, useCreateEvent, useUpdateEvent, useDeleteEvent, usePublishEvent, useSetTicketPricing, useUpdateCheckoutForm, useDuplicateEvent, Event, EventInput, CheckoutField } from "@/hooks/use-events";
 import { useTicketTypes, useCreateTicketType, useUpdateTicketType, useDeleteTicketType, useDiscountCodes, useCreateDiscountCode, useUpdateDiscountCode, useDeleteDiscountCode, TicketType, DiscountCode } from "@/hooks/use-ticket-types";
@@ -16,7 +16,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit2, Trash2, MapPin, Users, CalendarDays, ArrowUpDown, ArrowUp, ArrowDown, Globe, EyeOff, CreditCard, CheckCircle, ClipboardList, X, GripVertical, Copy, Star, Tag, Percent, TicketIcon, Search, XCircle, UserCheck, Send, Gift, CheckCircle2, Loader2 } from "lucide-react";
+import { Plus, Edit2, Trash2, MapPin, Users, CalendarDays, ArrowUpDown, ArrowUp, ArrowDown, Globe, EyeOff, CreditCard, CheckCircle, ClipboardList, X, GripVertical, Copy, Star, Tag, Percent, TicketIcon, Search, XCircle, UserCheck, Send, Gift, CheckCircle2, Loader2, ChevronDown, ChevronRight, Filter } from "lucide-react";
 import { ImageUploader } from "@/components/image-uploader";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
@@ -1033,6 +1033,8 @@ interface AdminTicket {
   eventTitle: string;
   eventDate: string;
   eventLocation: string | null;
+  checkoutData: Record<string, string> | null;
+  checkoutFields: CheckoutField[] | null;
 }
 
 function useAdminTickets() {
@@ -1054,6 +1056,8 @@ function TicketsTab() {
 
   const [search, setSearch] = useState("");
   const [eventFilter, setEventFilter] = useState("all");
+  const [fieldFilters, setFieldFilters] = useState<Record<string, string>>({});
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   const [cancelTarget, setCancelTarget] = useState<AdminTicket | null>(null);
   const [reallocateTarget, setReallocateTarget] = useState<AdminTicket | null>(null);
   const [reallocateEmail, setReallocateEmail] = useState("");
@@ -1070,21 +1074,53 @@ function TicketsTab() {
       .sort((a, b) => a.title.localeCompare(b.title));
   }, [tickets]);
 
+  // Fields for the currently selected event (so we know what filters to show)
+  const currentEventFields = useMemo<CheckoutField[]>(() => {
+    if (eventFilter === "all" || !tickets) return [];
+    const eventId = Number(eventFilter);
+    const eventTicket = tickets.find(t => t.eventId === eventId);
+    return eventTicket?.checkoutFields ?? [];
+  }, [tickets, eventFilter]);
+
+  // When event filter changes, clear field-specific filters
+  const handleEventFilterChange = (val: string) => {
+    setEventFilter(val);
+    setFieldFilters({});
+    setExpandedRows(new Set());
+  };
+
+  const toggleRow = (id: number) => {
+    setExpandedRows(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
   const filtered = useMemo(() => {
     if (!tickets) return [];
     const q = search.toLowerCase();
     return tickets.filter(t => {
       if (eventFilter !== "all" && t.eventId !== Number(eventFilter)) return false;
+      // Per-field filters
+      for (const [fieldId, filterVal] of Object.entries(fieldFilters)) {
+        if (!filterVal) continue;
+        const answer = (t.checkoutData?.[fieldId] ?? "").toLowerCase();
+        if (!answer.includes(filterVal.toLowerCase())) return false;
+      }
       if (!q) return true;
+      // Search in core fields + all checkout answers
+      const checkoutValues = Object.values(t.checkoutData ?? {}).join(" ").toLowerCase();
       return (
         (t.userName ?? "").toLowerCase().includes(q) ||
         t.userEmail.toLowerCase().includes(q) ||
         t.ticketCode.toLowerCase().includes(q) ||
         t.eventTitle.toLowerCase().includes(q) ||
-        (t.giftRecipientEmail ?? "").toLowerCase().includes(q)
+        (t.giftRecipientEmail ?? "").toLowerCase().includes(q) ||
+        checkoutValues.includes(q)
       );
     });
-  }, [tickets, search, eventFilter]);
+  }, [tickets, search, eventFilter, fieldFilters]);
 
   async function handleCancel() {
     if (!cancelTarget) return;
@@ -1136,30 +1172,88 @@ function TicketsTab() {
   return (
     <div className="space-y-6">
       {/* Search + filter row */}
-      <div className="flex flex-wrap gap-3">
-        <div className="flex items-center gap-2 bg-card border border-border/50 rounded-xl px-4 py-2 shadow-lg shadow-black/5 flex-1 min-w-[200px] max-w-md">
-          <Search className="w-4 h-4 text-muted-foreground shrink-0" />
-          <Input
-            className="border-0 bg-transparent focus-visible:ring-0 px-1 h-9 shadow-none text-foreground"
-            placeholder="Search member, code, event…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+      <div className="space-y-3">
+        <div className="flex flex-wrap gap-3">
+          <div className="flex items-center gap-2 bg-card border border-border/50 rounded-xl px-4 py-2 shadow-lg shadow-black/5 flex-1 min-w-[200px] max-w-md">
+            <Search className="w-4 h-4 text-muted-foreground shrink-0" />
+            <Input
+              className="border-0 bg-transparent focus-visible:ring-0 px-1 h-9 shadow-none text-foreground"
+              placeholder="Search member, code, event, form answers…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <select
+            value={eventFilter}
+            onChange={(e) => handleEventFilterChange(e.target.value)}
+            className="rounded-xl border border-border/50 bg-card text-foreground text-sm px-3 py-2 shadow-lg shadow-black/5 focus:outline-none focus:ring-2 focus:ring-primary/40"
+          >
+            <option value="all">All events</option>
+            {events.map(e => (
+              <option key={e.id} value={e.id}>{e.title}</option>
+            ))}
+          </select>
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground self-center ml-1">
+            <TicketIcon className="w-4 h-4" />
+            {filtered.length} ticket{filtered.length !== 1 ? "s" : ""}
+          </div>
         </div>
-        <select
-          value={eventFilter}
-          onChange={(e) => setEventFilter(e.target.value)}
-          className="rounded-xl border border-border/50 bg-card text-foreground text-sm px-3 py-2 shadow-lg shadow-black/5 focus:outline-none focus:ring-2 focus:ring-primary/40"
-        >
-          <option value="all">All events</option>
-          {events.map(e => (
-            <option key={e.id} value={e.id}>{e.title}</option>
-          ))}
-        </select>
-        <div className="flex items-center gap-1.5 text-sm text-muted-foreground self-center ml-1">
-          <TicketIcon className="w-4 h-4" />
-          {filtered.length} ticket{filtered.length !== 1 ? "s" : ""}
-        </div>
+
+        {/* Per-field filters — only shown when a specific event is selected and it has checkout fields */}
+        {currentEventFields.length > 0 && (
+          <div className="flex flex-wrap gap-2 items-center">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+              <Filter className="w-3.5 h-3.5" />
+              Filter by answer:
+            </div>
+            {currentEventFields.map(field => {
+              const val = fieldFilters[field.id] ?? "";
+              // For select fields: show a dropdown of options
+              if (field.type === "select" && field.options?.length) {
+                return (
+                  <select
+                    key={field.id}
+                    value={val}
+                    onChange={e => setFieldFilters(prev => ({ ...prev, [field.id]: e.target.value }))}
+                    className="rounded-lg border border-border/50 bg-card text-foreground text-xs px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  >
+                    <option value="">{field.label}: All</option>
+                    {field.options.map(opt => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                );
+              }
+              // For other field types: text input
+              return (
+                <div key={field.id} className="relative">
+                  <Input
+                    className="h-8 text-xs rounded-lg pr-6 border-border/50 bg-card min-w-[140px] max-w-[180px]"
+                    placeholder={field.label}
+                    value={val}
+                    onChange={e => setFieldFilters(prev => ({ ...prev, [field.id]: e.target.value }))}
+                  />
+                  {val && (
+                    <button
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      onClick={() => setFieldFilters(prev => { const n = { ...prev }; delete n[field.id]; return n; })}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+            {Object.values(fieldFilters).some(Boolean) && (
+              <button
+                className="text-xs text-muted-foreground hover:text-foreground underline"
+                onClick={() => setFieldFilters({})}
+              >
+                Clear all
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Table */}
@@ -1168,7 +1262,8 @@ function TicketsTab() {
           <Table>
             <TableHeader className="bg-secondary/50 border-b border-border/50">
               <TableRow className="hover:bg-transparent">
-                <TableHead className="text-muted-foreground py-4 px-6">Member</TableHead>
+                <TableHead className="text-muted-foreground py-4 px-6 w-8"></TableHead>
+                <TableHead className="text-muted-foreground py-4">Member</TableHead>
                 <TableHead className="text-muted-foreground py-4">Event</TableHead>
                 <TableHead className="text-muted-foreground py-4">Ticket Code</TableHead>
                 <TableHead className="text-muted-foreground py-4 text-center">Paid</TableHead>
@@ -1180,99 +1275,143 @@ function TicketsTab() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                     Loading tickets…
                   </TableCell>
                 </TableRow>
               ) : filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
-                    {search || eventFilter !== "all" ? "No tickets match your search." : "No tickets yet."}
+                  <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
+                    {search || eventFilter !== "all" || Object.values(fieldFilters).some(Boolean) ? "No tickets match your filters." : "No tickets yet."}
                   </TableCell>
                 </TableRow>
               ) : (
-                filtered.map((ticket) => (
-                  <TableRow key={ticket.id} className="border-b border-border/30 hover:bg-secondary/20 transition-colors">
-                    <TableCell className="py-4 px-6">
-                      <div>
-                        <p className="font-medium text-sm leading-tight">{ticket.userName ?? "—"}</p>
-                        <p className="text-xs text-muted-foreground">{ticket.userEmail}</p>
-                        {ticket.giftRecipientEmail && (
-                          <div className="flex items-center gap-1 mt-1">
-                            <Gift className="w-3 h-3 text-primary" />
-                            <span className="text-xs text-primary">{ticket.giftRecipientEmail}</span>
+                filtered.map((ticket) => {
+                  const hasAnswers = ticket.checkoutData && Object.keys(ticket.checkoutData).length > 0;
+                  const isExpanded = expandedRows.has(ticket.id);
+                  // Resolve field labels from the event's checkout fields
+                  const fields = ticket.checkoutFields ?? [];
+                  return (
+                    <React.Fragment key={ticket.id}>
+                      <TableRow className={`border-b border-border/30 hover:bg-secondary/20 transition-colors ${isExpanded ? "bg-secondary/10" : ""}`}>
+                        <TableCell className="py-4 px-3 w-8">
+                          {hasAnswers ? (
+                            <button
+                              onClick={() => toggleRow(ticket.id)}
+                              className="text-muted-foreground hover:text-foreground transition-colors"
+                              title={isExpanded ? "Hide form answers" : "Show form answers"}
+                            >
+                              {isExpanded
+                                ? <ChevronDown className="w-4 h-4" />
+                                : <ChevronRight className="w-4 h-4" />}
+                            </button>
+                          ) : null}
+                        </TableCell>
+                        <TableCell className="py-4">
+                          <div>
+                            <p className="font-medium text-sm leading-tight">{ticket.userName ?? "—"}</p>
+                            <p className="text-xs text-muted-foreground">{ticket.userEmail}</p>
+                            {ticket.giftRecipientEmail && (
+                              <div className="flex items-center gap-1 mt-1">
+                                <Gift className="w-3 h-3 text-primary" />
+                                <span className="text-xs text-primary">{ticket.giftRecipientEmail}</span>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-4">
-                      <div>
-                        <p className="text-sm font-medium leading-tight">{ticket.eventTitle}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(ticket.eventDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-4">
-                      <code className="text-xs font-mono bg-secondary/50 px-2 py-1 rounded-md tracking-wider">
-                        {ticket.ticketCode}
-                      </code>
-                    </TableCell>
-                    <TableCell className="py-4 text-center text-sm">
-                      {formatAmount(ticket.amountPaid)}
-                    </TableCell>
-                    <TableCell className="py-4 text-center">
-                      {ticket.checkedIn ? (
-                        <Badge className="bg-green-500/15 text-green-500 border-green-500/20 gap-1 text-xs">
-                          <CheckCircle2 className="w-3 h-3" /> Checked In
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-xs text-muted-foreground">Not yet</Badge>
+                        </TableCell>
+                        <TableCell className="py-4">
+                          <div>
+                            <p className="text-sm font-medium leading-tight">{ticket.eventTitle}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(ticket.eventDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-4">
+                          <code className="text-xs font-mono bg-secondary/50 px-2 py-1 rounded-md tracking-wider">
+                            {ticket.ticketCode}
+                          </code>
+                        </TableCell>
+                        <TableCell className="py-4 text-center text-sm">
+                          {formatAmount(ticket.amountPaid)}
+                        </TableCell>
+                        <TableCell className="py-4 text-center">
+                          {ticket.checkedIn ? (
+                            <Badge className="bg-green-500/15 text-green-500 border-green-500/20 gap-1 text-xs">
+                              <CheckCircle2 className="w-3 h-3" /> Checked In
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-xs text-muted-foreground">Not yet</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="py-4 text-sm text-muted-foreground whitespace-nowrap">
+                          {formatDateTime(ticket.createdAt)}
+                        </TableCell>
+                        <TableCell className="py-4 px-6">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 text-xs gap-1.5"
+                              onClick={() => handleResend(ticket)}
+                              disabled={resending === ticket.id}
+                              title="Resend confirmation email"
+                            >
+                              {resending === ticket.id
+                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                : <Send className="w-3.5 h-3.5" />}
+                              Resend
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 text-xs gap-1.5"
+                              onClick={() => { setReallocateTarget(ticket); setReallocateEmail(""); }}
+                              title="Reallocate to another member"
+                            >
+                              <UserCheck className="w-3.5 h-3.5" />
+                              Reallocate
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 text-xs gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => setCancelTarget(ticket)}
+                              title="Cancel ticket"
+                            >
+                              <XCircle className="w-3.5 h-3.5" />
+                              Cancel
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                      {isExpanded && hasAnswers && (
+                        <TableRow key={`${ticket.id}-answers`} className="bg-secondary/10 border-b border-border/30">
+                          <TableCell colSpan={8} className="py-0 px-0">
+                            <div className="px-12 py-3 border-t border-border/20">
+                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                                <ClipboardList className="w-3.5 h-3.5" /> Checkout Form Answers
+                              </p>
+                              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-2">
+                                {Object.entries(ticket.checkoutData!).map(([fieldId, answer]) => {
+                                  const fieldDef = fields.find(f => f.id === fieldId);
+                                  const label = fieldDef?.label ?? fieldId;
+                                  return (
+                                    <div key={fieldId}>
+                                      <p className="text-xs text-muted-foreground leading-tight">{label}</p>
+                                      <p className="text-sm font-medium leading-snug break-words">{answer || "—"}</p>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
                       )}
-                    </TableCell>
-                    <TableCell className="py-4 text-sm text-muted-foreground whitespace-nowrap">
-                      {formatDateTime(ticket.createdAt)}
-                    </TableCell>
-                    <TableCell className="py-4 px-6">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 text-xs gap-1.5"
-                          onClick={() => handleResend(ticket)}
-                          disabled={resending === ticket.id}
-                          title="Resend confirmation email"
-                        >
-                          {resending === ticket.id
-                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            : <Send className="w-3.5 h-3.5" />}
-                          Resend
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 text-xs gap-1.5"
-                          onClick={() => { setReallocateTarget(ticket); setReallocateEmail(""); }}
-                          title="Reallocate to another member"
-                        >
-                          <UserCheck className="w-3.5 h-3.5" />
-                          Reallocate
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 text-xs gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => setCancelTarget(ticket)}
-                          title="Cancel ticket"
-                        >
-                          <XCircle className="w-3.5 h-3.5" />
-                          Cancel
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                    </React.Fragment>
+                  );
+                })
               )}
             </TableBody>
           </Table>
