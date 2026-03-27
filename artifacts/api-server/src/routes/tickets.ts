@@ -397,6 +397,18 @@ router.post("/gift", requireAuth, async (req: any, res) => {
   }
   const [event] = await db.select().from(eventsTable).where(eq(eventsTable.id, eventId)).limit(1);
   if (!event) { res.status(404).json({ error: "Event not found" }); return; }
+
+  // Gifter must own a paid ticket for this event first
+  const [gifterTicket] = await db
+    .select()
+    .from(ticketsTable)
+    .where(and(eq(ticketsTable.userId, gifterId), eq(ticketsTable.eventId, eventId), eq(ticketsTable.status, "paid")))
+    .limit(1);
+  if (!gifterTicket) {
+    res.status(403).json({ error: "You need to have your own ticket before gifting one." });
+    return;
+  }
+
   const isFree = !event.ticketPrice || Number(event.ticketPrice) === 0;
 
   let recipient = await db.query.usersTable.findFirst({ where: eq(usersTable.email, recipientEmail.toLowerCase()) });

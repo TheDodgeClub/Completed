@@ -91,7 +91,7 @@ export default function TicketsScreen() {
 
   const [buyingEventId, setBuyingEventId] = useState<number | null>(null);
   const [checkoutFormEvent, setCheckoutFormEvent] = useState<Event | null>(null);
-  const [giftEvent, setGiftEvent] = useState<Event | null>(null);
+  const [giftEvent, setGiftEvent] = useState<{ id: number; title: string } | null>(null);
   const [giftEmail, setGiftEmail] = useState("");
   const [giftingEventId, setGiftingEventId] = useState<number | null>(null);
 
@@ -278,6 +278,7 @@ export default function TicketsScreen() {
                     ticket={ticket}
                     Colors={Colors}
                     onPress={() => setSelectedTicket(ticket)}
+                    onGift={() => { setGiftEvent({ id: ticket.eventId, title: ticket.eventTitle }); setGiftEmail(""); }}
                   />
                 ))
               )
@@ -298,7 +299,6 @@ export default function TicketsScreen() {
                       const t = myTickets?.find(ti => ti.eventId === event.id);
                       if (t) { setSelectedTicket(t); setActiveTab("my"); }
                     }}
-                    onGift={() => { setGiftEvent(event); setGiftEmail(""); }}
                     Colors={Colors}
                   />
                 ))
@@ -383,39 +383,49 @@ export default function TicketsScreen() {
 
 /* ── Sub-components ── */
 
-function TicketCard({ ticket, Colors, onPress }: { ticket: Ticket; Colors: any; onPress: () => void }) {
+function TicketCard({ ticket, Colors, onPress, onGift }: { ticket: Ticket; Colors: any; onPress: () => void; onGift: () => void }) {
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const date = new Date(ticket.eventDate);
   const day = date.toLocaleDateString("en-GB", { day: "2-digit" });
   const month = date.toLocaleDateString("en-GB", { month: "short" }).toUpperCase();
 
   return (
-    <Pressable
-      style={({ pressed }) => [styles.ticketCard, { opacity: pressed ? 0.85 : 1 }]}
-      onPress={onPress}
-    >
-      <View style={styles.ticketCardLeft}>
-        <View style={styles.dateBadge}>
-          <Text style={styles.dateDay}>{day}</Text>
-          <Text style={styles.dateMonth}>{month}</Text>
-        </View>
-        <View style={styles.ticketInfo}>
-          <Text style={styles.ticketEventTitle} numberOfLines={2}>{ticket.eventTitle}</Text>
-          <View style={styles.ticketMeta}>
-            <Feather name="map-pin" size={11} color={Colors.textMuted} />
-            <Text style={styles.ticketMetaText} numberOfLines={1}>{ticket.eventLocation}</Text>
+    <View style={styles.ticketCardWrap}>
+      <Pressable
+        style={({ pressed }) => [styles.ticketCard, { opacity: pressed ? 0.85 : 1 }]}
+        onPress={onPress}
+      >
+        <View style={styles.ticketCardLeft}>
+          <View style={styles.dateBadge}>
+            <Text style={styles.dateDay}>{day}</Text>
+            <Text style={styles.dateMonth}>{month}</Text>
           </View>
-          <View style={styles.ticketCodeRow}>
-            <Feather name="hash" size={11} color={Colors.primary} />
-            <Text style={styles.ticketCode}>{ticket.ticketCode}</Text>
+          <View style={styles.ticketInfo}>
+            <Text style={styles.ticketEventTitle} numberOfLines={2}>{ticket.eventTitle}</Text>
+            <View style={styles.ticketMeta}>
+              <Feather name="map-pin" size={11} color={Colors.textMuted} />
+              <Text style={styles.ticketMetaText} numberOfLines={1}>{ticket.eventLocation}</Text>
+            </View>
+            <View style={styles.ticketCodeRow}>
+              <Feather name="hash" size={11} color={Colors.primary} />
+              <Text style={styles.ticketCode}>{ticket.ticketCode}</Text>
+            </View>
           </View>
         </View>
-      </View>
-      <View style={styles.qrHint}>
-        <Feather name="maximize-2" size={20} color={Colors.primary} />
-        <Text style={styles.qrHintText}>View{"\n"}QR</Text>
-      </View>
-    </Pressable>
+        <View style={styles.qrHint}>
+          <Feather name="maximize-2" size={20} color={Colors.primary} />
+          <Text style={styles.qrHintText}>View{"\n"}QR</Text>
+        </View>
+      </Pressable>
+      <Pressable
+        style={({ pressed }) => [styles.ticketGiftRow, { opacity: pressed ? 0.7 : 1 }]}
+        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onGift(); }}
+      >
+        <Feather name="gift" size={14} color={Colors.primary} />
+        <Text style={styles.ticketGiftText}>Gift a ticket to a friend</Text>
+        <Feather name="chevron-right" size={14} color={Colors.textMuted} style={{ marginLeft: "auto" }} />
+      </Pressable>
+    </View>
   );
 }
 
@@ -426,7 +436,6 @@ function EventBuyCard({
   isRegisteringFree,
   onBuy,
   onViewTicket,
-  onGift,
   Colors,
 }: {
   event: Event;
@@ -435,7 +444,6 @@ function EventBuyCard({
   isRegisteringFree: boolean;
   onBuy: () => void;
   onViewTicket: () => void;
-  onGift: () => void;
   Colors: any;
 }) {
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
@@ -517,18 +525,10 @@ function EventBuyCard({
 
       {hasTicketing && (
         hasTicket ? (
-          <View style={styles.ticketOwnerRow}>
-            <Pressable style={[styles.buyBtn, styles.buyBtnOwned, { flex: 1, marginHorizontal: 0, marginBottom: 0 }]} onPress={onViewTicket}>
-              <Feather name="check-circle" size={15} color={Colors.primary} />
-              <Text style={[styles.buyBtnText, { color: Colors.primary }]}>View My Ticket</Text>
-            </Pressable>
-            <Pressable
-              style={styles.giftBtn}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onGift(); }}
-            >
-              <Feather name="gift" size={16} color={Colors.primary} />
-            </Pressable>
-          </View>
+          <Pressable style={[styles.buyBtn, styles.buyBtnOwned]} onPress={onViewTicket}>
+            <Feather name="check-circle" size={15} color={Colors.primary} />
+            <Text style={[styles.buyBtnText, { color: Colors.primary }]}>View My Ticket</Text>
+          </Pressable>
         ) : (
           <Pressable
             style={({ pressed }) => [styles.buyBtn, { opacity: pressed || isBuying || isRegisteringFree ? 0.7 : 1 }]}
@@ -980,16 +980,34 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       color: "#fff",
     },
     /* Ticket card (my tickets) */
-    ticketCard: {
+    ticketCardWrap: {
       backgroundColor: Colors.surface,
       borderRadius: 18,
+      borderWidth: 1,
+      borderColor: Colors.border,
+      marginBottom: 12,
+      overflow: "hidden",
+    },
+    ticketCard: {
       padding: 16,
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
-      borderWidth: 1,
-      borderColor: Colors.border,
-      marginBottom: 12,
+    },
+    ticketGiftRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 11,
+      borderTopWidth: 1,
+      borderTopColor: Colors.border,
+    },
+    ticketGiftText: {
+      fontFamily: "Inter_500Medium",
+      fontSize: 13,
+      color: Colors.primary,
+      flex: 1,
     },
     ticketCardLeft: { flexDirection: "row", gap: 14, flex: 1 },
     dateBadge: {
@@ -1111,16 +1129,6 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       fontFamily: "Inter_700Bold",
       fontSize: 14,
       color: "#fff",
-    },
-    ticketOwnerRow: {
-      flexDirection: "row", alignItems: "center", gap: 10,
-      paddingHorizontal: 16, paddingBottom: 16,
-    },
-    giftBtn: {
-      width: 46, height: 46, borderRadius: 14,
-      borderWidth: 1, borderColor: Colors.primary,
-      backgroundColor: `${Colors.primary}10`,
-      alignItems: "center", justifyContent: "center", flexShrink: 0,
     },
     /* Who's Going */
     whoGoingRow: {
