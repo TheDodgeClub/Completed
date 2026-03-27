@@ -527,10 +527,6 @@ export default function HomeScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Community Pulse</Text>
-              <View style={styles.pulseLiveBadge}>
-                <View style={styles.pulseLiveDot} />
-                <Text style={styles.pulseLiveLabel}>LIVE</Text>
-              </View>
             </View>
             <View style={styles.pulseCard}>
               {activityItems.slice(0, 6).map((item: ActivityItem, idx: number) => (
@@ -1108,27 +1104,6 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       paddingBottom: 10,
     },
     /* ── Community Pulse ── */
-    pulseLiveBadge: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 5,
-      backgroundColor: "#EF444422",
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 20,
-    },
-    pulseLiveDot: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
-      backgroundColor: "#EF4444",
-    },
-    pulseLiveLabel: {
-      fontFamily: "Inter_700Bold",
-      fontSize: 10,
-      color: "#EF4444",
-      letterSpacing: 0.8,
-    },
     pulseCard: {
       backgroundColor: Colors.card,
       borderRadius: 14,
