@@ -395,6 +395,7 @@ export default function TicketsScreen() {
       {ticketTypeModalEvent && (
         <TicketTypeModal
           event={ticketTypeModalEvent}
+          quantity={pendingQuantity}
           Colors={Colors}
           onClose={() => setTicketTypeModalEvent(null)}
           onSelect={(ticketTypeId, discountCode) => {
@@ -981,11 +982,13 @@ function CheckoutFormModal({
 
 function TicketTypeModal({
   event,
+  quantity,
   Colors,
   onClose,
   onSelect,
 }: {
   event: Event;
+  quantity: number;
   Colors: any;
   onClose: () => void;
   onSelect: (ticketTypeId: number, discountCode?: string) => void;
@@ -1129,26 +1132,35 @@ function TicketTypeModal({
             )}
 
             {/* Summary + CTA */}
-            {selectedType && (
-              <View style={{ backgroundColor: Colors.background, borderRadius: 14, padding: 14, marginBottom: 16, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <View>
-                  <Text style={{ color: Colors.textSecondary, fontSize: 12 }}>Total</Text>
-                  <Text style={{ color: Colors.text, fontSize: 22, fontWeight: "700" }}>
-                    {discountedPrice === 0 || (selectedType.price === 0 && !appliedCode)
-                      ? "FREE"
-                      : discountedPrice !== null
-                        ? `£${(discountedPrice / 100).toFixed(2)}`
-                        : `£${(selectedType.price / 100).toFixed(2)}`}
-                  </Text>
-                  {appliedCode && discountedPrice !== null && discountedPrice > 0 && (
-                    <Text style={{ color: Colors.textSecondary, fontSize: 11, textDecorationLine: "line-through" }}>
-                      £{(selectedType.price / 100).toFixed(2)}
+            {selectedType && (() => {
+              const perTicketPence = discountedPrice !== null ? discountedPrice : selectedType.price;
+              const totalPence = perTicketPence * quantity;
+              const isFreeOrder = totalPence === 0;
+              const originalTotalPence = selectedType.price * quantity;
+              return (
+                <View style={{ backgroundColor: Colors.background, borderRadius: 14, padding: 14, marginBottom: 16, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <View>
+                    <Text style={{ color: Colors.textSecondary, fontSize: 12 }}>
+                      {quantity > 1 ? `Total (${quantity} tickets)` : "Total"}
                     </Text>
-                  )}
+                    <Text style={{ color: Colors.text, fontSize: 22, fontWeight: "700" }}>
+                      {isFreeOrder ? "FREE" : `£${(totalPence / 100).toFixed(2)}`}
+                    </Text>
+                    {appliedCode && discountedPrice !== null && discountedPrice > 0 && (
+                      <Text style={{ color: Colors.textSecondary, fontSize: 11, textDecorationLine: "line-through" }}>
+                        £{(originalTotalPence / 100).toFixed(2)}
+                      </Text>
+                    )}
+                    {quantity > 1 && !isFreeOrder && (
+                      <Text style={{ color: Colors.textMuted, fontSize: 11, marginTop: 2 }}>
+                        £{(perTicketPence / 100).toFixed(2)} per ticket
+                      </Text>
+                    )}
+                  </View>
+                  <Text style={{ color: Colors.textSecondary, fontSize: 13 }}>{selectedType.name}</Text>
                 </View>
-                <Text style={{ color: Colors.textSecondary, fontSize: 13 }}>{selectedType.name}</Text>
-              </View>
-            )}
+              );
+            })()}
 
             <Pressable
               onPress={handleContinue}
