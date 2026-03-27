@@ -918,13 +918,8 @@ function CheckoutFormModal({
           style={[StyleSheet.absoluteFillObject, { backgroundColor: "rgba(0,0,0,0.6)" }]}
           onPress={onClose}
         />
-        {/* KAV fills the screen and pushes sheet above keyboard on iOS */}
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={[StyleSheet.absoluteFillObject, { justifyContent: "flex-end" }]}
-          keyboardVerticalOffset={0}
-        >
-          {/* Sheet anchored to the bottom — maxHeight keeps it from filling full screen */}
+        {/* Sheet anchored to the bottom */}
+        <View style={[StyleSheet.absoluteFillObject, { justifyContent: "flex-end" }]}>
           <View style={cfStyles.sheet}>
             {/* Handle + header — always visible, never scrolls */}
             <View style={cfStyles.sheetHandle} />
@@ -946,6 +941,7 @@ function CheckoutFormModal({
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
               scrollEnabled={scrollEnabled}
+              automaticallyAdjustKeyboardInsets
             >
               {fields.map(renderField)}
 
@@ -1055,7 +1051,7 @@ function CheckoutFormModal({
               </TouchableOpacity>
             </View>
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </View>
     </Modal>
   );
