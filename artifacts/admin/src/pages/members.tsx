@@ -26,6 +26,7 @@ import {
   Pencil, Check, Star, Heart, Copy, Crown, Users, TrendingUp,
   ExternalLink, UserPlus, ShieldOff,
 } from "lucide-react";
+import LeaderboardPage from "@/pages/leaderboard";
 
 const LEVEL_NAMES = ["Beginner", "Developing", "Experienced", "Skilled", "Advanced", "Pro", "League", "Expert", "Master", "Icon"];
 const ELITE_PRICE_GBP = 8.99;
@@ -106,6 +107,10 @@ export default function Members() {
             Elite
             {!isLoading && <span className="ml-1 text-xs opacity-60">{eliteMembers.length}</span>}
           </TabsTrigger>
+          <TabsTrigger value="leaderboard" className="gap-2">
+            <Trophy className="w-4 h-4" />
+            Leaderboard
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="players" className="mt-6">
@@ -116,6 +121,9 @@ export default function Members() {
         </TabsContent>
         <TabsContent value="elite" className="mt-6">
           <EliteTab members={members} isLoading={isLoading} toast={toast} />
+        </TabsContent>
+        <TabsContent value="leaderboard" className="mt-6">
+          <LeaderboardPage />
         </TabsContent>
       </Tabs>
     </div>

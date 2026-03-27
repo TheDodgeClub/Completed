@@ -118,13 +118,7 @@ export default function Leaderboard() {
   const all = members ?? [];
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-display font-bold text-foreground">Leaderboard</h1>
-        <p className="text-muted-foreground text-sm mt-0.5">Top members ranked by XP, medals, and rings.</p>
-      </div>
-
+    <div className="space-y-6">
       {/* Top podium — top 3 by XP */}
       {all.length >= 3 && (() => {
         const top3 = [...all].sort((a, b) => (b.xp ?? 0) - (a.xp ?? 0)).slice(0, 3);

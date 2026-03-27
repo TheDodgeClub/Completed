@@ -4,8 +4,8 @@ import { useMembers } from "@/hooks/use-members";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  CalendarDays, Users, Trophy, Zap, Wifi, ArrowRight,
-  Plus, FileText, Activity, TrendingUp, Clock,
+  CalendarDays, Users, Wifi, ArrowRight,
+  Plus, FileText, Activity, TrendingUp,
 } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -56,8 +56,6 @@ export default function Dashboard() {
   });
 
   const upcomingEvents = events?.filter(e => e.isUpcoming)?.length || 0;
-  const totalMedals = members?.reduce((sum, m) => sum + m.medalsEarned, 0) || 0;
-  const totalXp = members?.reduce((sum, m) => sum + (m.xp ?? 0), 0) || 0;
   const players = members?.filter(m => !m.accountType || m.accountType === "player").length || 0;
   const supporters = members?.filter(m => m.accountType === "supporter").length || 0;
 
@@ -76,27 +74,7 @@ export default function Dashboard() {
       href: "/members",
     },
     {
-      title: "Total XP",
-      value: membersLoading ? "..." : totalXp.toLocaleString(),
-      subtext: "Earned across all members",
-      icon: Zap,
-      color: "text-yellow-600",
-      bg: "bg-yellow-600/10",
-      badgeColor: "text-yellow-600 bg-yellow-600/10",
-      href: "/leaderboard",
-    },
-    {
-      title: "Medals",
-      value: membersLoading ? "..." : totalMedals,
-      subtext: "Awarded to date",
-      icon: Trophy,
-      color: "text-orange-600",
-      bg: "bg-orange-600/10",
-      badgeColor: "text-orange-600 bg-orange-600/10",
-      href: "/leaderboard",
-    },
-    {
-      title: "Upcoming",
+      title: "Upcoming Events",
       value: eventsLoading ? "..." : upcomingEvents,
       subtext: `${events?.length || 0} events total`,
       icon: CalendarDays,
@@ -125,15 +103,6 @@ export default function Dashboard() {
       bg: "bg-blue-600/10",
       border: "border-blue-600/20",
       href: "/posts",
-    },
-    {
-      label: "Leaderboard",
-      desc: "View rankings",
-      icon: Trophy,
-      color: "text-yellow-600",
-      bg: "bg-yellow-600/10",
-      border: "border-yellow-600/20",
-      href: "/leaderboard",
     },
     {
       label: "Members",
@@ -199,7 +168,7 @@ export default function Dashboard() {
       </Card>
 
       {/* ── KPI STAT CARDS ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         {stats.map((stat) => (
           <Link key={stat.title} href={stat.href} className="block group">
             <Card className="bg-card border-border/60 shadow-sm hover:border-primary/40 hover:shadow-md transition-all duration-200 overflow-hidden relative h-full">
@@ -229,7 +198,7 @@ export default function Dashboard() {
         <div className="space-y-5">
 
           {/* Quick Actions */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <div className="grid grid-cols-3 gap-2.5">
             {quickActions.map((action) => (
               <Link key={action.label} href={action.href} className="block">
                 <div className={`rounded-xl border ${action.border} ${action.bg} p-3.5 cursor-pointer hover:brightness-95 dark:hover:brightness-110 transition-all duration-150 group`}>
@@ -243,53 +212,6 @@ export default function Dashboard() {
             ))}
           </div>
 
-          {/* Upcoming Events */}
-          <Card className="bg-card border-border/60 shadow-sm">
-            <CardHeader className="pb-2 px-4 pt-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-sm">
-                  <CalendarDays className="w-4 h-4 text-primary" />
-                  Upcoming Events
-                </CardTitle>
-                <Link href="/events">
-                  <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-md hover:bg-primary/20 transition-colors cursor-pointer">
-                    Manage →
-                  </span>
-                </Link>
-              </div>
-            </CardHeader>
-            <CardContent className="px-4 pb-4 pt-0">
-              {eventsLoading ? (
-                <div className="text-sm text-muted-foreground py-4 text-center">Loading…</div>
-              ) : !events?.filter(e => e.isUpcoming).length ? (
-                <div className="text-sm text-muted-foreground py-4 text-center">No upcoming events</div>
-              ) : (
-                <div className="space-y-2">
-                  {events.filter(e => e.isUpcoming).slice(0, 5).map((event) => (
-                    <Link key={event.id} href="/events">
-                      <div className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-secondary/50 transition-colors cursor-pointer group">
-                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                          <CalendarDays className="w-3.5 h-3.5 text-primary" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-xs text-foreground truncate">{event.title}</div>
-                          <div className="text-[11px] text-muted-foreground">
-                            {new Date(event.date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}
-                            {event.location && ` · ${event.location}`}
-                          </div>
-                        </div>
-                        <div className="shrink-0">
-                          {event.isPublished
-                            ? <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-600/10 px-1.5 py-0.5 rounded">Live</span>
-                            : <span className="text-[10px] font-semibold text-muted-foreground bg-secondary px-1.5 py-0.5 rounded">Draft</span>}
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
         </div>
 
         {/* RIGHT: Engagement stats */}
