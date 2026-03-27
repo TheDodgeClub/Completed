@@ -7,7 +7,7 @@ import { useMembers } from "@/hooks/use-members";
 import { useVideos } from "@/hooks/use-videos";
 import {
   LayoutDashboard, CalendarDays, MessageSquare,
-  ShoppingBag, Users, LogOut, Loader2, Video, Sun, Moon, Settings, Ticket
+  ShoppingBag, Users, LogOut, Loader2, Video, Sun, Moon, Settings
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/context/theme";
@@ -65,7 +65,6 @@ function SidebarNav() {
       <NavItem href="/posts" icon={MessageSquare} label="Posts" count={posts?.length} />
       <NavItem href="/videos" icon={Video} label="Videos" count={videos?.length} />
       <NavItem href="/merch" icon={ShoppingBag} label="Merch" count={merch?.length} />
-      <NavItem href="/tickets" icon={Ticket} label="Tickets" />
       <NavItem href="/members" icon={Users} label="Members" count={members?.length} />
       <NavItem href="/settings" icon={Settings} label="Settings" />
     </nav>
