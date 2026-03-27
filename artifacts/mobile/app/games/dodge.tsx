@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
-import { awardGameXp } from "@/lib/api";
+
 
 const WIN = Dimensions.get("window");
 const SCREEN_W = WIN.width;
@@ -160,7 +160,6 @@ export default function DodgeGame() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(LIVES_MAX);
-  const [awardedXp, setAwardedXp] = useState(0);
   const [playerX, setPlayerX] = useState(SCREEN_W / 2);
   const [opponents, setOpponents] = useState<Opponent[]>([]);
   const [ballPos, setBallPos] = useState<{ x: number; y: number } | null>(null);
@@ -290,13 +289,6 @@ export default function DodgeGame() {
       if (nl <= 0) {
         phaseRef.current = "dead";
         setPhase("dead");
-        const earned = Math.min(scoreRef.current * 5, 50);
-        setAwardedXp(earned);
-        if (earned > 0) {
-          awardGameXp(earned)
-            .then(() => { refreshUserRef.current(); })
-            .catch(() => {});
-        }
         return;
       }
     }
@@ -485,11 +477,6 @@ export default function DodgeGame() {
                 <Text style={styles.overlaySub}>
                   You hit {score} opponent{score !== 1 ? "s" : ""}!
                 </Text>
-                {awardedXp > 0 ? (
-                  <Text style={styles.xpLabel}>+{awardedXp} XP earned!</Text>
-                ) : (
-                  <Text style={styles.overlaySub}>Hit opponents to earn XP next time</Text>
-                )}
               </>
             )}
             <Pressable style={styles.startBtn} onPress={startGame}>

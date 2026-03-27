@@ -470,12 +470,6 @@ export async function getEliteStatus(): Promise<EliteStatus> {
 }
 
 
-export async function awardGameXp(earned: number): Promise<{ added: number; totalGameXp: number }> {
-  return apiFetch<{ added: number; totalGameXp: number }>("/users/me/game-xp", {
-    method: "POST",
-    body: JSON.stringify({ earned }),
-  });
-}
 
 export async function forgotPassword(email: string): Promise<void> {
   await apiFetch<{ message: string }>("/auth/forgot-password", {

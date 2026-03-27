@@ -40,8 +40,8 @@ function computeAttendanceXP(
   return { eventXP, currentStreak: streak, bestStreak, eventsAttended: attendedCount };
 }
 
-function computeXP(eventXP: number, medalsEarned: number, ringsEarned: number, bonusXp: number = 0, gameXp: number = 0, isElite: boolean = false): number {
-  return eventXP + medalsEarned * 300 + ringsEarned * 1000 + bonusXp + gameXp + (isElite ? 500 : 0);
+function computeXP(eventXP: number, medalsEarned: number, ringsEarned: number, bonusXp: number = 0, isElite: boolean = false): number {
+  return eventXP + medalsEarned * 300 + ringsEarned * 1000 + bonusXp + (isElite ? 500 : 0);
 }
 
 function computeLevel(xp: number): number {
@@ -60,7 +60,7 @@ function xpForNextLevel(xp: number): { current: number; next: number; level: num
   return { current: xp - currentThreshold, next: nextThreshold - currentThreshold, level };
 }
 
-async function getUserStats(userId: number, bonusXp: number = 0, gameXp: number = 0, isElite: boolean = false) {
+async function getUserStats(userId: number, bonusXp: number = 0, isElite: boolean = false) {
   const [records, awards, pastEvents] = await Promise.all([
     db.query.attendanceTable.findMany({ where: eq(attendanceTable.userId, userId) }),
     db.query.awardsTable.findMany({ where: eq(awardsTable.userId, userId) }),
@@ -70,7 +70,7 @@ async function getUserStats(userId: number, bonusXp: number = 0, gameXp: number 
   const { eventXP, currentStreak, bestStreak, eventsAttended } = computeAttendanceXP(attendedIds, pastEvents);
   const medalsEarned = records.filter(r => r.earnedMedal).length + awards.filter(a => a.type === "medal").length;
   const ringsEarned = awards.filter(a => a.type === "ring").length;
-  const xp = computeXP(eventXP, medalsEarned, ringsEarned, bonusXp, gameXp, isElite);
+  const xp = computeXP(eventXP, medalsEarned, ringsEarned, bonusXp, isElite);
   const level = computeLevel(xp);
   const xpProgress = xpForNextLevel(xp);
   return { eventsAttended, medalsEarned, ringsEarned, xp, level, xpProgress, currentStreak, bestStreak };
@@ -97,7 +97,7 @@ function toProfile(user: typeof usersTable.$inferSelect, stats: Awaited<ReturnTy
 router.get("/leaderboard", async (_req, res) => {
   const [users, allAttendance, allAwards, pastEvents] = await Promise.all([
     db.query.usersTable.findMany({
-      columns: { id: true, name: true, avatarUrl: true, username: true, bonusXp: true, gameXp: true, isElite: true, isAdmin: true },
+      columns: { id: true, name: true, avatarUrl: true, username: true, bonusXp: true, isElite: true, isAdmin: true },
       where: eq(usersTable.isAdmin, false),
     }),
     db.query.attendanceTable.findMany({ columns: { userId: true, eventId: true, earnedMedal: true } }),
@@ -138,7 +138,7 @@ router.get("/leaderboard", async (_req, res) => {
       isElite: u.isElite ?? false,
       medals,
       rings,
-      xp: computeXP(eventXP, medals, rings, u.bonusXp ?? 0, u.gameXp ?? 0, u.isElite ?? false),
+      xp: computeXP(eventXP, medals, rings, u.bonusXp ?? 0, u.isElite ?? false),
     };
   });
 
@@ -156,7 +156,7 @@ router.get("/me/rank", async (req, res) => {
 
   const [users, allAttendance, allAwards, pastEvents] = await Promise.all([
     db.query.usersTable.findMany({
-      columns: { id: true, bonusXp: true, gameXp: true, isElite: true, isAdmin: true },
+      columns: { id: true, bonusXp: true, isElite: true, isAdmin: true },
       where: eq(usersTable.isAdmin, false),
     }),
     db.query.attendanceTable.findMany({ columns: { userId: true, eventId: true, earnedMedal: true } }),
@@ -182,7 +182,7 @@ router.get("/me/rank", async (req, res) => {
     const { eventXP } = computeAttendanceXP(attendanceEventsByUser.get(u.id) ?? new Set(), pastEvents);
     const medals = (attendanceMedalsByUser.get(u.id) ?? 0) + (awardMedalsByUser.get(u.id) ?? 0);
     const rings = ringsByUser.get(u.id) ?? 0;
-    return { id: u.id, xp: computeXP(eventXP, medals, rings, u.bonusXp ?? 0, u.gameXp ?? 0, u.isElite ?? false) };
+    return { id: u.id, xp: computeXP(eventXP, medals, rings, u.bonusXp ?? 0, u.isElite ?? false) };
   });
 
   const sortedByXp = [...allUsers].sort((a, b) => b.xp - a.xp);
@@ -410,7 +410,7 @@ router.get("/", async (_req, res) => {
 router.get("/:id/profile", async (req, res) => {
   const user = await db.query.usersTable.findFirst({ where: eq(usersTable.id, Number(req.params.id)) });
   if (!user) { res.status(404).json({ error: "Not found" }); return; }
-  const stats = await getUserStats(user.id, user.bonusXp ?? 0, user.gameXp ?? 0, user.isElite ?? false);
+  const stats = await getUserStats(user.id, user.bonusXp ?? 0, user.isElite ?? false);
   res.json(toProfile(user, stats));
 });
 
@@ -552,33 +552,8 @@ router.put("/me", async (req, res) => {
   const [user] = await db.update(usersTable).set(updates).where(eq(usersTable.id, userId)).returning();
   if (!user) { res.status(404).json({ error: "Not found" }); return; }
 
-  const stats = await getUserStats(user.id, user.bonusXp ?? 0, user.gameXp ?? 0, user.isElite ?? false);
+  const stats = await getUserStats(user.id, user.bonusXp ?? 0, user.isElite ?? false);
   res.json(toProfile(user, stats));
-});
-
-/* POST /api/users/me/game-xp — award XP for completing a mini game */
-router.post("/me/game-xp", async (req, res) => {
-  const userId = req.session?.userId;
-  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
-
-  const earned = Number(req.body.earned);
-  if (isNaN(earned) || earned < 0 || earned > 50) {
-    res.status(400).json({ error: "Invalid XP amount" });
-    return;
-  }
-
-  const user = await db.query.usersTable.findFirst({ where: eq(usersTable.id, userId) });
-  if (!user) { res.status(404).json({ error: "Not found" }); return; }
-
-  const MAX_GAME_XP = 500;
-  const current = user.gameXp ?? 0;
-  const toAdd = Math.max(0, Math.min(earned, MAX_GAME_XP - current));
-
-  if (toAdd > 0) {
-    await db.update(usersTable).set({ gameXp: current + toAdd }).where(eq(usersTable.id, userId));
-  }
-
-  res.json({ added: toAdd, totalGameXp: current + toAdd });
 });
 
 /* POST /api/users/me/avatar — update avatar URL */

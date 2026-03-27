@@ -620,7 +620,7 @@ function computeAttendanceXP(attendedEventIds: Set<number>, pastEvents: { id: nu
   }
   return { eventXP, currentStreak: streak, bestStreak, eventsAttended: attendedCount };
 }
-function computeXP(eventXP: number, medals: number, rings: number, bonus: number = 0, gameXp: number = 0, isElite: boolean = false) { return eventXP + medals * 300 + rings * 1000 + bonus + gameXp + (isElite ? 500 : 0); }
+function computeXP(eventXP: number, medals: number, rings: number, bonus: number = 0, isElite: boolean = false) { return eventXP + medals * 300 + rings * 1000 + bonus + (isElite ? 500 : 0); }
 function computeLevel(xp: number) {
   let level = 1;
   for (let i = 1; i < LEVEL_THRESHOLDS.length; i++) {
@@ -663,7 +663,7 @@ router.get("/members", async (_req, res) => {
     const { eventXP, eventsAttended, currentStreak, bestStreak } = computeAttendanceXP(attendanceEventsByUser.get(u.id) ?? new Set(), pastEvents);
     const medalsEarned = (attendanceMedalsByUser.get(u.id) ?? 0) + awards.filter(a => a.type === "medal").length;
     const ringsEarned = awards.filter(a => a.type === "ring").length;
-    const xp = computeXP(eventXP, medalsEarned, ringsEarned, u.bonusXp ?? 0, u.gameXp ?? 0, u.isElite ?? false);
+    const xp = computeXP(eventXP, medalsEarned, ringsEarned, u.bonusXp ?? 0, u.isElite ?? false);
     return {
       id: u.id,
       name: u.name,
@@ -715,7 +715,7 @@ router.put("/members/:id", async (req, res) => {
   const { eventXP, eventsAttended, currentStreak, bestStreak } = computeAttendanceXP(attendedIds, pastEvents);
   const medalsEarned = records.filter(r => r.earnedMedal).length + awards.filter(a => a.type === "medal").length;
   const ringsEarned = awards.filter(a => a.type === "ring").length;
-  const xp = computeXP(eventXP, medalsEarned, ringsEarned, user.bonusXp ?? 0, user.gameXp ?? 0, user.isElite ?? false);
+  const xp = computeXP(eventXP, medalsEarned, ringsEarned, user.bonusXp ?? 0, user.isElite ?? false);
   res.json({
     id: user.id, name: user.name, email: user.email, isAdmin: user.isAdmin,
     memberSince: (user.memberSince ?? user.createdAt).toISOString(), eventsAttended, medalsEarned, ringsEarned, xp,

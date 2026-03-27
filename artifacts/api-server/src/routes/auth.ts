@@ -80,8 +80,8 @@ function computeAttendanceXP(attendedEventIds: Set<number>, pastEvents: { id: nu
   return { eventXP, currentStreak: streak, bestStreak, eventsAttended: attendedCount };
 }
 
-function computeXP(eventXP: number, medalsEarned: number, ringsEarned: number, bonusXp: number = 0, gameXp: number = 0, isElite: boolean = false): number {
-  return eventXP + medalsEarned * 300 + ringsEarned * 1000 + bonusXp + gameXp + (isElite ? 500 : 0);
+function computeXP(eventXP: number, medalsEarned: number, ringsEarned: number, bonusXp: number = 0, isElite: boolean = false): number {
+  return eventXP + medalsEarned * 300 + ringsEarned * 1000 + bonusXp + (isElite ? 500 : 0);
 }
 
 function computeLevel(xp: number): number {
@@ -127,7 +127,7 @@ function toProfile(
   };
 }
 
-async function getUserStats(userId: number, bonusXp: number = 0, gameXp: number = 0, isElite: boolean = false) {
+async function getUserStats(userId: number, bonusXp: number = 0, isElite: boolean = false) {
   const [records, awards, pastEvents] = await Promise.all([
     db.select().from(attendanceTable).where(eq(attendanceTable.userId, userId)),
     db.select().from(awardsTable).where(eq(awardsTable.userId, userId)),
@@ -137,7 +137,7 @@ async function getUserStats(userId: number, bonusXp: number = 0, gameXp: number 
   const { eventXP, currentStreak, bestStreak, eventsAttended } = computeAttendanceXP(attendedIds, pastEvents);
   const medalsEarned = records.filter(r => r.earnedMedal).length + awards.filter(a => a.type === "medal").length;
   const ringsEarned = awards.filter(a => a.type === "ring").length;
-  const xp = computeXP(eventXP, medalsEarned, ringsEarned, bonusXp, gameXp, isElite);
+  const xp = computeXP(eventXP, medalsEarned, ringsEarned, bonusXp, isElite);
   const level = computeLevel(xp);
   return { eventsAttended, medalsEarned, ringsEarned, xp, level, currentStreak, bestStreak };
 }
@@ -156,7 +156,7 @@ router.get("/me", async (req, res) => {
     return;
   }
 
-  const stats = await getUserStats(user.id, user.bonusXp ?? 0, user.gameXp ?? 0, user.isElite ?? false);
+  const stats = await getUserStats(user.id, user.bonusXp ?? 0, user.isElite ?? false);
   res.json(toProfile(user, stats));
 });
 
@@ -236,7 +236,7 @@ router.post("/login", async (req, res) => {
     return;
   }
 
-  const stats = await getUserStats(user.id, user.bonusXp ?? 0, user.gameXp ?? 0, user.isElite ?? false);
+  const stats = await getUserStats(user.id, user.bonusXp ?? 0, user.isElite ?? false);
   req.session = { userId: user.id };
   res.json({ user: toProfile(user, stats), token: String(user.id) });
 });
@@ -282,7 +282,7 @@ router.post("/google", async (req, res) => {
   }
 
   req.session = { userId: user.id };
-  const stats = await getUserStats(user.id, user.bonusXp ?? 0, user.gameXp ?? 0, user.isElite ?? false);
+  const stats = await getUserStats(user.id, user.bonusXp ?? 0, user.isElite ?? false);
   res.json({ user: toProfile(user, stats), token: String(user.id) });
 });
 
