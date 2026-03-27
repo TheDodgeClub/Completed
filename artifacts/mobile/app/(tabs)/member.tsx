@@ -679,10 +679,10 @@ export default function MemberScreen() {
         <View style={styles.quickActions}>
           <Pressable
             style={({ pressed }) => [styles.quickBtn, { opacity: pressed ? 0.8 : 1 }]}
-            onPress={() => router.push("/(tabs)/tickets")}
+            onPress={() => router.push("/(tabs)/tickets?tab=my")}
           >
             <Feather name="tag" size={20} color={Colors.primary} />
-            <Text style={styles.quickBtnText}>Tickets</Text>
+            <Text style={styles.quickBtnText}>My Tickets</Text>
           </Pressable>
         </View>
 

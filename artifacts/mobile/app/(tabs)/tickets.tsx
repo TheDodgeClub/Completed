@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback, useRef } from "react";
+import React, { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -23,6 +23,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as WebBrowser from "expo-web-browser";
 import * as Haptics from "expo-haptics";
 import QRCode from "react-native-qrcode-svg";
+import { useLocalSearchParams } from "expo-router";
 import { useColors } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -57,9 +58,14 @@ export default function TicketsScreen() {
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { tab } = useLocalSearchParams<{ tab?: string }>();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
-  const [activeTab, setActiveTab] = useState<"my" | "buy">("buy");
+  const [activeTab, setActiveTab] = useState<"my" | "buy">(tab === "my" ? "my" : "buy");
+
+  useEffect(() => {
+    if (tab === "my" || tab === "buy") setActiveTab(tab);
+  }, [tab]);
 
   const { data: events, isLoading: eventsLoading, refetch: refetchEvents } = useQuery({
     queryKey: ["all-events"],
