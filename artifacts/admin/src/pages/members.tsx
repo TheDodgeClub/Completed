@@ -18,6 +18,7 @@ import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -560,6 +561,30 @@ function PlayerDetailSheet({ member, onClose, toast }: { member: AdminMember | n
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-8">
+              {/* Account Type Toggle */}
+              <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-secondary/30 border border-border/40">
+                <div className="space-y-0.5">
+                  <p className="text-sm font-semibold text-foreground">Account Type</p>
+                  <p className="text-xs text-muted-foreground">
+                    {member.accountType === "supporter" ? "♥ Supporter — does not play but follows the club" : "Player — active dodgeball participant"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs font-medium ${member.accountType !== "supporter" ? "text-primary" : "text-muted-foreground"}`}>Player</span>
+                  <Switch
+                    checked={member.accountType === "supporter"}
+                    onCheckedChange={(checked) => {
+                      updateMember({ id: member.id, data: { accountType: checked ? "supporter" : "player" } }, {
+                        onSuccess: () => toast({ title: `Converted to ${checked ? "Supporter" : "Player"}` }),
+                        onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+                      });
+                    }}
+                    className="data-[state=checked]:bg-pink-500"
+                  />
+                  <span className={`text-xs font-medium ${member.accountType === "supporter" ? "text-pink-500" : "text-muted-foreground"}`}>Supporter</span>
+                </div>
+              </div>
+
               {/* Edit Profile */}
               <div className="space-y-3">
                 <button onClick={() => { setProfileExpanded(!profileExpanded); if (!profileExpanded) { setEditName(member.name); setEditUsername(member.username ?? ""); setEditBio(member.bio ?? ""); setEditMemberSince(member.memberSince ? member.memberSince.split("T")[0] : ""); } }} className="w-full flex items-center justify-between text-left">

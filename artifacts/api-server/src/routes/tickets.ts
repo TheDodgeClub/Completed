@@ -176,7 +176,7 @@ router.post("/checkout", requireAuth, async (req: any, res) => {
     }
 
     if (user) {
-      sendTicketConfirmationEmail({ toEmail: user.email, toName: user.name ?? user.email, eventName: event.title, eventDate: event.date, eventLocation: event.location, ticketCodes: tickets.map(t => t.ticketCode) }).catch(e => console.error("[email] send error:", e));
+      sendTicketConfirmationEmail({ toEmail: user.email, toName: user.name ?? user.email, eventName: event.title, eventDate: event.date, eventLocation: event.location, ticketCodes: tickets.map(t => t.ticketCode), eventConfig: event }).catch(e => console.error("[email] send error:", e));
     }
     res.status(201).json({ ticket, free: true });
     return;
@@ -341,7 +341,7 @@ router.get("/success", async (req, res) => {
           const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
           const [event] = await db.select().from(eventsTable).where(eq(eventsTable.id, evId)).limit(1);
           if (user && event) {
-            sendTicketConfirmationEmail({ toEmail: user.email, toName: user.name ?? user.email, eventName: event.title, eventDate: event.date, eventLocation: event.location, ticketCodes: allCodes }).catch(e => console.error("[email] send error:", e));
+            sendTicketConfirmationEmail({ toEmail: user.email, toName: user.name ?? user.email, eventName: event.title, eventDate: event.date, eventLocation: event.location, ticketCodes: allCodes, eventConfig: event }).catch(e => console.error("[email] send error:", e));
           }
         }
       } else {
@@ -366,7 +366,7 @@ router.get("/success", async (req, res) => {
         const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
         const [event] = await db.select().from(eventsTable).where(eq(eventsTable.id, evId)).limit(1);
         if (user && event) {
-          sendTicketConfirmationEmail({ toEmail: user.email, toName: user.name ?? user.email, eventName: event.title, eventDate: event.date, eventLocation: event.location, ticketCodes: allCodes }).catch(e => console.error("[email] send error:", e));
+          sendTicketConfirmationEmail({ toEmail: user.email, toName: user.name ?? user.email, eventName: event.title, eventDate: event.date, eventLocation: event.location, ticketCodes: allCodes, eventConfig: event }).catch(e => console.error("[email] send error:", e));
         }
       }
     }
@@ -473,7 +473,7 @@ router.post("/free", requireAuth, async (req: any, res) => {
 
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
   if (user) {
-    sendTicketConfirmationEmail({ toEmail: user.email, toName: user.name ?? user.email, eventName: event.title, eventDate: event.date, eventLocation: event.location, ticketCodes: tickets.map(t => t.ticketCode) }).catch(e => console.error("[email] send error:", e));
+    sendTicketConfirmationEmail({ toEmail: user.email, toName: user.name ?? user.email, eventName: event.title, eventDate: event.date, eventLocation: event.location, ticketCodes: tickets.map(t => t.ticketCode), eventConfig: event }).catch(e => console.error("[email] send error:", e));
   }
   res.status(201).json({ ticket });
 });
@@ -520,7 +520,7 @@ router.post("/gift", requireAuth, async (req: any, res) => {
 
     if (isFree) {
       const [ticket] = await db.insert(ticketsTable).values({ userId: recipient.id, eventId, status: "paid", ticketCode: generateTicketCode(), amountPaid: 0, ticketTypeId: giftTicketType?.id ?? null }).returning();
-      sendGiftEmail({ toEmail: recipient.email, toName: recipient.name ?? recipient.email, gifterName, eventName: event.title, eventDate: event.date, eventLocation: event.location, ticketCode: ticket.ticketCode }).catch(e => console.error("[email] gift send error:", e));
+      sendGiftEmail({ toEmail: recipient.email, toName: recipient.name ?? recipient.email, gifterName, eventName: event.title, eventDate: event.date, eventLocation: event.location, ticketCode: ticket.ticketCode, eventConfig: event }).catch(e => console.error("[email] gift send error:", e));
       res.status(201).json({ ticket, gifted: true });
       return;
     }
@@ -548,7 +548,7 @@ router.post("/gift", requireAuth, async (req: any, res) => {
 
   if (isFree) {
     const [ticket] = await db.insert(ticketsTable).values({ userId: gifterId, eventId, status: "paid", ticketCode: generateTicketCode(), amountPaid: 0, giftRecipientEmail: normalizedEmail, ticketTypeId: giftTicketType?.id ?? null }).returning();
-    sendGiftEmail({ toEmail: normalizedEmail, toName: normalizedEmail, gifterName, eventName: event.title, eventDate: event.date, eventLocation: event.location, ticketCode: ticket.ticketCode }).catch(e => console.error("[email] gift send error:", e));
+    sendGiftEmail({ toEmail: normalizedEmail, toName: normalizedEmail, gifterName, eventName: event.title, eventDate: event.date, eventLocation: event.location, ticketCode: ticket.ticketCode, eventConfig: event }).catch(e => console.error("[email] gift send error:", e));
     res.status(201).json({ ticket, gifted: true });
     return;
   }
@@ -588,7 +588,7 @@ router.get("/gift-success", async (req, res) => {
       const [ticket] = await db.insert(ticketsTable).values({ userId: rId, eventId: eId, status: "paid", ticketCode: generateTicketCode(), amountPaid: session.amount_total ?? 0, stripeCheckoutSessionId: session_id }).returning();
       const [recipient] = await db.select().from(usersTable).where(eq(usersTable.id, rId)).limit(1);
       if (recipient && event) {
-        sendGiftEmail({ toEmail: recipient.email, toName: recipient.name ?? recipient.email, gifterName, eventName: event.title, eventDate: event.date, eventLocation: event.location, ticketCode: ticket.ticketCode }).catch(e => console.error("[email] gift success email error:", e));
+        sendGiftEmail({ toEmail: recipient.email, toName: recipient.name ?? recipient.email, gifterName, eventName: event.title, eventDate: event.date, eventLocation: event.location, ticketCode: ticket.ticketCode, eventConfig: event }).catch(e => console.error("[email] gift success email error:", e));
       }
     }
   } else if (recipientEmail && gifterId) {
@@ -598,7 +598,7 @@ router.get("/gift-success", async (req, res) => {
     if (!existing) {
       const [ticket] = await db.insert(ticketsTable).values({ userId: gId, eventId: eId, status: "paid", ticketCode: generateTicketCode(), amountPaid: session.amount_total ?? 0, stripeCheckoutSessionId: session_id, giftRecipientEmail: normalizedEmail }).returning();
       if (event) {
-        sendGiftEmail({ toEmail: normalizedEmail, toName: normalizedEmail, gifterName, eventName: event.title, eventDate: event.date, eventLocation: event.location, ticketCode: ticket.ticketCode }).catch(e => console.error("[email] gift success email error:", e));
+        sendGiftEmail({ toEmail: normalizedEmail, toName: normalizedEmail, gifterName, eventName: event.title, eventDate: event.date, eventLocation: event.location, ticketCode: ticket.ticketCode, eventConfig: event }).catch(e => console.error("[email] gift success email error:", e));
       }
     }
   }

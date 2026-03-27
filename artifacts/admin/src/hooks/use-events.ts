@@ -33,6 +33,16 @@ export interface Event {
   ticketTypeCount: number;
   ticketTypeMinPrice: number | null;
   ticketTypeMaxPrice: number | null;
+  emailSubject: string | null;
+  emailHeaderImageUrl: string | null;
+  emailBodyText: string | null;
+  emailCtaText: string | null;
+  emailCtaUrl: string | null;
+  giftEmailSubject: string | null;
+  giftEmailHeaderImageUrl: string | null;
+  giftEmailBodyText: string | null;
+  giftEmailCtaText: string | null;
+  giftEmailCtaUrl: string | null;
 }
 
 export type EventInput = Omit<Event, "id" | "isUpcoming" | "isPublished" | "attendeeCount">;

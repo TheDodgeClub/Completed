@@ -37,6 +37,16 @@ function toAdminEvent(e: typeof eventsTable.$inferSelect, ttSummary?: TicketType
     ticketTypeCount: ttSummary?.count ?? 0,
     ticketTypeMinPrice: ttSummary?.minPrice ?? null,
     ticketTypeMaxPrice: ttSummary?.maxPrice ?? null,
+    emailSubject: e.emailSubject ?? null,
+    emailHeaderImageUrl: e.emailHeaderImageUrl ?? null,
+    emailBodyText: e.emailBodyText ?? null,
+    emailCtaText: e.emailCtaText ?? null,
+    emailCtaUrl: e.emailCtaUrl ?? null,
+    giftEmailSubject: e.giftEmailSubject ?? null,
+    giftEmailHeaderImageUrl: e.giftEmailHeaderImageUrl ?? null,
+    giftEmailBodyText: e.giftEmailBodyText ?? null,
+    giftEmailCtaText: e.giftEmailCtaText ?? null,
+    giftEmailCtaUrl: e.giftEmailCtaUrl ?? null,
   };
 }
 
@@ -72,7 +82,12 @@ router.post("/events", async (req, res) => {
 
 /* PUT /api/admin/events/:id — update */
 router.put("/events/:id", async (req, res) => {
-  const { title, description, date, location, ticketUrl, imageUrl, eliteEarlyAccess, eliteDiscountPercent, xpReward, checkInPin } = req.body;
+  const {
+    title, description, date, location, ticketUrl, imageUrl,
+    eliteEarlyAccess, eliteDiscountPercent, xpReward, checkInPin,
+    emailSubject, emailHeaderImageUrl, emailBodyText, emailCtaText, emailCtaUrl,
+    giftEmailSubject, giftEmailHeaderImageUrl, giftEmailBodyText, giftEmailCtaText, giftEmailCtaUrl,
+  } = req.body;
   const [event] = await db.update(eventsTable)
     .set({
       title, description,
@@ -84,6 +99,16 @@ router.put("/events/:id", async (req, res) => {
       eliteDiscountPercent: eliteDiscountPercent != null ? Number(eliteDiscountPercent) : null,
       xpReward: xpReward != null ? Number(xpReward) : undefined,
       checkInPin: checkInPin !== undefined ? (checkInPin || null) : undefined,
+      emailSubject: emailSubject !== undefined ? (emailSubject || null) : undefined,
+      emailHeaderImageUrl: emailHeaderImageUrl !== undefined ? (emailHeaderImageUrl || null) : undefined,
+      emailBodyText: emailBodyText !== undefined ? (emailBodyText || null) : undefined,
+      emailCtaText: emailCtaText !== undefined ? (emailCtaText || null) : undefined,
+      emailCtaUrl: emailCtaUrl !== undefined ? (emailCtaUrl || null) : undefined,
+      giftEmailSubject: giftEmailSubject !== undefined ? (giftEmailSubject || null) : undefined,
+      giftEmailHeaderImageUrl: giftEmailHeaderImageUrl !== undefined ? (giftEmailHeaderImageUrl || null) : undefined,
+      giftEmailBodyText: giftEmailBodyText !== undefined ? (giftEmailBodyText || null) : undefined,
+      giftEmailCtaText: giftEmailCtaText !== undefined ? (giftEmailCtaText || null) : undefined,
+      giftEmailCtaUrl: giftEmailCtaUrl !== undefined ? (giftEmailCtaUrl || null) : undefined,
     })
     .where(eq(eventsTable.id, Number(req.params.id)))
     .returning();
@@ -605,12 +630,13 @@ router.get("/members", async (_req, res) => {
 
 /* PUT /api/admin/members/:id — edit member profile */
 router.put("/members/:id", async (req, res) => {
-  const { name, username, bio, memberSince } = req.body;
+  const { name, username, bio, memberSince, accountType } = req.body;
   const updates: Record<string, unknown> = {};
   if (name !== undefined) updates.name = name;
   if (username !== undefined) updates.username = username || null;
   if (bio !== undefined) updates.bio = bio || null;
   if (memberSince !== undefined) updates.memberSince = memberSince ? new Date(memberSince) : null;
+  if (accountType === "player" || accountType === "supporter") updates.accountType = accountType;
 
   const [user] = await db.update(usersTable).set(updates).where(eq(usersTable.id, Number(req.params.id))).returning();
   if (!user) { res.status(404).json({ error: "Not found" }); return; }

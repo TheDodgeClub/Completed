@@ -23,6 +23,16 @@ export const eventsTable = pgTable("events", {
   eliteDiscountPercent: integer("elite_discount_percent"),
   xpReward: integer("xp_reward").notNull().default(50),
   checkInPin: text("check_in_pin"),
+  emailSubject: text("email_subject"),
+  emailHeaderImageUrl: text("email_header_image_url"),
+  emailBodyText: text("email_body_text"),
+  emailCtaText: text("email_cta_text"),
+  emailCtaUrl: text("email_cta_url"),
+  giftEmailSubject: text("gift_email_subject"),
+  giftEmailHeaderImageUrl: text("gift_email_header_image_url"),
+  giftEmailBodyText: text("gift_email_body_text"),
+  giftEmailCtaText: text("gift_email_cta_text"),
+  giftEmailCtaUrl: text("gift_email_cta_url"),
 });
 
 export type CheckoutField = {

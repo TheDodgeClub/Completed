@@ -57,9 +57,10 @@ workspace/
 - Uses Brevo transactional email API (REST, no SDK) via `BREVO_API_KEY` secret
 - Email service: `artifacts/api-server/src/services/email.ts`
 - Template variables: `{{userName}}`, `{{eventName}}`, `{{eventDate}}`, `{{eventLocation}}`, `{{ticketCode}}`
+- **Per-event email templates**: Each event has 10 email fields (`emailSubject`, `emailHeaderImageUrl`, `emailBodyText`, `emailCtaText`, `emailCtaUrl` + gift equivalents); configured via the email icon button in the Events table → opens an EmailConfigModal with Ticket/Gift tabs; blank fields fall back to global settings
+- Global sender settings (from name/email) still editable in Admin → Settings
 - Template customisable from Admin → Settings (stored in `settings` table as `emailFromName`, `emailFromAddress`, `emailSubject`, `emailBodyHtml`)
 - Default branded HTML template used if no custom body is set
-- Admin can send a test email via Settings → "Send Test Email" button (`POST /api/settings/admin/test-email`)
 
 ### Authentication & Registration
 - Email + password registration and login; 2-step onboarding (name/email/password → Player/Supporter role selection + optional referral code)
@@ -69,7 +70,7 @@ workspace/
 
 ### Data Models
 - `users` — id, email, passwordHash, name, isAdmin, avatarUrl, stripeCustomerId, **isElite**, **stripeSubscriptionId**, **eliteSince**, **accountType** (player|supporter), **referralCode**, **referredBy**
-- `events` — id, title, description, date, location, ticketUrl, imageUrl, attendeeCount, ticketPrice, ticketCapacity, stripeProductId, stripePriceId, **eliteEarlyAccess**, **eliteDiscountPercent**, **checkInPin** (TEXT, admin-set short PIN)
+- `events` — id, title, description, date, location, ticketUrl, imageUrl, attendeeCount, ticketPrice, ticketCapacity, stripeProductId, stripePriceId, **eliteEarlyAccess**, **eliteDiscountPercent**, **checkInPin** (TEXT), **emailSubject**, **emailHeaderImageUrl**, **emailBodyText**, **emailCtaText**, **emailCtaUrl**, **giftEmailSubject**, **giftEmailHeaderImageUrl**, **giftEmailBodyText**, **giftEmailCtaText**, **giftEmailCtaUrl**
 - `tickets` — id, userId, eventId, stripeCheckoutSessionId, stripePaymentIntentId, status (pending/paid/free/cancelled), ticketCode (16-char hex), checkedIn, amountPaid
 - `attendance` — id, userId, eventId, earnedMedal, attendedAt
 - `posts` — id, title, content, imageUrl, isMembersOnly, **isEliteOnly**, authorId

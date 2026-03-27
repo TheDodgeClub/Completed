@@ -1,45 +1,18 @@
 import { useEvents } from "@/hooks/use-events";
-import { usePosts } from "@/hooks/use-posts";
 import { useMerch } from "@/hooks/use-merch";
 import { useMembers } from "@/hooks/use-members";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
-  CalendarDays, MessageSquare, Users, Trophy, Zap, CircleDot,
-  Bell, Send, CheckCircle, Clock, Activity, TrendingUp, Wifi,
-  ArrowRight, Plus, FileText,
+  CalendarDays, Users, Trophy, Zap, Wifi, ArrowRight,
+  Plus, FileText, Activity, TrendingUp, Clock,
 } from "lucide-react";
 import { Link } from "wouter";
-import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
 
-const LEVEL_NAMES = ["Beginner", "Developing", "Experienced", "Skilled", "Advanced", "Pro", "League", "Expert", "Master", "Icon"];
-
-type LiveUser = {
-  id: number;
-  name: string;
-  avatarUrl: string | null;
-  lastSeenAt: string;
-};
-
-type AnnouncementRecord = {
-  id: number;
-  title: string;
-  body: string;
-  sentCount: number;
-  sentBy: string | null;
-  createdAt: string;
-};
-
-type LiveUsersData = {
-  count: number;
-  users: LiveUser[];
-};
-
+type LiveUser = { id: number; name: string; avatarUrl: string | null; lastSeenAt: string };
+type LiveUsersData = { count: number; users: LiveUser[] };
 type SessionStats = {
   totalSessions: number;
   avgDuration: number;
@@ -48,8 +21,6 @@ type SessionStats = {
   todayAvgDuration: number;
   weekSessions: number;
   weekAvgDuration: number;
-  topUsers: { userId: number; name: string; avatarUrl: string | null; sessions: number; avgDuration: number; totalSeconds: number }[];
-  dailyBreakdown: { day: string; sessions: number; avgDuration: number }[];
 };
 
 function fmtDuration(secs: number): string {
@@ -66,31 +37,9 @@ function resolveAvatarUrl(url: string | null | undefined): string | undefined {
   return url;
 }
 
-function MemberAvatar({ member }: { member: { name: string; avatarUrl: string | null } }) {
-  return (
-    <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center overflow-hidden border border-border/50 shrink-0">
-      {member.avatarUrl ? (
-        <img src={resolveAvatarUrl(member.avatarUrl)} alt={member.name} className="w-full h-full object-cover" />
-      ) : (
-        <span className="font-bold text-xs">{member.name.charAt(0)}</span>
-      )}
-    </div>
-  );
-}
-
-function RankBadge({ idx }: { idx: number }) {
-  const colors = ["text-accent", "text-slate-300", "text-amber-600"];
-  return (
-    <span className={`w-5 text-center text-sm font-bold shrink-0 ${colors[idx] ?? "text-muted-foreground"}`}>
-      {idx + 1}
-    </span>
-  );
-}
-
 export default function Dashboard() {
   const { data: user } = useAuth();
   const { data: events, isLoading: eventsLoading } = useEvents();
-  const { data: posts, isLoading: postsLoading } = usePosts();
   const { data: merch, isLoading: merchLoading } = useMerch();
   const { data: members, isLoading: membersLoading } = useMembers();
 
@@ -106,96 +55,50 @@ export default function Dashboard() {
     refetchInterval: 30000,
   });
 
-  const { data: announcementHistory, refetch: refetchHistory } = useQuery<AnnouncementRecord[]>({
-    queryKey: ["admin-announcements"],
-    queryFn: () => fetchApi<AnnouncementRecord[]>("/api/admin/announcements"),
-    staleTime: 30000,
-  });
-
-  const [notifTitle, setNotifTitle] = useState("");
-  const [notifBody, setNotifBody] = useState("");
-  const [notifSending, setNotifSending] = useState(false);
-  const [notifResult, setNotifResult] = useState<{ sent: number; failed: number } | null>(null);
-  const notifRef = useRef<HTMLDivElement>(null);
-  const [reminderSending, setReminderSending] = useState(false);
-  const [reminderResult, setReminderResult] = useState<{ sent: number; skipped: number } | null>(null);
-
-  const handleSendEventReminders = async () => {
-    setReminderSending(true);
-    setReminderResult(null);
-    try {
-      const data = await fetchApi<{ sent: number; skipped: number }>("/api/admin/notify-event-reminders", { method: "POST" });
-      setReminderResult({ sent: data.sent ?? 0, skipped: data.skipped ?? 0 });
-    } catch {
-      setReminderResult({ sent: 0, skipped: 0 });
-    } finally {
-      setReminderSending(false);
-    }
-  };
-
-  const handleSendNotification = async () => {
-    if (!notifTitle.trim() || !notifBody.trim()) return;
-    setNotifSending(true);
-    setNotifResult(null);
-    try {
-      const data = await fetchApi<{ sent: number; failed: number }>("/api/admin/notify", {
-        method: "POST",
-        body: JSON.stringify({ title: notifTitle, body: notifBody }),
-      });
-      setNotifResult({ sent: data.sent ?? 0, failed: data.failed ?? 0 });
-      setNotifTitle("");
-      setNotifBody("");
-      refetchHistory();
-    } catch {
-      setNotifResult({ sent: 0, failed: 1 });
-    } finally {
-      setNotifSending(false);
-    }
-  };
-
   const upcomingEvents = events?.filter(e => e.isUpcoming)?.length || 0;
   const totalMedals = members?.reduce((sum, m) => sum + m.medalsEarned, 0) || 0;
   const totalXp = members?.reduce((sum, m) => sum + (m.xp ?? 0), 0) || 0;
+  const players = members?.filter(m => !m.accountType || m.accountType === "player").length || 0;
+  const supporters = members?.filter(m => m.accountType === "supporter").length || 0;
 
-  const topByXp = [...(members ?? [])].sort((a, b) => (b.xp ?? 0) - (a.xp ?? 0)).slice(0, 5);
-  const topByMedals = [...(members ?? [])].sort((a, b) => b.medalsEarned - a.medalsEarned).slice(0, 5);
-  const topByRings = [...(members ?? [])].sort((a, b) => b.ringsEarned - a.ringsEarned).slice(0, 5);
+  const liveCount = liveData?.count ?? 0;
+  const liveUsers = liveData?.users ?? [];
 
   const stats = [
     {
-      title: "Total Members",
+      title: "Members",
       value: membersLoading ? "..." : members?.length || 0,
-      subtext: "Active in the club",
+      subtext: `${players} players · ${supporters} supporters`,
       icon: Users,
-      color: "text-blue-400",
-      bg: "bg-blue-400/10",
-      badgeColor: "text-blue-400 bg-blue-400/10",
+      color: "text-blue-600",
+      bg: "bg-blue-600/10",
+      badgeColor: "text-blue-600 bg-blue-600/10",
       href: "/members",
     },
     {
-      title: "Total XP Earned",
+      title: "Total XP",
       value: membersLoading ? "..." : totalXp.toLocaleString(),
-      subtext: `Across ${members?.length || 0} members`,
+      subtext: "Earned across all members",
       icon: Zap,
-      color: "text-accent",
-      bg: "bg-accent/10",
-      badgeColor: "text-accent bg-accent/10",
-      href: "/members",
+      color: "text-yellow-600",
+      bg: "bg-yellow-600/10",
+      badgeColor: "text-yellow-600 bg-yellow-600/10",
+      href: "/leaderboard",
     },
     {
-      title: "Medals Awarded",
+      title: "Medals",
       value: membersLoading ? "..." : totalMedals,
-      subtext: "To members across all events",
+      subtext: "Awarded to date",
       icon: Trophy,
-      color: "text-yellow-500",
-      bg: "bg-yellow-500/10",
-      badgeColor: "text-yellow-500 bg-yellow-500/10",
-      href: "/members",
+      color: "text-orange-600",
+      bg: "bg-orange-600/10",
+      badgeColor: "text-orange-600 bg-orange-600/10",
+      href: "/leaderboard",
     },
     {
-      title: "Upcoming Events",
+      title: "Upcoming",
       value: eventsLoading ? "..." : upcomingEvents,
-      subtext: `Out of ${events?.length || 0} total events`,
+      subtext: `${events?.length || 0} events total`,
       icon: CalendarDays,
       color: "text-primary",
       bg: "bg-primary/10",
@@ -204,51 +107,41 @@ export default function Dashboard() {
     },
   ];
 
-  const emptyState = (
-    <div className="text-sm text-muted-foreground py-4 text-center">No members yet</div>
-  );
-  const loadingState = (
-    <div className="text-sm text-muted-foreground py-4 text-center">Loading...</div>
-  );
-
-  const liveCount = liveData?.count ?? 0;
-  const liveUsers = liveData?.users ?? [];
-
   const quickActions = [
-    {
-      label: "Send Notification",
-      desc: "Broadcast to all members",
-      icon: Bell,
-      color: "text-accent",
-      bg: "bg-accent/10",
-      border: "border-accent/25",
-      onClick: () => notifRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }),
-    },
     {
       label: "Add Event",
       desc: "Schedule a new session",
       icon: Plus,
       color: "text-primary",
       bg: "bg-primary/10",
-      border: "border-primary/25",
+      border: "border-primary/20",
       href: "/events",
     },
     {
       label: "New Post",
       desc: "Publish to the feed",
       icon: FileText,
-      color: "text-blue-400",
-      bg: "bg-blue-400/10",
-      border: "border-blue-400/25",
+      color: "text-blue-600",
+      bg: "bg-blue-600/10",
+      border: "border-blue-600/20",
       href: "/posts",
     },
     {
-      label: "View Members",
-      desc: `Manage all ${members?.length ?? "..."} members`,
+      label: "Leaderboard",
+      desc: "View rankings",
+      icon: Trophy,
+      color: "text-yellow-600",
+      bg: "bg-yellow-600/10",
+      border: "border-yellow-600/20",
+      href: "/leaderboard",
+    },
+    {
+      label: "Members",
+      desc: `Manage ${members?.length ?? "..."} members`,
       icon: Users,
-      color: "text-purple-400",
-      bg: "bg-purple-400/10",
-      border: "border-purple-400/25",
+      color: "text-purple-600",
+      bg: "bg-purple-600/10",
+      border: "border-purple-600/20",
       href: "/members",
     },
   ];
@@ -257,76 +150,47 @@ export default function Dashboard() {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-display font-bold text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground mt-1">Welcome back, {user?.name}. Here's what's happening.</p>
-      </div>
-
-      {/* ── QUICK ACTIONS ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {quickActions.map((action) => {
-          const inner = (
-            <button
-              key={action.label}
-              onClick={action.onClick}
-              className={`w-full text-left rounded-2xl border ${action.border} ${action.bg} p-4 cursor-pointer hover:brightness-110 transition-all duration-150 group`}
-            >
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${action.bg} mb-3 group-hover:scale-110 transition-transform`}>
-                <action.icon className={`w-4 h-4 ${action.color}`} />
-              </div>
-              <div className={`text-sm font-bold ${action.color} mb-0.5`}>{action.label}</div>
-              <div className="text-xs text-muted-foreground">{action.desc}</div>
-            </button>
-          );
-          if (action.href) {
-            return (
-              <Link key={action.label} href={action.href} className="block">
-                {inner}
-              </Link>
-            );
-          }
-          return <div key={action.label}>{inner}</div>;
-        })}
+        <h1 className="text-2xl font-display font-bold text-foreground">Dashboard</h1>
+        <p className="text-muted-foreground text-sm mt-0.5">Welcome back, {user?.name}.</p>
       </div>
 
       {/* ── LIVE NOW BANNER ── */}
-      <Card className={`border ${liveCount > 0 ? "border-green-500/40 bg-green-500/5" : "border-border/50 bg-card"} shadow-lg shadow-black/20 transition-colors duration-500`}>
-        <CardContent className="py-4 px-5">
+      <Card className={`border ${liveCount > 0 ? "border-green-500/50 bg-green-500/5" : "border-border/50 bg-card"} shadow-sm transition-colors duration-500`}>
+        <CardContent className="py-3 px-4">
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-2 shrink-0">
               {liveCount > 0 ? (
-                <span className="relative flex h-3 w-3">
+                <span className="relative flex h-2.5 w-2.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />
                 </span>
               ) : (
-                <span className="inline-flex rounded-full h-3 w-3 bg-muted-foreground/30" />
+                <span className="inline-flex rounded-full h-2.5 w-2.5 bg-muted-foreground/30" />
               )}
-              <Wifi className={`w-4 h-4 ${liveCount > 0 ? "text-green-400" : "text-muted-foreground"}`} />
-              <span className={`font-bold text-lg ${liveCount > 0 ? "text-green-400" : "text-muted-foreground"}`}>
+              <Wifi className={`w-3.5 h-3.5 ${liveCount > 0 ? "text-green-600" : "text-muted-foreground"}`} />
+              <span className={`font-bold text-sm ${liveCount > 0 ? "text-green-600" : "text-muted-foreground"}`}>
                 {liveCount}
               </span>
-              <span className="text-sm font-medium text-muted-foreground">
-                {liveCount === 1 ? "member" : "members"} live in the app right now
+              <span className="text-xs text-muted-foreground">
+                {liveCount === 1 ? "member" : "members"} live right now
               </span>
-              <span className="text-xs text-muted-foreground/60 ml-1">(last 5 min)</span>
             </div>
             {liveUsers.length > 0 && (
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-muted-foreground/40 text-xs">—</span>
-                {liveUsers.slice(0, 8).map((u) => (
-                  <div key={u.id} className="flex items-center gap-1.5 bg-green-500/10 border border-green-500/20 rounded-full px-2 py-0.5">
-                    <div className="w-4 h-4 rounded-full bg-secondary flex items-center justify-center overflow-hidden shrink-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {liveUsers.slice(0, 6).map((u) => (
+                  <div key={u.id} className="flex items-center gap-1 bg-green-500/10 border border-green-500/20 rounded-full px-2 py-0.5">
+                    <div className="w-3.5 h-3.5 rounded-full bg-secondary flex items-center justify-center overflow-hidden shrink-0">
                       {u.avatarUrl ? (
                         <img src={resolveAvatarUrl(u.avatarUrl)} alt={u.name} className="w-full h-full object-cover" />
                       ) : (
-                        <span className="text-[8px] font-bold">{u.name.charAt(0)}</span>
+                        <span className="text-[7px] font-bold">{u.name.charAt(0)}</span>
                       )}
                     </div>
-                    <span className="text-xs font-medium text-green-300">{u.name.split(" ")[0]}</span>
+                    <span className="text-xs font-medium text-green-700 dark:text-green-300">{u.name.split(" ")[0]}</span>
                   </div>
                 ))}
-                {liveUsers.length > 8 && (
-                  <span className="text-xs text-muted-foreground">+{liveUsers.length - 8} more</span>
+                {liveUsers.length > 6 && (
+                  <span className="text-xs text-muted-foreground">+{liveUsers.length - 6} more</span>
                 )}
               </div>
             )}
@@ -334,356 +198,193 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* ── MAIN 2-COLUMN GRID ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
+      {/* ── KPI STAT CARDS ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {stats.map((stat) => (
+          <Link key={stat.title} href={stat.href} className="block group">
+            <Card className="bg-card border-border/60 shadow-sm hover:border-primary/40 hover:shadow-md transition-all duration-200 overflow-hidden relative h-full">
+              <div className="absolute inset-0 bg-gradient-to-br from-white/[0.015] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <CardHeader className="flex flex-row items-center justify-between pb-1.5 space-y-0 px-4 pt-4">
+                <CardTitle className="text-xs font-semibold text-muted-foreground tracking-wide uppercase">{stat.title}</CardTitle>
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${stat.bg}`}>
+                  <stat.icon className={`w-3.5 h-3.5 ${stat.color}`} />
+                </div>
+              </CardHeader>
+              <CardContent className="px-4 pb-4 pt-0">
+                <div className="text-2xl font-display font-bold text-foreground mb-0.5">{stat.value}</div>
+                <p className="text-[11px] text-muted-foreground mb-2">{stat.subtext}</p>
+                <div className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md ${stat.badgeColor}`}>
+                  View <ArrowRight className="w-2.5 h-2.5" />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        ))}
+      </div>
 
-        {/* LEFT: KPI cards + Leaderboards */}
-        <div className="space-y-6">
+      {/* ── MAIN 2-COL GRID ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
 
-          {/* KPI stat cards with explicit "View all →" affordance */}
-          <div className="grid grid-cols-2 gap-4">
-            {stats.map((stat) => (
-              <Link key={stat.title} href={stat.href} className="block group">
-                <Card className="bg-card border-border/50 shadow-lg shadow-black/20 hover:border-primary/40 transition-all duration-300 overflow-hidden relative h-full">
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${stat.bg} transition-transform group-hover:scale-110`}>
-                      <stat.icon className={`w-5 h-5 ${stat.color}`} />
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-4xl font-display font-bold text-foreground mb-1">{stat.value}</div>
-                    <p className="text-xs text-muted-foreground mb-3">{stat.subtext}</p>
-                    {/* Explicit CTA badge — visible affordance even before hover */}
-                    <div className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg ${stat.badgeColor}`}>
-                      View all <ArrowRight className="w-3 h-3" />
-                    </div>
-                  </CardContent>
-                </Card>
+        {/* LEFT: Quick actions + upcoming events */}
+        <div className="space-y-5">
+
+          {/* Quick Actions */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            {quickActions.map((action) => (
+              <Link key={action.label} href={action.href} className="block">
+                <div className={`rounded-xl border ${action.border} ${action.bg} p-3.5 cursor-pointer hover:brightness-95 dark:hover:brightness-110 transition-all duration-150 group`}>
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${action.bg} mb-2 group-hover:scale-110 transition-transform`}>
+                    <action.icon className={`w-3.5 h-3.5 ${action.color}`} />
+                  </div>
+                  <div className={`text-xs font-bold ${action.color} mb-0.5`}>{action.label}</div>
+                  <div className="text-[10px] text-muted-foreground leading-snug">{action.desc}</div>
+                </div>
               </Link>
             ))}
           </div>
 
-          {/* Leaderboards — 3 columns */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-
-            {/* XP Leaderboard */}
-            <Card className="bg-card border-border/50 shadow-lg shadow-black/20">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2 text-sm">
-                    <Zap className="w-4 h-4 text-accent" />
-                    XP Leaderboard
-                  </CardTitle>
-                  <Link href="/members">
-                    <span className="text-xs font-semibold text-accent bg-accent/10 px-2 py-1 rounded-lg hover:bg-accent/20 transition-colors cursor-pointer">
-                      View →
-                    </span>
-                  </Link>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-1 pt-0">
-                {membersLoading ? loadingState : topByXp.length === 0 ? emptyState : topByXp.map((member, idx) => {
-                  const maxVal = topByXp[0]?.xp ?? 1;
-                  const pct = maxVal > 0 ? Math.max(((member.xp ?? 0) / maxVal) * 100, 2) : 2;
-                  return (
-                    <Link key={member.id} href="/members">
-                      <div className="flex items-center gap-2 p-2 rounded-xl hover:bg-secondary/40 transition-colors cursor-pointer">
-                        <RankBadge idx={idx} />
-                        <MemberAvatar member={member} />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="font-semibold text-xs text-foreground truncate">{member.name}</span>
-                            <span className="text-xs text-accent font-bold shrink-0">{(member.xp ?? 0).toLocaleString()}</span>
-                          </div>
-                          <div className="h-1 bg-secondary rounded-full overflow-hidden mt-1">
-                            <div className="h-full bg-accent rounded-full" style={{ width: `${pct}%` }} />
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </CardContent>
-            </Card>
-
-            {/* Medal Leaderboard */}
-            <Card className="bg-card border-border/50 shadow-lg shadow-black/20">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2 text-sm">
-                    <Trophy className="w-4 h-4 text-yellow-500" />
-                    Medals
-                  </CardTitle>
-                  <Link href="/members">
-                    <span className="text-xs font-semibold text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded-lg hover:bg-yellow-500/20 transition-colors cursor-pointer">
-                      View →
-                    </span>
-                  </Link>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-1 pt-0">
-                {membersLoading ? loadingState : topByMedals.length === 0 ? emptyState : topByMedals.map((member, idx) => {
-                  const maxVal = topByMedals[0]?.medalsEarned ?? 1;
-                  const pct = maxVal > 0 ? Math.max((member.medalsEarned / maxVal) * 100, 2) : 2;
-                  return (
-                    <Link key={member.id} href="/members">
-                      <div className="flex items-center gap-2 p-2 rounded-xl hover:bg-secondary/40 transition-colors cursor-pointer">
-                        <RankBadge idx={idx} />
-                        <MemberAvatar member={member} />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="font-semibold text-xs text-foreground truncate">{member.name}</span>
-                            <span className="text-xs text-yellow-500 font-bold shrink-0">{member.medalsEarned} 🏅</span>
-                          </div>
-                          <div className="h-1 bg-secondary rounded-full overflow-hidden mt-1">
-                            <div className="h-full bg-yellow-500 rounded-full" style={{ width: `${pct}%` }} />
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </CardContent>
-            </Card>
-
-            {/* Ring Leaderboard */}
-            <Card className="bg-card border-border/50 shadow-lg shadow-black/20">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2 text-sm">
-                    <CircleDot className="w-4 h-4 text-purple-400" />
-                    Rings
-                  </CardTitle>
-                  <Link href="/members">
-                    <span className="text-xs font-semibold text-purple-400 bg-purple-400/10 px-2 py-1 rounded-lg hover:bg-purple-400/20 transition-colors cursor-pointer">
-                      View →
-                    </span>
-                  </Link>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-1 pt-0">
-                {membersLoading ? loadingState : topByRings.length === 0 ? emptyState : topByRings.map((member, idx) => {
-                  const maxVal = topByRings[0]?.ringsEarned ?? 1;
-                  const pct = maxVal > 0 ? Math.max((member.ringsEarned / maxVal) * 100, 2) : 2;
-                  return (
-                    <Link key={member.id} href="/members">
-                      <div className="flex items-center gap-2 p-2 rounded-xl hover:bg-secondary/40 transition-colors cursor-pointer">
-                        <RankBadge idx={idx} />
-                        <MemberAvatar member={member} />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-1">
-                            <span className="font-semibold text-xs text-foreground truncate">{member.name}</span>
-                            <span className="text-xs text-purple-400 font-bold shrink-0">{member.ringsEarned} 💍</span>
-                          </div>
-                          <div className="h-1 bg-secondary rounded-full overflow-hidden mt-1">
-                            <div className="h-full bg-purple-400 rounded-full" style={{ width: `${pct}%` }} />
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* RIGHT: Push notification + Engagement stats */}
-        <div className="space-y-4">
-
-          {/* Push Notification — promoted above fold, not buried at bottom */}
-          <div ref={notifRef}>
-            <Card className="bg-card border-accent/20 shadow-lg shadow-black/20">
-              <CardHeader className="pb-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
-                    <Bell className="w-4 h-4 text-accent" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-base">Push Notification</CardTitle>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Broadcast to all {members?.length ?? "..."} members
-                    </p>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {notifResult && (
-                  <div className={`flex items-center gap-2 p-3 rounded-xl text-sm font-medium ${notifResult.sent > 0 ? "bg-green-500/10 text-green-400 border border-green-500/20" : "bg-destructive/10 text-destructive border border-destructive/20"}`}>
-                    <CheckCircle className="w-4 h-4 shrink-0" />
-                    {notifResult.sent > 0
-                      ? `Sent to ${notifResult.sent} member${notifResult.sent !== 1 ? "s" : ""}${notifResult.failed > 0 ? ` (${notifResult.failed} failed)` : ""}`
-                      : "Failed to send — please try again"}
-                  </div>
-                )}
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground tracking-widest uppercase mb-1.5 block">Title</label>
-                  <Input
-                    placeholder="e.g. New event this Friday!"
-                    value={notifTitle}
-                    onChange={(e) => setNotifTitle(e.target.value)}
-                    className="bg-background border-border/60 focus:border-accent/50"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-muted-foreground tracking-widest uppercase mb-1.5 block">Message</label>
-                  <Textarea
-                    placeholder="e.g. Join us at the sports hall on Friday at 7pm…"
-                    value={notifBody}
-                    onChange={(e) => setNotifBody(e.target.value)}
-                    rows={3}
-                    className="bg-background border-border/60 focus:border-accent/50 resize-none"
-                  />
-                </div>
-                <Button
-                  className="w-full bg-accent text-accent-foreground hover:bg-accent/90 font-bold gap-2"
-                  onClick={handleSendNotification}
-                  disabled={notifSending || !notifTitle.trim() || !notifBody.trim()}
-                >
-                  {notifSending ? (
-                    <>Sending…</>
-                  ) : (
-                    <><Send className="w-4 h-4" /> Send to All Members</>
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Announcement History */}
-          {announcementHistory && announcementHistory.length > 0 && (
-            <Card className="bg-card border-border/50 shadow-lg shadow-black/20">
-              <CardHeader className="pb-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
-                    <Bell className="w-4 h-4 text-accent" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-base">Notification History</CardTitle>
-                    <p className="text-xs text-muted-foreground mt-0.5">Last {announcementHistory.length} broadcast{announcementHistory.length !== 1 ? "s" : ""} sent</p>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-2 pt-0">
-                {announcementHistory.map((a) => (
-                  <div key={a.id} className="flex items-start gap-3 p-3 rounded-xl bg-muted/30 border border-border/40">
-                    <div className="mt-0.5 w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                      <Send className="w-3.5 h-3.5 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline justify-between gap-2">
-                        <p className="font-semibold text-sm text-foreground truncate">{a.title}</p>
-                        <span className="text-xs text-muted-foreground shrink-0">
-                          {new Date(a.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{a.body}</p>
-                      <span className="inline-flex items-center gap-1 mt-1.5 text-xs font-medium text-green-400">
-                        <CheckCircle className="w-3 h-3" />
-                        Sent to {a.sentCount} member{a.sentCount !== 1 ? "s" : ""}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* 48h Event Reminders */}
-          <Card className="bg-card border-primary/20 shadow-lg shadow-black/20">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                  <Clock className="w-4 h-4 text-primary" />
-                </div>
-                <div>
-                  <CardTitle className="text-base">48h Event Reminders</CardTitle>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Notify ticket holders of events starting in ~48 hours
-                  </p>
-                </div>
+          {/* Upcoming Events */}
+          <Card className="bg-card border-border/60 shadow-sm">
+            <CardHeader className="pb-2 px-4 pt-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <CalendarDays className="w-4 h-4 text-primary" />
+                  Upcoming Events
+                </CardTitle>
+                <Link href="/events">
+                  <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-md hover:bg-primary/20 transition-colors cursor-pointer">
+                    Manage →
+                  </span>
+                </Link>
               </div>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {reminderResult !== null && (
-                <div className={`flex items-center gap-2 p-3 rounded-xl text-sm font-medium ${reminderResult.sent > 0 ? "bg-green-500/10 text-green-400 border border-green-500/20" : "bg-muted/50 text-muted-foreground border border-border"}`}>
-                  <CheckCircle className="w-4 h-4 shrink-0" />
-                  {reminderResult.sent > 0
-                    ? `Sent ${reminderResult.sent} reminder${reminderResult.sent !== 1 ? "s" : ""}${reminderResult.skipped > 0 ? ` (${reminderResult.skipped} already sent)` : ""}`
-                    : reminderResult.skipped > 0
-                      ? `No new reminders needed — ${reminderResult.skipped} already sent`
-                      : "No upcoming events within 48 hours"}
+            <CardContent className="px-4 pb-4 pt-0">
+              {eventsLoading ? (
+                <div className="text-sm text-muted-foreground py-4 text-center">Loading…</div>
+              ) : !events?.filter(e => e.isUpcoming).length ? (
+                <div className="text-sm text-muted-foreground py-4 text-center">No upcoming events</div>
+              ) : (
+                <div className="space-y-2">
+                  {events.filter(e => e.isUpcoming).slice(0, 5).map((event) => (
+                    <Link key={event.id} href="/events">
+                      <div className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-secondary/50 transition-colors cursor-pointer group">
+                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                          <CalendarDays className="w-3.5 h-3.5 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-xs text-foreground truncate">{event.title}</div>
+                          <div className="text-[11px] text-muted-foreground">
+                            {new Date(event.date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}
+                            {event.location && ` · ${event.location}`}
+                          </div>
+                        </div>
+                        <div className="shrink-0">
+                          {event.isPublished
+                            ? <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-600/10 px-1.5 py-0.5 rounded">Live</span>
+                            : <span className="text-[10px] font-semibold text-muted-foreground bg-secondary px-1.5 py-0.5 rounded">Draft</span>}
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
                 </div>
               )}
-              <Button
-                variant="outline"
-                className="w-full font-bold gap-2 border-primary/30 text-primary hover:bg-primary/10"
-                onClick={handleSendEventReminders}
-                disabled={reminderSending}
-              >
-                {reminderSending ? (
-                  <>Checking events…</>
-                ) : (
-                  <><Bell className="w-4 h-4" /> Send 48h Reminders Now</>
-                )}
-              </Button>
             </CardContent>
           </Card>
+        </div>
 
-          {/* Engagement stats — compact 2x2 mini cards */}
-          <Card className="bg-card border-border/50 shadow-lg shadow-black/20">
-            <CardHeader className="pb-3">
+        {/* RIGHT: Engagement stats */}
+        <div className="space-y-4">
+
+          {/* App Engagement */}
+          <Card className="bg-card border-border/60 shadow-sm">
+            <CardHeader className="pb-2 px-4 pt-4">
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Activity className="w-4 h-4 text-primary" />
                 App Engagement
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-0">
-              <div className="grid grid-cols-2 gap-3">
+            <CardContent className="px-4 pb-4 pt-0">
+              <div className="grid grid-cols-2 gap-2">
                 {[
                   {
-                    label: "Sessions Today",
+                    label: "Today",
                     value: sessionLoading ? "…" : sessionStats?.todaySessions ?? 0,
                     sub: sessionLoading ? "" : `Avg ${fmtDuration(sessionStats?.todayAvgDuration ?? 0)}`,
-                    color: "text-green-400",
-                    bg: "bg-green-400/10",
+                    color: "text-green-600",
+                    bg: "bg-green-600/8",
                   },
                   {
                     label: "Avg Session",
                     value: sessionLoading ? "…" : fmtDuration(sessionStats?.avgDuration ?? 0),
-                    sub: "All-time per session",
-                    color: "text-blue-400",
-                    bg: "bg-blue-400/10",
+                    sub: "All-time",
+                    color: "text-blue-600",
+                    bg: "bg-blue-600/8",
                   },
                   {
                     label: "This Week",
                     value: sessionLoading ? "…" : sessionStats?.weekSessions ?? 0,
                     sub: sessionLoading ? "" : `Avg ${fmtDuration(sessionStats?.weekAvgDuration ?? 0)}`,
-                    color: "text-purple-400",
-                    bg: "bg-purple-400/10",
+                    color: "text-purple-600",
+                    bg: "bg-purple-600/8",
                   },
                   {
                     label: "Total Time",
                     value: sessionLoading ? "…" : fmtDuration(sessionStats?.totalSeconds ?? 0),
                     sub: `${sessionStats?.totalSessions ?? 0} sessions`,
-                    color: "text-accent",
-                    bg: "bg-accent/10",
+                    color: "text-orange-600",
+                    bg: "bg-orange-600/8",
                   },
                 ].map((s) => (
                   <div key={s.label} className={`rounded-xl p-3 ${s.bg} border border-border/30`}>
-                    <div className="text-xs text-muted-foreground mb-1.5">{s.label}</div>
-                    <div className={`text-xl font-display font-bold ${s.color}`}>{s.value}</div>
-                    {s.sub && <div className="text-xs text-muted-foreground mt-0.5">{s.sub}</div>}
+                    <div className="text-[10px] text-muted-foreground mb-1 font-medium uppercase tracking-wide">{s.label}</div>
+                    <div className={`text-lg font-display font-bold ${s.color}`}>{s.value}</div>
+                    {s.sub && <div className="text-[10px] text-muted-foreground mt-0.5">{s.sub}</div>}
                   </div>
                 ))}
               </div>
             </CardContent>
           </Card>
+
+          {/* Quick Stats */}
+          <Card className="bg-card border-border/60 shadow-sm">
+            <CardHeader className="pb-2 px-4 pt-4">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <TrendingUp className="w-4 h-4 text-primary" />
+                Club at a Glance
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 pb-4 pt-0 space-y-2.5">
+              {[
+                {
+                  label: "Players",
+                  value: membersLoading ? "…" : players,
+                  color: "text-blue-600",
+                },
+                {
+                  label: "Supporters",
+                  value: membersLoading ? "…" : supporters,
+                  color: "text-pink-600",
+                },
+                {
+                  label: "Upcoming Events",
+                  value: eventsLoading ? "…" : upcomingEvents,
+                  color: "text-primary",
+                },
+                {
+                  label: "Merch Items",
+                  value: merch ? merch.length : "…",
+                  color: "text-purple-600",
+                },
+              ].map((row) => (
+                <div key={row.label} className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">{row.label}</span>
+                  <span className={`text-xs font-bold ${row.color}`}>{row.value}</span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
         </div>
       </div>
-
     </div>
   );
 }

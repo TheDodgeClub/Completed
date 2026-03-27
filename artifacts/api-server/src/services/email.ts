@@ -32,6 +32,19 @@ function formatDate(dateStr: string | Date | null | undefined): string {
   return d.toLocaleDateString("en-GB", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
 }
 
+export interface EventEmailConfig {
+  emailSubject?: string | null;
+  emailHeaderImageUrl?: string | null;
+  emailBodyText?: string | null;
+  emailCtaText?: string | null;
+  emailCtaUrl?: string | null;
+  giftEmailSubject?: string | null;
+  giftEmailHeaderImageUrl?: string | null;
+  giftEmailBodyText?: string | null;
+  giftEmailCtaText?: string | null;
+  giftEmailCtaUrl?: string | null;
+}
+
 export interface TicketEmailParams {
   toEmail: string;
   toName: string;
@@ -39,6 +52,7 @@ export interface TicketEmailParams {
   eventDate: string | Date | null | undefined;
   eventLocation: string | null | undefined;
   ticketCodes: string[];
+  eventConfig?: EventEmailConfig | null;
 }
 
 export interface GiftEmailParams {
@@ -49,6 +63,7 @@ export interface GiftEmailParams {
   eventDate: string | Date | null | undefined;
   eventLocation: string | null | undefined;
   ticketCode: string;
+  eventConfig?: EventEmailConfig | null;
 }
 
 const DEFAULT_SUBJECT = "Your ticket is confirmed! 🎉";
@@ -150,7 +165,7 @@ export async function sendGiftEmail(params: GiftEmailParams): Promise<void> {
     return;
   }
 
-  const [fromName, fromEmail, subjectTpl, headerImageUrl, bodyText, ctaText, ctaUrl] =
+  const [fromName, fromEmail, globalSubject, globalHeader, globalBody, globalCtaText, globalCtaUrl] =
     await Promise.all([
       getSetting("emailFromName"),
       getSetting("emailFromAddress"),
@@ -160,6 +175,13 @@ export async function sendGiftEmail(params: GiftEmailParams): Promise<void> {
       getSetting("giftEmailCtaText"),
       getSetting("giftEmailCtaUrl"),
     ]);
+
+  const ec = params.eventConfig;
+  const subjectTpl = ec?.giftEmailSubject || globalSubject;
+  const headerImageUrl = ec?.giftEmailHeaderImageUrl || globalHeader;
+  const bodyText = ec?.giftEmailBodyText || globalBody;
+  const ctaText = ec?.giftEmailCtaText || globalCtaText;
+  const ctaUrl = ec?.giftEmailCtaUrl || globalCtaUrl;
 
   const vars: Record<string, string> = {
     recipientName: params.toName,
@@ -215,7 +237,7 @@ export async function sendTicketConfirmationEmail(params: TicketEmailParams): Pr
     return;
   }
 
-  const [fromName, fromEmail, subjectTpl, rawBodyHtml, headerImageUrl, bodyText, ctaText, ctaUrl] =
+  const [fromName, fromEmail, globalSubject, rawBodyHtml, globalHeader, globalBody, globalCtaText, globalCtaUrl] =
     await Promise.all([
       getSetting("emailFromName"),
       getSetting("emailFromAddress"),
@@ -227,6 +249,13 @@ export async function sendTicketConfirmationEmail(params: TicketEmailParams): Pr
       getSetting("emailCtaUrl"),
     ]);
 
+  const ec = params.eventConfig;
+  const subjectTpl = ec?.emailSubject || globalSubject;
+  const headerImageUrl = ec?.emailHeaderImageUrl || globalHeader;
+  const bodyText = ec?.emailBodyText || globalBody;
+  const ctaText = ec?.emailCtaText || globalCtaText;
+  const ctaUrl = ec?.emailCtaUrl || globalCtaUrl;
+
   const vars: Record<string, string> = {
     userName: params.toName,
     eventName: params.eventName,
@@ -237,8 +266,8 @@ export async function sendTicketConfirmationEmail(params: TicketEmailParams): Pr
 
   const subject = interpolate(subjectTpl ?? DEFAULT_SUBJECT, vars);
 
-  // Use raw override only if explicitly set (not the old default HTML)
-  const useRawOverride = rawBodyHtml && rawBodyHtml.trim().length > 0 && !headerImageUrl && !bodyText && !ctaText;
+  // Use raw override only if explicitly set (not the old default HTML) and no per-event config
+  const useRawOverride = !ec && rawBodyHtml && rawBodyHtml.trim().length > 0 && !headerImageUrl && !bodyText && !ctaText;
   const html = interpolate(
     useRawOverride
       ? rawBodyHtml!

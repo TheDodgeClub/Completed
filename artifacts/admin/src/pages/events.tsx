@@ -16,7 +16,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit2, Trash2, MapPin, Users, CalendarDays, ArrowUpDown, ArrowUp, ArrowDown, Globe, EyeOff, CreditCard, CheckCircle, ClipboardList, X, GripVertical, Copy, Star, Tag, Percent, TicketIcon, Search, XCircle, UserCheck, Send, Gift, CheckCircle2, Loader2, ChevronDown, ChevronRight, Filter } from "lucide-react";
+import { Plus, Edit2, Trash2, MapPin, Users, CalendarDays, ArrowUpDown, ArrowUp, ArrowDown, Globe, EyeOff, CreditCard, CheckCircle, ClipboardList, X, GripVertical, Copy, Star, Tag, Percent, TicketIcon, Search, XCircle, UserCheck, Send, Gift, CheckCircle2, Loader2, ChevronDown, ChevronRight, Filter, Mail } from "lucide-react";
 import { ImageUploader } from "@/components/image-uploader";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
@@ -32,6 +32,7 @@ export default function Events() {
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [ticketEvent, setTicketEvent] = useState<Event | null>(null);
   const [checkoutEvent, setCheckoutEvent] = useState<Event | null>(null);
+  const [emailEvent, setEmailEvent] = useState<Event | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
@@ -250,6 +251,15 @@ export default function Events() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          className="h-8 w-8 rounded-lg hover:bg-emerald-400/10 hover:text-emerald-400"
+                          onClick={() => setEmailEvent(event)}
+                          title="Configure email templates for this event"
+                        >
+                          <Mail className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="h-8 w-8 rounded-lg hover:bg-violet-400/10 hover:text-violet-400"
                           onClick={() => handleDuplicate(event)}
                           disabled={isDuplicating}
@@ -290,6 +300,7 @@ export default function Events() {
       {editingEvent && <EventFormModal event={editingEvent} onClose={() => setEditingEvent(null)} />}
       {ticketEvent && <TicketPricingModal event={ticketEvent} onClose={() => setTicketEvent(null)} />}
       {checkoutEvent && <CheckoutFormModal event={checkoutEvent} onClose={() => setCheckoutEvent(null)} />}
+      {emailEvent && <EmailConfigModal event={emailEvent} onClose={() => setEmailEvent(null)} />}
 
       <DeleteConfirmDialog
         id={deleteId}
@@ -985,6 +996,126 @@ function EventFormModal({ event, onClose }: { event?: Event; onClose: () => void
             </Button>
           </div>
         </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EmailConfigModal({ event, onClose }: { event: Event; onClose: () => void }) {
+  const { mutate: update, isPending: saving } = useUpdateEvent();
+  const { toast } = useToast();
+
+  const [emailSubject, setEmailSubject] = useState(event.emailSubject ?? "");
+  const [emailHeaderImageUrl, setEmailHeaderImageUrl] = useState(event.emailHeaderImageUrl ?? "");
+  const [emailBodyText, setEmailBodyText] = useState(event.emailBodyText ?? "");
+  const [emailCtaText, setEmailCtaText] = useState(event.emailCtaText ?? "");
+  const [emailCtaUrl, setEmailCtaUrl] = useState(event.emailCtaUrl ?? "");
+  const [giftEmailSubject, setGiftEmailSubject] = useState(event.giftEmailSubject ?? "");
+  const [giftEmailHeaderImageUrl, setGiftEmailHeaderImageUrl] = useState(event.giftEmailHeaderImageUrl ?? "");
+  const [giftEmailBodyText, setGiftEmailBodyText] = useState(event.giftEmailBodyText ?? "");
+  const [giftEmailCtaText, setGiftEmailCtaText] = useState(event.giftEmailCtaText ?? "");
+  const [giftEmailCtaUrl, setGiftEmailCtaUrl] = useState(event.giftEmailCtaUrl ?? "");
+
+  const handleSave = () => {
+    update({
+      id: event.id,
+      emailSubject: emailSubject || null,
+      emailHeaderImageUrl: emailHeaderImageUrl || null,
+      emailBodyText: emailBodyText || null,
+      emailCtaText: emailCtaText || null,
+      emailCtaUrl: emailCtaUrl || null,
+      giftEmailSubject: giftEmailSubject || null,
+      giftEmailHeaderImageUrl: giftEmailHeaderImageUrl || null,
+      giftEmailBodyText: giftEmailBodyText || null,
+      giftEmailCtaText: giftEmailCtaText || null,
+      giftEmailCtaUrl: giftEmailCtaUrl || null,
+    } as any, {
+      onSuccess: () => { toast({ title: "Email templates saved" }); onClose(); },
+      onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+    });
+  };
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[560px] bg-card border-border/50 text-foreground max-h-[90vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="px-6 pt-6 pb-3 shrink-0 border-b border-border/30">
+          <DialogTitle className="font-display text-xl flex items-center gap-2">
+            <Mail className="w-5 h-5 text-emerald-400" /> Email Templates
+          </DialogTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            Override default email templates for <span className="font-semibold text-foreground">{event.title}</span>. Leave blank to use global defaults.
+          </p>
+        </DialogHeader>
+
+        <Tabs defaultValue="ticket" className="flex flex-col flex-1 min-h-0">
+          <TabsList className="mx-6 mt-4 mb-0 rounded-xl bg-secondary/60 border border-border/30 shrink-0">
+            <TabsTrigger value="ticket" className="rounded-lg gap-1.5 text-xs">
+              <Send className="w-3.5 h-3.5" /> Ticket Confirmation
+            </TabsTrigger>
+            <TabsTrigger value="gift" className="rounded-lg gap-1.5 text-xs">
+              <Gift className="w-3.5 h-3.5" /> Gift Ticket
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="ticket" className="flex-1 overflow-y-auto px-6 pb-2 pt-4 m-0 space-y-4">
+            <div className="space-y-2">
+              <Label className="text-xs">Subject Line</Label>
+              <Input value={emailSubject} onChange={e => setEmailSubject(e.target.value)} className="bg-background border-border rounded-xl" placeholder="Your ticket for {event} is confirmed!" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Header Image URL</Label>
+              <Input value={emailHeaderImageUrl} onChange={e => setEmailHeaderImageUrl(e.target.value)} className="bg-background border-border rounded-xl" placeholder="https://..." />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Email Body Text</Label>
+              <Textarea value={emailBodyText} onChange={e => setEmailBodyText(e.target.value)} rows={5} className="bg-background border-border rounded-xl resize-none text-sm" placeholder="Thanks for getting your ticket, {name}! We can't wait to see you there…" />
+              <p className="text-xs text-muted-foreground">Available variables: <code className="bg-secondary px-1 rounded">{'{name}'}</code> <code className="bg-secondary px-1 rounded">{'{event}'}</code> <code className="bg-secondary px-1 rounded">{'{date}'}</code></p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label className="text-xs">Button Label</Label>
+                <Input value={emailCtaText} onChange={e => setEmailCtaText(e.target.value)} className="bg-background border-border rounded-xl" placeholder="View Ticket" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Button URL</Label>
+                <Input value={emailCtaUrl} onChange={e => setEmailCtaUrl(e.target.value)} className="bg-background border-border rounded-xl" placeholder="https://..." />
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="gift" className="flex-1 overflow-y-auto px-6 pb-2 pt-4 m-0 space-y-4">
+            <div className="space-y-2">
+              <Label className="text-xs">Subject Line</Label>
+              <Input value={giftEmailSubject} onChange={e => setGiftEmailSubject(e.target.value)} className="bg-background border-border rounded-xl" placeholder="You've been gifted a ticket to {event}!" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Header Image URL</Label>
+              <Input value={giftEmailHeaderImageUrl} onChange={e => setGiftEmailHeaderImageUrl(e.target.value)} className="bg-background border-border rounded-xl" placeholder="https://..." />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Email Body Text</Label>
+              <Textarea value={giftEmailBodyText} onChange={e => setGiftEmailBodyText(e.target.value)} rows={5} className="bg-background border-border rounded-xl resize-none text-sm" placeholder="Great news, {recipient}! {gifter} has gifted you a ticket…" />
+              <p className="text-xs text-muted-foreground">Available variables: <code className="bg-secondary px-1 rounded">{'{recipient}'}</code> <code className="bg-secondary px-1 rounded">{'{gifter}'}</code> <code className="bg-secondary px-1 rounded">{'{event}'}</code> <code className="bg-secondary px-1 rounded">{'{date}'}</code></p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label className="text-xs">Button Label</Label>
+                <Input value={giftEmailCtaText} onChange={e => setGiftEmailCtaText(e.target.value)} className="bg-background border-border rounded-xl" placeholder="View Ticket" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Button URL</Label>
+                <Input value={giftEmailCtaUrl} onChange={e => setGiftEmailCtaUrl(e.target.value)} className="bg-background border-border rounded-xl" placeholder="https://..." />
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+
+        <div className="px-6 py-4 border-t border-border/30 flex justify-end gap-2 shrink-0">
+          <Button variant="outline" onClick={onClose} disabled={saving} className="rounded-xl border-border/50 hover:bg-secondary">Cancel</Button>
+          <Button onClick={handleSave} disabled={saving} className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white">
+            {saving ? "Saving…" : "Save Templates"}
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );

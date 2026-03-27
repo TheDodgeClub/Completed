@@ -14,6 +14,7 @@ import Members from "@/pages/members";
 import Videos from "@/pages/videos";
 import SettingsPage from "@/pages/settings";
 import TicketsPage from "@/pages/tickets";
+import LeaderboardPage from "@/pages/leaderboard";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const ProtectedMembers = makePR(Members);
 const ProtectedVideos = makePR(Videos);
 const ProtectedSettings = makePR(SettingsPage);
 const ProtectedTickets = makePR(TicketsPage);
+const ProtectedLeaderboard = makePR(LeaderboardPage);
 
 function Router() {
   return (
@@ -47,6 +49,7 @@ function Router() {
         <Route path="/members" component={ProtectedMembers} />
         <Route path="/videos" component={ProtectedVideos} />
         <Route path="/tickets" component={ProtectedTickets} />
+        <Route path="/leaderboard" component={ProtectedLeaderboard} />
         <Route path="/settings" component={ProtectedSettings} />
         <Route component={NotFound} />
       </Switch>
