@@ -223,6 +223,30 @@ export default function HomeScreen() {
           </View>
         )}
 
+        {/* ── Supporter Journey Bar — in hero, matching member progress position ── */}
+        {isAuthenticated && user?.accountType === "supporter" && (() => {
+          const sp = getSupporterProgress(user.xp ?? 0);
+          return (
+            <View style={styles.xpSection}>
+              <View style={styles.xpTopRow}>
+                <Text style={styles.xpSectionLabel}>Supporter Journey</Text>
+                <Text style={styles.xpValue}>{(user.xp ?? 0).toLocaleString()} XP</Text>
+              </View>
+              <View style={styles.xpLevelRow}>
+                <Text style={styles.xpLevelName}>{sp.current.emoji} {sp.current.name}</Text>
+              </View>
+              <View style={styles.xpBarBg}>
+                <View style={[styles.xpBarFill, { width: `${Math.round(sp.progress * 100)}%` as any }]} />
+              </View>
+              <Text style={styles.xpHint}>
+                {sp.isMax
+                  ? "Superfan status reached 🏆 You're a club legend!"
+                  : `${sp.xpToNext} XP to unlock ${sp.next!.emoji} ${sp.next!.name} — ${sp.next!.perk}`}
+              </Text>
+            </View>
+          );
+        })()}
+
         <View style={styles.heroCTARow}>
           <Pressable
             style={({ pressed }) => [styles.heroBtn, styles.heroBtnSecondary, { opacity: pressed ? 0.85 : 1 }]}
@@ -320,35 +344,6 @@ export default function HomeScreen() {
             )}
           </View>
         )}
-
-        {/* ── Supporter Journey Bar ── */}
-        {isAuthenticated && user?.accountType === "supporter" && (() => {
-          const sp = getSupporterProgress(user.xp ?? 0);
-          return (
-            <View style={styles.supporterJourneyCard}>
-              <View style={styles.supporterJourneyHeader}>
-                <Text style={styles.supporterJourneyLabel}>Supporter Journey</Text>
-                <Text style={styles.supporterJourneyXp}>{(user.xp ?? 0).toLocaleString()} XP</Text>
-              </View>
-              <Text style={styles.supporterJourneyTier}>{sp.current.emoji} {sp.current.name}</Text>
-              <View style={styles.supporterJourneyTrack}>
-                <View style={[styles.supporterJourneyFill, { width: `${Math.round(sp.progress * 100)}%` as any }]} />
-              </View>
-              <View style={styles.supporterJourneyFooter}>
-                {sp.isMax ? (
-                  <Text style={styles.supporterJourneyHint}>Superfan status reached 🏆 You're a club legend!</Text>
-                ) : (
-                  <Text style={styles.supporterJourneyHint}>
-                    {sp.xpToNext} XP to unlock {sp.next!.emoji} {sp.next!.name} — {sp.next!.perk}
-                  </Text>
-                )}
-                {!sp.isMax && (
-                  <Text style={styles.supporterJourneyNext}>{sp.next!.emoji}</Text>
-                )}
-              </View>
-            </View>
-          );
-        })()}
 
         {/* Next Upcoming Event Banner — guests only */}
         {!isAuthenticated && nextEvent && (
