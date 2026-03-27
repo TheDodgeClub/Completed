@@ -41,7 +41,6 @@ import {
   Achievement,
 } from "@/lib/api";
 import { getToken } from "@/lib/api";
-import { EliteBanner } from "@/components/EliteBanner";
 import { useAnnouncements } from "@/hooks/useAnnouncements";
 
 const LEVEL_THRESHOLDS = [0, 300, 800, 1600, 2500, 5000, 10000, 20000, 40000, 80000];
@@ -558,7 +557,7 @@ export default function MemberScreen() {
                   <Text style={styles.xpHintText}>
                     {sp.xpToNext} XP to unlock {sp.next!.emoji} {sp.next!.name} — {sp.next!.perk}
                   </Text>
-                  <Text style={styles.xpStreakHint}>Earn XP by referring friends or playing Daily Dodge</Text>
+                  <Text style={styles.xpStreakHint}>Earn XP by attending events and referring friends</Text>
                 </>
               )}
               {currentStreak >= 2 && (
@@ -685,15 +684,6 @@ export default function MemberScreen() {
             <Feather name="tag" size={20} color={Colors.primary} />
             <Text style={styles.quickBtnText}>Tickets</Text>
           </Pressable>
-          {user.accountType !== "supporter" && (
-            <Pressable
-              style={({ pressed }) => [styles.quickBtn, user.isElite ? styles.quickBtnElite : {}, { opacity: pressed ? 0.8 : 1 }]}
-              onPress={() => router.push("/elite")}
-            >
-              <Text style={{ fontFamily: "Poppins_800ExtraBold", fontSize: 18, color: Colors.accent, lineHeight: 22 }}>E</Text>
-              <Text style={styles.quickBtnText}>{user.isElite ? "Elite" : "Go Elite"}</Text>
-            </Pressable>
-          )}
         </View>
 
         {/* ── Achievement Progress — players only ── */}
@@ -758,33 +748,6 @@ export default function MemberScreen() {
           </View>
         )}
 
-        {/* ── Daily Dodge ── */}
-        <Pressable
-          style={({ pressed }) => [styles.gameCard, { opacity: pressed ? 0.88 : 1 }]}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            router.push("/games/dodge");
-          }}
-        >
-          <LinearGradient
-            colors={["#0a3d1f", "#051a0d"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.gameCardGradient}
-          >
-            <View style={styles.gameCardLeft}>
-              <Text style={styles.gameCardEmoji}>🏐</Text>
-            </View>
-            <View style={styles.gameCardBody}>
-              <Text style={styles.gameCardTitle}>DAILY DODGE</Text>
-              <Text style={styles.gameCardSub}>Play today's game — earn up to +50 XP</Text>
-            </View>
-            <View style={styles.gameCardArrow}>
-              <Feather name="play-circle" size={28} color="#FFC107" />
-            </View>
-          </LinearGradient>
-        </Pressable>
-
         {/* ── Team History ── */}
         {teamHistory && teamHistory.length > 0 && (
           <View style={styles.section}>
@@ -797,11 +760,6 @@ export default function MemberScreen() {
               ))}
             </View>
           </View>
-        )}
-
-        {/* ── Go Elite Banner — players only ── */}
-        {user.accountType !== "supporter" && (
-          <EliteBanner isElite={user.isElite ?? false} isAuthenticated={true} />
         )}
 
         {/* ── Event History ── */}
