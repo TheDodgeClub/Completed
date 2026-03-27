@@ -545,6 +545,8 @@ export default function HomeScreen() {
                         username: null,
                         bio: null,
                         preferredRole: null,
+                        accountType: item.accountType,
+                        isElite: item.isElite,
                         memberSince: item.timestamp,
                       });
                     }}

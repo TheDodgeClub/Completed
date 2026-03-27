@@ -195,32 +195,32 @@ router.get("/me/rank", async (req, res) => {
 router.get("/activity", async (_req, res) => {
   const [recentAwards, recentMembers, recentRegistrations, eliteUpgrades, recentComments] = await Promise.all([
     db.query.awardsTable.findMany({
-      with: { user: { columns: { id: true, name: true, avatarUrl: true } } },
+      with: { user: { columns: { id: true, name: true, avatarUrl: true, accountType: true, isElite: true } } },
       orderBy: [desc(awardsTable.awardedAt)],
       limit: 8,
     }),
     db.query.usersTable.findMany({
-      columns: { id: true, name: true, avatarUrl: true, createdAt: true, isAdmin: true },
+      columns: { id: true, name: true, avatarUrl: true, createdAt: true, isAdmin: true, accountType: true, isElite: true },
       orderBy: [desc(usersTable.createdAt)],
       limit: 6,
     }),
     db.query.eventRegistrationsTable.findMany({
       with: {
-        user: { columns: { id: true, name: true, avatarUrl: true } },
+        user: { columns: { id: true, name: true, avatarUrl: true, accountType: true, isElite: true } },
         event: { columns: { title: true } },
       },
       orderBy: [desc(eventRegistrationsTable.registeredAt)],
       limit: 8,
     }),
     db.query.usersTable.findMany({
-      columns: { id: true, name: true, avatarUrl: true, eliteSince: true },
+      columns: { id: true, name: true, avatarUrl: true, eliteSince: true, accountType: true },
       where: isNotNull(usersTable.eliteSince),
       orderBy: [desc(usersTable.eliteSince)],
       limit: 6,
     }),
     db.query.postCommentsTable.findMany({
       with: {
-        user: { columns: { id: true, name: true, avatarUrl: true } },
+        user: { columns: { id: true, name: true, avatarUrl: true, accountType: true, isElite: true } },
         post: { columns: { title: true } },
       },
       orderBy: [desc(postCommentsTable.createdAt)],
@@ -231,6 +231,7 @@ router.get("/activity", async (_req, res) => {
   const items: Array<{
     id: string; type: string; userId: number; userName: string;
     userAvatar: string | null; text: string; timestamp: string;
+    accountType: "player" | "supporter"; isElite: boolean;
   }> = [];
 
   for (const award of recentAwards) {
@@ -244,6 +245,8 @@ router.get("/activity", async (_req, res) => {
         ? `${award.user.name} earned a Ring 💍`
         : `${award.user.name} earned a Medal 🏅`,
       timestamp: award.awardedAt.toISOString(),
+      accountType: (award.user.accountType ?? "player") as "player" | "supporter",
+      isElite: award.user.isElite ?? false,
     });
   }
 
@@ -256,6 +259,8 @@ router.get("/activity", async (_req, res) => {
       userAvatar: member.avatarUrl ?? null,
       text: `${member.name} just joined the Dodge Club 👋`,
       timestamp: member.createdAt.toISOString(),
+      accountType: (member.accountType ?? "player") as "player" | "supporter",
+      isElite: member.isElite ?? false,
     });
   }
 
@@ -268,6 +273,8 @@ router.get("/activity", async (_req, res) => {
       userAvatar: reg.user.avatarUrl ?? null,
       text: `${reg.user.name} grabbed tickets to ${reg.event.title} 🎟️`,
       timestamp: reg.registeredAt.toISOString(),
+      accountType: (reg.user.accountType ?? "player") as "player" | "supporter",
+      isElite: reg.user.isElite ?? false,
     });
   }
 
@@ -281,6 +288,8 @@ router.get("/activity", async (_req, res) => {
       userAvatar: u.avatarUrl ?? null,
       text: `${u.name} went Elite ⚡`,
       timestamp: u.eliteSince.toISOString(),
+      accountType: (u.accountType ?? "player") as "player" | "supporter",
+      isElite: true,
     });
   }
 
@@ -293,6 +302,8 @@ router.get("/activity", async (_req, res) => {
       userAvatar: comment.user.avatarUrl ?? null,
       text: `${comment.user.name} commented on "${comment.post.title}" 💬`,
       timestamp: comment.createdAt.toISOString(),
+      accountType: (comment.user.accountType ?? "player") as "player" | "supporter",
+      isElite: comment.user.isElite ?? false,
     });
   }
 

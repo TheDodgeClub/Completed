@@ -674,6 +674,8 @@ export type ActivityItem = {
   userAvatar: string | null;
   text: string;
   timestamp: string;
+  accountType: "player" | "supporter";
+  isElite: boolean;
 };
 
 export async function getActivity(): Promise<ActivityItem[]> {
