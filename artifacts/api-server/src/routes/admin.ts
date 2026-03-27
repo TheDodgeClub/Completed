@@ -214,6 +214,105 @@ router.get("/events/:id/tickets", async (req, res) => {
   res.json(tickets);
 });
 
+/* ========== TICKET MANAGEMENT ========== */
+
+/* GET /api/admin/tickets — all paid tickets with member + event info */
+router.get("/tickets", async (req, res) => {
+  const rows = await db
+    .select({
+      id: ticketsTable.id,
+      ticketCode: ticketsTable.ticketCode,
+      status: ticketsTable.status,
+      amountPaid: ticketsTable.amountPaid,
+      checkedIn: ticketsTable.checkedIn,
+      checkedInAt: ticketsTable.checkedInAt,
+      giftRecipientEmail: ticketsTable.giftRecipientEmail,
+      createdAt: ticketsTable.createdAt,
+      userId: ticketsTable.userId,
+      userName: usersTable.name,
+      userEmail: usersTable.email,
+      eventId: eventsTable.id,
+      eventTitle: eventsTable.title,
+      eventDate: eventsTable.date,
+      eventLocation: eventsTable.location,
+    })
+    .from(ticketsTable)
+    .innerJoin(usersTable, eq(ticketsTable.userId, usersTable.id))
+    .innerJoin(eventsTable, eq(ticketsTable.eventId, eventsTable.id))
+    .where(eq(ticketsTable.status, "paid"))
+    .orderBy(desc(ticketsTable.createdAt));
+  res.json(rows);
+});
+
+/* DELETE /api/admin/tickets/:id — cancel a ticket */
+router.delete("/tickets/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  const [ticket] = await db
+    .update(ticketsTable)
+    .set({ status: "cancelled" })
+    .where(eq(ticketsTable.id, id))
+    .returning();
+  if (!ticket) { res.status(404).json({ error: "Ticket not found" }); return; }
+  res.json({ ok: true, ticket });
+});
+
+/* PUT /api/admin/tickets/:id/reallocate — reassign ticket to another user */
+router.put("/tickets/:id/reallocate", async (req, res) => {
+  const id = Number(req.params.id);
+  const { email } = req.body as { email?: string };
+  if (!email) { res.status(400).json({ error: "email required" }); return; }
+  const newOwner = await db.query.usersTable.findFirst({ where: eq(usersTable.email, email.toLowerCase()) });
+  if (!newOwner) { res.status(404).json({ error: "No member found with that email address" }); return; }
+  const [ticket] = await db.select().from(ticketsTable).where(eq(ticketsTable.id, id)).limit(1);
+  if (!ticket) { res.status(404).json({ error: "Ticket not found" }); return; }
+  // Check new owner doesn't already have a ticket for this event
+  const [existing] = await db.select().from(ticketsTable)
+    .where(and(eq(ticketsTable.userId, newOwner.id), eq(ticketsTable.eventId, ticket.eventId), eq(ticketsTable.status, "paid")))
+    .limit(1);
+  if (existing && existing.id !== id) {
+    res.status(409).json({ error: "That member already has a ticket for this event" }); return;
+  }
+  const [updated] = await db
+    .update(ticketsTable)
+    .set({ userId: newOwner.id, giftRecipientEmail: null })
+    .where(eq(ticketsTable.id, id))
+    .returning();
+  res.json({ ok: true, ticket: updated, newOwner: { id: newOwner.id, name: newOwner.name, email: newOwner.email } });
+});
+
+/* POST /api/admin/tickets/:id/resend — resend ticket confirmation email */
+router.post("/tickets/:id/resend", async (req, res) => {
+  const id = Number(req.params.id);
+  const [row] = await db
+    .select({
+      ticketCode: ticketsTable.ticketCode,
+      giftRecipientEmail: ticketsTable.giftRecipientEmail,
+      userName: usersTable.name,
+      userEmail: usersTable.email,
+      eventTitle: eventsTable.title,
+      eventDate: eventsTable.date,
+      eventLocation: eventsTable.location,
+    })
+    .from(ticketsTable)
+    .innerJoin(usersTable, eq(ticketsTable.userId, usersTable.id))
+    .innerJoin(eventsTable, eq(ticketsTable.eventId, eventsTable.id))
+    .where(eq(ticketsTable.id, id))
+    .limit(1);
+  if (!row) { res.status(404).json({ error: "Ticket not found" }); return; }
+  const { sendTicketConfirmationEmail } = await import("../services/email");
+  const toEmail = row.giftRecipientEmail ?? row.userEmail;
+  const toName = row.giftRecipientEmail ? row.giftRecipientEmail : (row.userName ?? row.userEmail);
+  await sendTicketConfirmationEmail({
+    toEmail,
+    toName,
+    eventName: row.eventTitle,
+    eventDate: row.eventDate,
+    eventLocation: row.eventLocation,
+    ticketCode: row.ticketCode,
+  });
+  res.json({ ok: true, sentTo: toEmail });
+});
+
 /* ========== POSTS ========== */
 
 /* GET /api/admin/posts — list all */
