@@ -899,7 +899,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     eventTextCardCountdown: {
       fontFamily: "Inter_600SemiBold",
       fontSize: 11,
-      color: "#FFC107",
+      color: Colors.primary,
       marginTop: 3,
     },
     /* ── Supporter Onboarding Card ── */

@@ -40,13 +40,15 @@ import {
 
 function getCountdown(dateStr: string): string | null {
   const diff = new Date(dateStr).getTime() - Date.now();
-  if (diff <= 0 || diff > 30 * 86400000) return null;
+  if (diff <= 0 || diff > 60 * 86400000) return null;
   const d = Math.floor(diff / 86400000);
   const h = Math.floor((diff % 86400000) / 3600000);
   const m = Math.floor((diff % 3600000) / 60000);
-  if (d > 0) return `${d}d ${h}h`;
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
+  if (d >= 2) return `${d} days`;
+  if (d === 1) return "Tomorrow";
+  if (h >= 1) return `${h}h`;
+  if (m >= 1) return `${m} mins`;
+  return "Starting soon!";
 }
 
 export default function TicketsScreen() {
@@ -212,8 +214,14 @@ export default function TicketsScreen() {
               {nextClubEvent.title}
             </Text>
             <View style={styles.countdownStripChip}>
-              <Feather name="clock" size={11} color="#FFC107" />
-              <Text style={styles.countdownStripChipText}>{nextClubCountdown}</Text>
+              <Feather name="clock" size={11} color={Colors.primary} />
+              <Text style={styles.countdownStripChipText}>
+                {nextClubCountdown === "Tomorrow"
+                  ? "Tomorrow's event"
+                  : nextClubCountdown === "Starting soon!"
+                  ? "Starting soon!"
+                  : `${nextClubCountdown} till next event`}
+              </Text>
             </View>
           </View>
         )}
@@ -892,25 +900,25 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       flexDirection: "row",
       alignItems: "center",
       gap: 8,
-      backgroundColor: "rgba(255,193,7,0.07)",
+      backgroundColor: `${Colors.primary}12`,
       borderRadius: 10,
       paddingHorizontal: 12,
       paddingVertical: 8,
       marginBottom: 14,
       borderWidth: 1,
-      borderColor: "rgba(255,193,7,0.2)",
+      borderColor: `${Colors.primary}30`,
     },
     countdownStripEvent: { flex: 1, fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.text },
     countdownStripChip: {
       flexDirection: "row",
       alignItems: "center",
       gap: 4,
-      backgroundColor: "rgba(255,193,7,0.15)",
+      backgroundColor: `${Colors.primary}20`,
       borderRadius: 20,
       paddingHorizontal: 8,
       paddingVertical: 4,
     },
-    countdownStripChipText: { fontFamily: "Inter_700Bold", fontSize: 11, color: "#FFC107" },
+    countdownStripChipText: { fontFamily: "Inter_700Bold", fontSize: 11, color: Colors.primary },
     tabs: {
       flexDirection: "row",
       gap: 0,

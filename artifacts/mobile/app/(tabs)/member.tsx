@@ -650,7 +650,7 @@ export default function MemberScreen() {
             </Text>
           </View>
           <View style={styles.countdownChip}>
-            <Feather name="clock" size={11} color="#FFC107" />
+            <Feather name="clock" size={11} color={Colors.primary} />
             <Text style={styles.countdownChipText}>
               {nextClubCountdown === "Tomorrow"
                 ? "Tomorrow's event"
@@ -1029,14 +1029,14 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       flexDirection: "row",
       alignItems: "center",
       gap: 4,
-      backgroundColor: "rgba(255,193,7,0.12)",
+      backgroundColor: `${Colors.primary}15`,
       borderRadius: 20,
       paddingHorizontal: 10,
       paddingVertical: 5,
       borderWidth: 1,
-      borderColor: "rgba(255,193,7,0.4)",
+      borderColor: `${Colors.primary}40`,
     },
-    countdownChipText: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: "#FFC107" },
+    countdownChipText: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: Colors.primary },
 
     /* Stats */
     statsSection: {
