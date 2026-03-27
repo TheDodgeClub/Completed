@@ -336,30 +336,6 @@ function EventCard({
             </div>
           </div>
 
-          {/* Elite perks */}
-          <div className="p-3 bg-yellow-500/5 rounded-xl border border-yellow-500/20 space-y-2">
-            <Label className="text-xs text-yellow-500 font-semibold flex items-center gap-1.5"><Star className="w-3.5 h-3.5" /> Elite Member Perks</Label>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id={`elite-${event.id}`}
-                checked={eliteEarlyAccess}
-                onCheckedChange={(c) => setEliteEarlyAccess(c === true)}
-                className="border-yellow-500/50 data-[state=checked]:bg-yellow-500 data-[state=checked]:border-yellow-500"
-              />
-              <label htmlFor={`elite-${event.id}`} className="text-xs cursor-pointer">Elite Early Ticket Access</label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Label className="text-xs text-muted-foreground shrink-0">Discount %</Label>
-              <Input
-                type="number" min={0} max={100}
-                value={eliteDiscountPercent}
-                onChange={e => setEliteDiscountPercent(e.target.value)}
-                placeholder="e.g. 10"
-                className="bg-background border-border/50 rounded-lg h-7 text-sm w-24"
-              />
-            </div>
-          </div>
-
           {/* Save button */}
           <div className="flex justify-end">
             <Button onClick={handleSave} disabled={saving} className="rounded-xl bg-primary hover:bg-primary/90 text-white px-6">
@@ -1107,6 +1083,7 @@ function EmailConfigModal({ event, onClose }: { event: Event; onClose: () => voi
   const { mutate: update, isPending: saving } = useUpdateEvent();
   const { toast } = useToast();
 
+  const [activeTab, setActiveTab] = useState<"ticket" | "gift">("ticket");
   const [emailSubject, setEmailSubject] = useState(event.emailSubject ?? "");
   const [emailHeaderImageUrl, setEmailHeaderImageUrl] = useState(event.emailHeaderImageUrl ?? "");
   const [emailBodyText, setEmailBodyText] = useState(event.emailBodyText ?? "");
@@ -1119,6 +1096,29 @@ function EmailConfigModal({ event, onClose }: { event: Event; onClose: () => voi
   const [giftEmailCtaText, setGiftEmailCtaText] = useState(event.giftEmailCtaText ?? "");
   const [giftEmailCtaUrl, setGiftEmailCtaUrl] = useState(event.giftEmailCtaUrl ?? "");
   const [giftEmailVideoUrl, setGiftEmailVideoUrl] = useState(event.giftEmailVideoUrl ?? "");
+  const [testEmail, setTestEmail] = useState("");
+  const [isSendingTest, setIsSendingTest] = useState(false);
+
+  const handleSendTest = async () => {
+    if (!testEmail.trim()) { toast({ title: "Enter an email address to send the test to", variant: "destructive" }); return; }
+    setIsSendingTest(true);
+    try {
+      const res = await fetchApi<{ ok: boolean; sentTo: string }>(`/api/admin/events/${event.id}/test-email`, {
+        method: "POST",
+        body: JSON.stringify({
+          type: activeTab,
+          toEmail: testEmail.trim(),
+          emailSubject, emailHeaderImageUrl, emailBodyText, emailCtaText, emailCtaUrl, emailVideoUrl,
+          giftEmailSubject, giftEmailHeaderImageUrl, giftEmailBodyText, giftEmailCtaText, giftEmailCtaUrl, giftEmailVideoUrl,
+        }),
+      });
+      toast({ title: `Test email sent to ${res.sentTo}` });
+    } catch (err: any) {
+      toast({ title: "Failed to send test email", description: err.message, variant: "destructive" });
+    } finally {
+      setIsSendingTest(false);
+    }
+  };
 
   const handleSave = () => {
     update({
@@ -1153,7 +1153,7 @@ function EmailConfigModal({ event, onClose }: { event: Event; onClose: () => voi
           </p>
         </DialogHeader>
 
-        <Tabs defaultValue="ticket" className="flex flex-col flex-1 min-h-0">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "ticket" | "gift")} className="flex flex-col flex-1 min-h-0">
           <TabsList className="mx-6 mt-4 mb-0 rounded-xl bg-secondary/60 border border-border/30 shrink-0">
             <TabsTrigger value="ticket" className="rounded-lg gap-1.5 text-xs">
               <Send className="w-3.5 h-3.5" /> Ticket Confirmation
@@ -1168,11 +1168,11 @@ function EmailConfigModal({ event, onClose }: { event: Event; onClose: () => voi
               <Label className="text-xs">Subject Line</Label>
               <Input value={emailSubject} onChange={e => setEmailSubject(e.target.value)} className="bg-background border-border rounded-xl" placeholder="Your ticket for {event} is confirmed!" />
             </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Header Image URL</Label>
-              <Input value={emailHeaderImageUrl} onChange={e => setEmailHeaderImageUrl(e.target.value)} className="bg-background border-border rounded-xl" placeholder="https://..." />
-              <p className="text-xs text-muted-foreground">Appears at the top of the email as a banner image.</p>
-            </div>
+            <ImageUploader
+              label="Header Image"
+              value={emailHeaderImageUrl}
+              onChange={(url) => setEmailHeaderImageUrl(url || "")}
+            />
             <div className="space-y-2">
               <Label className="text-xs">Video Link URL</Label>
               <Input value={emailVideoUrl} onChange={e => setEmailVideoUrl(e.target.value)} className="bg-background border-border rounded-xl" placeholder="https://youtube.com/..." />
@@ -1200,11 +1200,11 @@ function EmailConfigModal({ event, onClose }: { event: Event; onClose: () => voi
               <Label className="text-xs">Subject Line</Label>
               <Input value={giftEmailSubject} onChange={e => setGiftEmailSubject(e.target.value)} className="bg-background border-border rounded-xl" placeholder="You've been gifted a ticket to {event}!" />
             </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Header Image URL</Label>
-              <Input value={giftEmailHeaderImageUrl} onChange={e => setGiftEmailHeaderImageUrl(e.target.value)} className="bg-background border-border rounded-xl" placeholder="https://..." />
-              <p className="text-xs text-muted-foreground">Appears at the top of the gift email as a banner image.</p>
-            </div>
+            <ImageUploader
+              label="Header Image"
+              value={giftEmailHeaderImageUrl}
+              onChange={(url) => setGiftEmailHeaderImageUrl(url || "")}
+            />
             <div className="space-y-2">
               <Label className="text-xs">Video Link URL</Label>
               <Input value={giftEmailVideoUrl} onChange={e => setGiftEmailVideoUrl(e.target.value)} className="bg-background border-border rounded-xl" placeholder="https://youtube.com/..." />
@@ -1227,6 +1227,32 @@ function EmailConfigModal({ event, onClose }: { event: Event; onClose: () => voi
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Send test email */}
+        <div className="px-6 pt-3 pb-0 shrink-0 border-t border-border/30">
+          <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1.5">
+            <Send className="w-3 h-3" /> Send a test — uses the <span className="font-semibold text-foreground">{activeTab === "ticket" ? "Ticket Confirmation" : "Gift Ticket"}</span> template with current values
+          </p>
+          <div className="flex gap-2">
+            <Input
+              type="email"
+              value={testEmail}
+              onChange={e => setTestEmail(e.target.value)}
+              placeholder="your@email.com"
+              className="bg-background border-border/50 rounded-xl h-9 text-sm"
+              onKeyDown={e => e.key === "Enter" && handleSendTest()}
+            />
+            <Button
+              variant="outline"
+              onClick={handleSendTest}
+              disabled={isSendingTest || !testEmail.trim()}
+              className="shrink-0 rounded-xl border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 gap-1.5"
+            >
+              {isSendingTest ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+              {isSendingTest ? "Sending…" : "Send Test"}
+            </Button>
+          </div>
+        </div>
 
         <div className="px-6 py-4 border-t border-border/30 flex justify-end gap-2 shrink-0">
           <Button variant="outline" onClick={onClose} disabled={saving} className="rounded-xl border-border/50 hover:bg-secondary">Cancel</Button>

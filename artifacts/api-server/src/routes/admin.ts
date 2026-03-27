@@ -413,6 +413,65 @@ router.post("/tickets/:id/resend", async (req, res) => {
   res.json({ ok: true, sentTo: toEmail });
 });
 
+/* POST /api/admin/events/:id/test-email — send a preview email using current (unsaved) form values */
+router.post("/events/:id/test-email", async (req, res) => {
+  const eventId = Number(req.params.id);
+  const [event] = await db.select().from(eventsTable).where(eq(eventsTable.id, eventId)).limit(1);
+  if (!event) { res.status(404).json({ error: "Event not found" }); return; }
+
+  const {
+    type = "ticket", toEmail,
+    emailSubject, emailHeaderImageUrl, emailBodyText, emailCtaText, emailCtaUrl, emailVideoUrl,
+    giftEmailSubject, giftEmailHeaderImageUrl, giftEmailBodyText, giftEmailCtaText, giftEmailCtaUrl, giftEmailVideoUrl,
+  } = req.body;
+
+  if (!toEmail) { res.status(400).json({ error: "toEmail is required" }); return; }
+
+  const { sendTicketConfirmationEmail, sendGiftEmail } = await import("../services/email");
+
+  try {
+    if (type === "gift") {
+      await sendGiftEmail({
+        toEmail,
+        toName: "Test Recipient",
+        gifterName: "Test Sender",
+        eventName: event.title,
+        eventDate: event.date.toISOString(),
+        eventLocation: event.location,
+        ticketCode: "TEST-0000",
+        eventConfig: {
+          giftEmailSubject: giftEmailSubject || null,
+          giftEmailHeaderImageUrl: giftEmailHeaderImageUrl || null,
+          giftEmailBodyText: giftEmailBodyText || null,
+          giftEmailCtaText: giftEmailCtaText || null,
+          giftEmailCtaUrl: giftEmailCtaUrl || null,
+          giftEmailVideoUrl: giftEmailVideoUrl || null,
+        },
+      });
+    } else {
+      await sendTicketConfirmationEmail({
+        toEmail,
+        toName: "Test Attendee",
+        eventName: event.title,
+        eventDate: event.date.toISOString(),
+        eventLocation: event.location,
+        ticketCodes: ["TEST-0000"],
+        eventConfig: {
+          emailSubject: emailSubject || null,
+          emailHeaderImageUrl: emailHeaderImageUrl || null,
+          emailBodyText: emailBodyText || null,
+          emailCtaText: emailCtaText || null,
+          emailCtaUrl: emailCtaUrl || null,
+          emailVideoUrl: emailVideoUrl || null,
+        },
+      });
+    }
+    res.json({ ok: true, sentTo: toEmail });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to send test email" });
+  }
+});
+
 /* ========== POSTS ========== */
 
 /* GET /api/admin/posts — list all */
