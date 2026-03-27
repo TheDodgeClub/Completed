@@ -21,9 +21,10 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useColors } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import { resolveImageUrl } from "@/constants/api";
+import { MemberProfileModal } from "@/components/MemberProfileModal";
 import {
-  listMembers, getMemberProfile, getLeaderboard,
-  MemberSummary, UserProfile, LeaderboardEntry, LeaderboardData,
+  listMembers, getLeaderboard,
+  MemberSummary, LeaderboardEntry, LeaderboardData,
 } from "@/lib/api";
 
 const LEVEL_NAMES = ["Beginner", "Developing", "Experienced", "Skilled", "Advanced", "Pro", "League", "Expert", "Master", "Icon"];
@@ -255,230 +256,6 @@ function MemberRow({ member, onPress }: { member: MemberSummary; onPress: () => 
   );
 }
 
-/* ── Supporter tier constants (mirrors index.tsx) ── */
-const SUPPORTER_TIERS = [
-  { name: "Club Friend",  emoji: "🤝", minXp: 0,    perk: "Welcome to The Dodge Club!" },
-  { name: "Die Hard",     emoji: "🔥", minXp: 150,  perk: "Shoutout at events" },
-  { name: "Club Legend",  emoji: "⭐", minXp: 500,  perk: "VIP supporter status" },
-  { name: "Superfan",     emoji: "🏆", minXp: 1000, perk: "Name on the club wall" },
-] as const;
-function getSupporterProgress(xp: number) {
-  let tierIdx = 0;
-  for (let i = 0; i < SUPPORTER_TIERS.length; i++) { if (xp >= SUPPORTER_TIERS[i].minXp) tierIdx = i; }
-  const current = SUPPORTER_TIERS[tierIdx];
-  const next = SUPPORTER_TIERS[tierIdx + 1] ?? null;
-  const isMax = next === null;
-  const start = current.minXp;
-  const end = next?.minXp ?? start;
-  const progress = isMax ? 1 : Math.min(1, Math.max(0, (xp - start) / (end - start)));
-  const xpToNext = isMax ? 0 : end - xp;
-  return { current, next, isMax, progress, xpToNext };
-}
-
-const LEVEL_THRESHOLDS = [0, 300, 800, 1600, 2500, 5000, 10000, 20000, 40000, 80000];
-function getLevelProgress(xp: number, level: number) {
-  const threshCurrent = LEVEL_THRESHOLDS[level - 1] ?? 0;
-  const threshNext = LEVEL_THRESHOLDS[level];
-  if (!threshNext) return { pct: 1, isMax: true, nextLevelName: "Max" };
-  return {
-    pct: Math.min((xp - threshCurrent) / (threshNext - threshCurrent), 1),
-    isMax: false,
-    nextLevelName: LEVEL_NAMES[level] ?? "Max",
-    xpToNext: threshNext - xp,
-  };
-}
-
-function ProfileModal({ member, onClose, currentUserId }: {
-  member: MemberSummary;
-  onClose: () => void;
-  currentUserId: number | null;
-}) {
-  const Colors = useColors();
-  const styles = useMemo(() => makeStyles(Colors), [Colors]);
-
-  const { data: profile, isLoading } = useQuery({
-    queryKey: ["member-profile", member.id],
-    queryFn: () => getMemberProfile(member.id),
-  });
-
-  const isSupporter = (profile?.accountType ?? member.accountType) === "supporter";
-  const level = profile ? getLevel(profile.xp) : 1;
-  const levelName = LEVEL_NAMES[(level - 1)] ?? "Rookie";
-  const levelProgress = (!isSupporter && profile) ? getLevelProgress(profile.xp, level) : null;
-  const supporterProgress = (isSupporter && profile) ? getSupporterProgress(profile.xp) : null;
-
-  const handleDM = () => {
-    onClose();
-    router.push(`/messages/${member.id}` as any);
-  };
-
-  return (
-    <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <View style={[styles.modalRoot, { backgroundColor: Colors.background }]}>
-        <View style={styles.modalHandle} />
-        <Pressable style={styles.modalClose} onPress={onClose}>
-          <Feather name="x" size={22} color={Colors.textMuted} />
-        </Pressable>
-
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 56 }}>
-          {/* Hero */}
-          <LinearGradient colors={[Colors.primary + "CC", Colors.background]} style={styles.profileHero}>
-            <Avatar avatarUrl={member.avatarUrl} name={member.name} size={88} Colors={Colors} />
-            <Text style={styles.profileName}>{member.name}</Text>
-            {member.username && <Text style={styles.profileUsername}>@{member.username}</Text>}
-            <View style={{ flexDirection: "row", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
-              {isSupporter ? (
-                <View style={[styles.levelBadge, { backgroundColor: "#E8F5E920", borderColor: "#4CAF5060", borderWidth: 1 }]}>
-                  <Text style={[styles.levelText, { color: "#4CAF50" }]}>❤️ Supporter</Text>
-                </View>
-              ) : (
-                <View style={styles.levelBadge}>
-                  <Text style={styles.levelText}>{levelName}</Text>
-                </View>
-              )}
-              {member.isElite && (
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#FFC10720", borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: "#FFC10750" }}>
-                  <Text style={{ fontFamily: "Poppins_800ExtraBold", fontSize: 10, color: "#FFC107" }}>⚡ ELITE</Text>
-                </View>
-              )}
-            </View>
-          </LinearGradient>
-
-          {isLoading ? (
-            <ActivityIndicator color={Colors.primary} style={{ marginTop: 32 }} />
-          ) : profile ? (
-            <View style={styles.profileBody}>
-
-              {/* ── Progress bar: Supporter Journey or Player XP ── */}
-              {isSupporter && supporterProgress ? (
-                <View style={styles.xpSection}>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                    <Text style={styles.xpSectionLabel}>Supporter Journey</Text>
-                    <Text style={styles.xpValue}>{profile.xp.toLocaleString()} XP</Text>
-                  </View>
-                  <Text style={[styles.xpSectionLabel, { fontSize: 12, marginBottom: 6, color: Colors.textMuted }]}>
-                    {supporterProgress.current.emoji} {supporterProgress.current.name}
-                  </Text>
-                  <View style={styles.xpBarBg}>
-                    <View style={[styles.xpBarFill, { width: `${Math.round(supporterProgress.progress * 100)}%` as any }]} />
-                  </View>
-                  <Text style={styles.xpHint}>
-                    {supporterProgress.isMax
-                      ? "Superfan status reached 🏆 Club legend!"
-                      : `${supporterProgress.xpToNext} XP to unlock ${supporterProgress.next!.emoji} ${supporterProgress.next!.name}`}
-                  </Text>
-                </View>
-              ) : levelProgress ? (
-                <View style={styles.xpSection}>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                    <Text style={styles.xpSectionLabel}>XP Progress</Text>
-                    <Text style={styles.xpValue}>{profile.xp.toLocaleString()} XP</Text>
-                  </View>
-                  <View style={styles.xpBarBg}>
-                    <View style={[styles.xpBarFill, { width: `${Math.round(levelProgress.pct * 100)}%` as any }]} />
-                  </View>
-                  <Text style={styles.xpHint}>
-                    {levelProgress.isMax
-                      ? "Maximum level reached 🏆"
-                      : `${levelProgress.xpToNext?.toLocaleString()} XP to ${levelProgress.nextLevelName}`}
-                  </Text>
-                </View>
-              ) : null}
-
-              {/* ── Stats grid ── */}
-              {isSupporter ? (
-                <View style={[styles.statsGrid, { justifyContent: "center" }]}>
-                  {[
-                    { emoji: "⚡", label: "XP", value: profile.xp.toLocaleString() },
-                    { emoji: "📅", label: "Events", value: String(profile.eventsAttended) },
-                  ].map((s) => (
-                    <View key={s.label} style={[styles.statBox, { flex: 0, minWidth: 110 }]}>
-                      <Text style={{ fontSize: 18, marginBottom: 2 }}>{s.emoji}</Text>
-                      <Text style={styles.statValue}>{s.value}</Text>
-                      <Text style={styles.statLabel}>{s.label}</Text>
-                    </View>
-                  ))}
-                </View>
-              ) : (
-                <View style={styles.statsGrid}>
-                  {[
-                    { emoji: "⚡", label: "XP", value: profile.xp.toLocaleString() },
-                    { emoji: "📅", label: "Events", value: String(profile.eventsAttended) },
-                    { emoji: "🏅", label: "Medals", value: String(profile.medalsEarned) },
-                    { emoji: "💍", label: "Rings", value: String(profile.ringsEarned) },
-                  ].map((s) => (
-                    <View key={s.label} style={styles.statBox}>
-                      <Text style={{ fontSize: 18, marginBottom: 2 }}>{s.emoji}</Text>
-                      <Text style={styles.statValue}>{s.value}</Text>
-                      <Text style={styles.statLabel}>{s.label}</Text>
-                    </View>
-                  ))}
-                </View>
-              )}
-
-              {/* ── Streaks (players only) ── */}
-              {!isSupporter && (
-                <View style={styles.streakCard}>
-                  <View style={styles.streakItem}>
-                    <Text style={styles.streakEmoji}>🔥</Text>
-                    <View>
-                      <Text style={styles.streakValue}>{profile.currentStreak}</Text>
-                      <Text style={styles.streakLabel}>Current Streak</Text>
-                    </View>
-                  </View>
-                  <View style={styles.streakDivider} />
-                  <View style={styles.streakItem}>
-                    <Text style={styles.streakEmoji}>🏆</Text>
-                    <View>
-                      <Text style={styles.streakValue}>{profile.bestStreak}</Text>
-                      <Text style={styles.streakLabel}>Best Streak</Text>
-                    </View>
-                  </View>
-                </View>
-              )}
-
-              {/* ── Bio ── */}
-              {profile.bio ? (
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>About</Text>
-                  <Text style={styles.bioText}>{profile.bio}</Text>
-                </View>
-              ) : null}
-
-              {/* ── Preferred role (players only) ── */}
-              {!isSupporter && profile.preferredRole ? (
-                <View style={styles.roleRow}>
-                  <Feather name="user" size={14} color={Colors.textMuted} />
-                  <Text style={styles.memberSinceText}>Plays as {profile.preferredRole}</Text>
-                </View>
-              ) : null}
-
-              {/* ── Member since ── */}
-              <View style={styles.roleRow}>
-                <Feather name="calendar" size={14} color={Colors.textMuted} />
-                <Text style={styles.memberSinceText}>
-                  Member since {new Date(profile.memberSince).toLocaleDateString("en-GB", { month: "long", year: "numeric" })}
-                </Text>
-              </View>
-
-              {/* ── DM button (not yourself) ── */}
-              {currentUserId !== null && currentUserId !== member.id && (
-                <Pressable
-                  style={({ pressed }) => [styles.dmBtn, { opacity: pressed ? 0.85 : 1 }]}
-                  onPress={handleDM}
-                >
-                  <Feather name="message-circle" size={18} color="#fff" />
-                  <Text style={styles.dmBtnText}>Send Message</Text>
-                </Pressable>
-              )}
-            </View>
-          ) : null}
-        </ScrollView>
-      </View>
-    </Modal>
-  );
-}
-
 export default function CommunityScreen() {
   const insets = useSafeAreaInsets();
   const Colors = useColors();
@@ -595,7 +372,7 @@ export default function CommunityScreen() {
       )}
 
       {selected && (
-        <ProfileModal
+        <MemberProfileModal
           member={selected}
           currentUserId={user?.id ?? null}
           onClose={() => setSelected(null)}

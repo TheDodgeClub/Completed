@@ -24,12 +24,13 @@ import { resolveImageUrl } from "@/constants/api";
 import { useAuth } from "@/context/AuthContext";
 import {
   listUpcomingEvents, listPosts, getAppSettings, getMyRank, getActivity, listMerch,
-  Post, ActivityItem, MerchProduct,
+  Post, ActivityItem, MerchProduct, MemberSummary,
 } from "@/lib/api";
 import { EventCard } from "@/components/EventCard";
 import { PostCard } from "@/components/PostCard";
 import { PostDetailModal } from "@/components/PostDetailModal";
 import { VideoHero } from "@/components/VideoHero";
+import { MemberProfileModal } from "@/components/MemberProfileModal";
 
 /* ── Supporter tier constants ── */
 const SUPPORTER_TIERS = [
@@ -161,6 +162,7 @@ export default function HomeScreen() {
   const homeVideoUrl = appSettings?.homeVideoUrl ?? null;
 
   const [selectedPost, setSelectedPost] = React.useState<Post | null>(null);
+  const [selectedPulseMember, setSelectedPulseMember] = React.useState<MemberSummary | null>(null);
   const [refreshing, setRefreshing] = React.useState(false);
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -532,7 +534,21 @@ export default function HomeScreen() {
               {activityItems.slice(0, 6).map((item: ActivityItem, idx: number) => (
                 <View key={item.id}>
                   {idx > 0 && <View style={styles.pulseDivider} />}
-                  <View style={styles.pulseRow}>
+                  <Pressable
+                    style={({ pressed }) => [styles.pulseRow, { opacity: pressed ? 0.75 : 1 }]}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setSelectedPulseMember({
+                        id: item.userId,
+                        name: item.userName,
+                        avatarUrl: item.userAvatar,
+                        username: null,
+                        bio: null,
+                        preferredRole: null,
+                        memberSince: item.timestamp,
+                      });
+                    }}
+                  >
                     <View style={styles.pulseAvatarWrap}>
                       {item.userAvatar ? (
                         <Image
@@ -548,7 +564,7 @@ export default function HomeScreen() {
                     </View>
                     <Text style={styles.pulseText} numberOfLines={2}>{item.text}</Text>
                     <Text style={styles.pulseTime}>{timeAgo(item.timestamp)}</Text>
-                  </View>
+                  </Pressable>
                 </View>
               ))}
             </View>
@@ -638,6 +654,14 @@ export default function HomeScreen() {
 
     {selectedPost && (
       <PostDetailModal post={selectedPost} onClose={() => setSelectedPost(null)} />
+    )}
+
+    {selectedPulseMember && (
+      <MemberProfileModal
+        member={selectedPulseMember}
+        currentUserId={user?.id ?? null}
+        onClose={() => setSelectedPulseMember(null)}
+      />
     )}
 
   </>
