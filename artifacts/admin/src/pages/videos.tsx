@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit2, Trash2, Globe, EyeOff, Video as VideoIcon, ExternalLink, Upload, X, Link, Save, Loader2 } from "lucide-react";
+import { Plus, Edit2, Trash2, Globe, EyeOff, Video as VideoIcon, ExternalLink, Upload, X, Link, Save, Loader2, Camera, Image as ImageIcon } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { cn } from "@/lib/utils";
 
@@ -303,12 +303,185 @@ export default function Videos() {
   );
 }
 
+/* ─── Thumbnail Picker ─── */
+async function uploadImageFile(file: File): Promise<string> {
+  const res = await fetch("/api/storage/uploads/request-url", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: file.name, size: file.size, contentType: file.type || "image/jpeg" }),
+  });
+  if (!res.ok) throw new Error("Failed to get upload URL");
+  const { uploadURL, objectPath } = await res.json();
+  const putRes = await fetch(uploadURL, { method: "PUT", body: file, headers: { "Content-Type": file.type || "image/jpeg" } });
+  if (!putRes.ok) throw new Error("Upload failed");
+  return `/api/storage${objectPath}`;
+}
+
+function ThumbnailPicker({ value, onChange, videoUrl }: {
+  value: string;
+  onChange: (url: string) => void;
+  videoUrl: string;
+}) {
+  const [mode, setMode] = useState<"upload" | "capture" | "url">("upload");
+  const [busy, setBusy] = useState(false);
+  const [captureError, setCaptureError] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const canCapture = !!(videoUrl && !videoUrl.includes("youtube.com") && !videoUrl.includes("youtu.be") && !videoUrl.includes("vimeo.com"));
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBusy(true);
+    setUploadError(null);
+    try {
+      const url = await uploadImageFile(file);
+      onChange(url);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setBusy(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  async function handleCapture() {
+    if (!videoUrl) return;
+    setBusy(true);
+    setCaptureError(null);
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const video = document.createElement("video");
+        video.crossOrigin = "anonymous";
+        video.src = videoUrl;
+        video.preload = "auto";
+        video.muted = true;
+
+        video.addEventListener("loadedmetadata", () => {
+          video.currentTime = Math.min(2, video.duration * 0.1);
+        });
+
+        video.addEventListener("seeked", async () => {
+          try {
+            const canvas = document.createElement("canvas");
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 360;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) throw new Error("Canvas not supported");
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const blob = await new Promise<Blob>((res, rej) => canvas.toBlob(b => b ? res(b) : rej(new Error("Failed to create image")), "image/jpeg", 0.9));
+            const file = new File([blob], "thumbnail.jpg", { type: "image/jpeg" });
+            const url = await uploadImageFile(file);
+            onChange(url);
+            video.remove();
+            resolve();
+          } catch (err) {
+            reject(err);
+          }
+        });
+
+        video.addEventListener("error", () => reject(new Error("Could not load video. The video URL may not support cross-origin access.")));
+        video.load();
+      });
+    } catch (err) {
+      setCaptureError(err instanceof Error ? err.message : "Capture failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <Label>Thumbnail</Label>
+
+      {value ? (
+        <div className="relative rounded-xl border border-border/50 overflow-hidden group">
+          <img src={value} alt="Thumbnail preview" className="w-full h-32 object-cover" />
+          <div className="absolute inset-0 bg-black/50 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button type="button" size="sm" variant="outline" className="bg-background/80 h-8 text-xs"
+              onClick={() => fileInputRef.current?.click()} disabled={busy}>
+              <Upload className="w-3 h-3 mr-1" /> Replace
+            </Button>
+            <Button type="button" size="sm" variant="outline"
+              className="bg-background/80 h-8 text-xs text-destructive border-destructive/50"
+              onClick={() => onChange("")}>
+              <X className="w-3 h-3 mr-1" /> Remove
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="flex rounded-xl border border-border/50 overflow-hidden">
+            <button type="button" onClick={() => setMode("upload")}
+              className={cn("flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors border-r border-border/50",
+                mode === "upload" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground")}>
+              <ImageIcon className="w-3 h-3" /> Upload Image
+            </button>
+            {canCapture && (
+              <button type="button" onClick={() => setMode("capture")}
+                className={cn("flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors border-r border-border/50",
+                  mode === "capture" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground")}>
+                <Camera className="w-3 h-3" /> Auto-capture
+              </button>
+            )}
+            <button type="button" onClick={() => setMode("url")}
+              className={cn("flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors",
+                mode === "url" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground")}>
+              <Link className="w-3 h-3" /> Paste URL
+            </button>
+          </div>
+
+          {mode === "upload" && (
+            <div
+              onClick={() => !busy && fileInputRef.current?.click()}
+              className={cn("border-2 border-dashed border-border/50 rounded-xl p-5 text-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors",
+                busy && "pointer-events-none opacity-70")}>
+              {busy ? (
+                <><Loader2 className="w-5 h-5 mx-auto mb-1 text-primary animate-spin" /><p className="text-xs text-muted-foreground">Uploading…</p></>
+              ) : (
+                <><ImageIcon className="w-5 h-5 mx-auto mb-1 text-muted-foreground" /><p className="text-xs font-medium">Click to upload an image</p><p className="text-xs text-muted-foreground">JPG, PNG, or WebP</p></>
+              )}
+            </div>
+          )}
+
+          {mode === "capture" && canCapture && (
+            <div className="space-y-2">
+              <Button type="button" variant="outline" size="sm" onClick={handleCapture} disabled={busy}
+                className="w-full rounded-xl border-border/50 gap-2">
+                {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
+                {busy ? "Capturing frame…" : "Grab thumbnail from video"}
+              </Button>
+              {captureError && <p className="text-xs text-destructive">{captureError}</p>}
+              <p className="text-xs text-muted-foreground">Captures a frame from ~2 seconds into the video. Only works for direct MP4 links.</p>
+            </div>
+          )}
+
+          {mode === "url" && (
+            <Input
+              type="url"
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              className="bg-background border-border rounded-xl"
+              placeholder="https://img.youtube.com/vi/.../hqdefault.jpg"
+            />
+          )}
+
+          {uploadError && <p className="text-xs text-destructive">{uploadError}</p>}
+        </>
+      )}
+
+      <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/*" className="hidden" onChange={handleImageUpload} />
+    </div>
+  );
+}
+
 function VideoFormModal({ video, onClose }: { video?: Video; onClose: () => void }) {
   const { mutate: create, isPending: creating } = useCreateVideo();
   const { mutate: update, isPending: updating } = useUpdateVideo();
   const { toast } = useToast();
 
-  const { register, handleSubmit } = useForm<VideoInput>({
+  const { register, handleSubmit, watch } = useForm<VideoInput>({
     defaultValues: video ? {
       title: video.title,
       description: video.description || "",
@@ -317,11 +490,14 @@ function VideoFormModal({ video, onClose }: { video?: Video; onClose: () => void
     } : { title: "", description: "", url: "", thumbnailUrl: "" }
   });
 
+  const [thumbnailUrl, setThumbnailUrl] = useState(video?.thumbnailUrl || "");
+  const videoUrl = watch("url");
+
   const onSubmit = (data: VideoInput) => {
     const payload = {
       ...data,
       description: data.description || undefined,
-      thumbnailUrl: data.thumbnailUrl || undefined,
+      thumbnailUrl: thumbnailUrl || undefined,
     };
     if (video) {
       update({ id: video.id, data: payload }, {
@@ -340,7 +516,7 @@ function VideoFormModal({ video, onClose }: { video?: Video; onClose: () => void
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[500px] bg-card border-border/50 text-foreground">
+      <DialogContent className="sm:max-w-[520px] bg-card border-border/50 text-foreground max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-display text-xl">{video ? "Edit Video" : "Add Video"}</DialogTitle>
         </DialogHeader>
@@ -355,13 +531,10 @@ function VideoFormModal({ video, onClose }: { video?: Video; onClose: () => void
           </div>
           <div className="space-y-2">
             <Label>Video URL</Label>
-            <Input type="url" {...register("url", { required: true })} className="bg-background border-border rounded-xl" placeholder="https://youtube.com/watch?v=..." />
-            <p className="text-xs text-muted-foreground">YouTube, Vimeo, or any video URL. Members will tap to open in their browser.</p>
+            <Input type="url" {...register("url", { required: true })} className="bg-background border-border rounded-xl" placeholder="https://example.com/video.mp4" />
+            <p className="text-xs text-muted-foreground">Direct MP4 link or YouTube/Vimeo URL.</p>
           </div>
-          <div className="space-y-2">
-            <Label>Thumbnail URL (Optional)</Label>
-            <Input type="url" {...register("thumbnailUrl")} className="bg-background border-border rounded-xl" placeholder="https://img.youtube.com/vi/.../hqdefault.jpg" />
-          </div>
+          <ThumbnailPicker value={thumbnailUrl} onChange={setThumbnailUrl} videoUrl={videoUrl} />
           <DialogFooter className="pt-4">
             <Button type="button" variant="outline" onClick={onClose} disabled={pending} className="rounded-xl border-border/50 hover:bg-secondary">Cancel</Button>
             <Button type="submit" disabled={pending} className="rounded-xl bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20">
