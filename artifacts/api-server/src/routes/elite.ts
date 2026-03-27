@@ -123,7 +123,7 @@ router.get("/success", async (req: any, res) => {
   res.redirect(`https://${domain}/mobile/?eliteSuccess=1`);
 });
 
-/* GET /api/elite/manage — Stripe customer portal for subscription management */
+/* GET /api/elite/manage — Stripe customer portal for subscription management (authenticated) */
 router.get("/manage", requireAuth, async (req: any, res) => {
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.session.userId)).limit(1);
   if (!user?.stripeCustomerId) {
@@ -139,6 +139,107 @@ router.get("/manage", requireAuth, async (req: any, res) => {
     return_url: `${baseUrl}/mobile/`,
   });
   res.json({ url: portal.url });
+});
+
+/* POST /api/elite/subscribe-web — create Stripe checkout session by email (no session auth, for web use) */
+router.post("/subscribe-web", async (req: any, res) => {
+  const { email } = req.body as { email?: string };
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    res.status(400).json({ error: "Please enter a valid email address." });
+    return;
+  }
+
+  const [user] = await db.select().from(usersTable)
+    .where(eq(usersTable.email, email.toLowerCase().trim()))
+    .limit(1);
+
+  if (!user) {
+    res.status(404).json({ error: "No account found with that email. Download the app to create an account first." });
+    return;
+  }
+  if (user.isElite) {
+    res.status(409).json({ error: "This account is already an Elite member." });
+    return;
+  }
+
+  const stripe = await getUncachableStripeClient();
+
+  let customerId = user.stripeCustomerId;
+  if (customerId) {
+    try {
+      const c = await stripe.customers.retrieve(customerId);
+      if ((c as any).deleted) customerId = null;
+    } catch (err: any) {
+      if (err?.code === "resource_missing") customerId = null;
+      else throw err;
+    }
+  }
+  if (!customerId) {
+    const customer = await stripe.customers.create({
+      email: user.email,
+      ...(user.name ? { name: user.name } : {}),
+      metadata: { userId: String(user.id) },
+    });
+    customerId = customer.id;
+    await db.update(usersTable).set({ stripeCustomerId: customerId }).where(eq(usersTable.id, user.id));
+  }
+
+  const baseUrl = process.env.REPLIT_DOMAINS
+    ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
+    : `${req.protocol}://${req.get("host")}`;
+
+  const session = await stripe.checkout.sessions.create({
+    customer: customerId,
+    payment_method_types: ["card"],
+    line_items: [{
+      price_data: {
+        currency: "gbp",
+        product_data: {
+          name: ELITE_MONTHLY_LABEL,
+          description: "Early tickets · Exclusive tips · Members-only content · Discounted tickets",
+        },
+        unit_amount: ELITE_PRICE_GBP,
+        recurring: { interval: "month" },
+      },
+      quantity: 1,
+    }],
+    mode: "subscription",
+    success_url: `${baseUrl}/api/elite/success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${baseUrl}/landing/`,
+    metadata: { userId: String(user.id) },
+  });
+
+  res.json({ url: session.url });
+});
+
+/* GET /api/elite/portal?email=... — Stripe customer portal by email (no session auth, for web use) */
+router.get("/portal", async (req: any, res) => {
+  const email = String(req.query.email ?? "").toLowerCase().trim();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    res.status(400).json({ error: "Invalid email address." });
+    return;
+  }
+
+  const [user] = await db.select().from(usersTable)
+    .where(eq(usersTable.email, email))
+    .limit(1);
+
+  if (!user?.stripeCustomerId) {
+    res.status(404).json({ error: "No subscription found for that email." });
+    return;
+  }
+
+  const stripe = await getUncachableStripeClient();
+  const baseUrl = process.env.REPLIT_DOMAINS
+    ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
+    : `${req.protocol}://${req.get("host")}`;
+
+  const portal = await stripe.billingPortal.sessions.create({
+    customer: user.stripeCustomerId,
+    return_url: `${baseUrl}/landing/`,
+  });
+
+  res.redirect(portal.url);
 });
 
 /* POST /api/elite/webhook — handle subscription lifecycle events */

@@ -1,3 +1,4 @@
+import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, Event, Post } from "@/lib/api";
 
@@ -234,6 +235,101 @@ function UpcomingEvents({ events }: { events: Event[] }) {
   );
 }
 
+const ELITE_BENEFITS = [
+  { icon: "⏰", title: "Early Ticket Access", desc: "First pick on every event before general sale opens." },
+  { icon: "📖", title: "Tips & Tricks", desc: "Exclusive coaching content, tactics, and training guides." },
+  { icon: "⭐", title: "Elite-Only Updates", desc: "Posts and announcements reserved for Elite members." },
+  { icon: "🏷️", title: "Discounted Tickets", desc: "Enjoy discounts on selected events." },
+  { icon: "🛡️", title: "Elite Badge", desc: "Stand out in the community with your exclusive badge." },
+];
+
+function EliteSection() {
+  const [email, setEmail] = React.useState("");
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  async function handleSubscribe(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
+      const res = await fetch(`${BASE}/api/elite/subscribe-web`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error ?? "Something went wrong."); return; }
+      window.location.href = data.url;
+    } catch {
+      setError("Could not connect. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div id="elite" style={{ margin: "0 16px 24px", background: "#07391B", borderRadius: 16, overflow: "hidden" }}>
+      <div style={{ padding: "28px 20px 20px" }}>
+        <div style={{ color: AMBER, fontWeight: 800, fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 8 }}>
+          Elite Membership
+        </div>
+        <div style={{ color: "white", fontWeight: 800, fontSize: 22, lineHeight: 1.25, marginBottom: 4 }}>
+          Unlock the full club experience
+        </div>
+        <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, marginBottom: 20 }}>
+          £8.99/month · Cancel anytime
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 24 }}>
+          {ELITE_BENEFITS.map(b => (
+            <div key={b.title} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+              <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>{b.icon}</span>
+              <div>
+                <div style={{ color: "white", fontWeight: 700, fontSize: 13, marginBottom: 2 }}>{b.title}</div>
+                <div style={{ color: "rgba(255,255,255,0.55)", fontSize: 12, lineHeight: 1.5 }}>{b.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <form onSubmit={handleSubscribe} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <input
+            type="email"
+            placeholder="Enter your account email"
+            value={email}
+            onChange={e => { setEmail(e.target.value); setError(null); }}
+            required
+            style={{
+              padding: "13px 14px", borderRadius: 10, border: "none", fontSize: 14,
+              background: "rgba(255,255,255,0.1)", color: "white", outline: "none",
+              width: "100%",
+            }}
+          />
+          {error && (
+            <div style={{ color: "#FF6B6B", fontSize: 12, paddingLeft: 2 }}>{error}</div>
+          )}
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              background: AMBER, color: DARK_TEXT, fontWeight: 800, fontSize: 14,
+              padding: "14px", borderRadius: 10, border: "none", cursor: loading ? "not-allowed" : "pointer",
+              opacity: loading ? 0.7 : 1, width: "100%",
+            }}
+          >
+            {loading ? "Redirecting…" : "Join Elite — £8.99/month"}
+          </button>
+          <div style={{ color: "rgba(255,255,255,0.35)", fontSize: 11, textAlign: "center" }}>
+            You need a Dodge Club account to subscribe. <a href="https://apps.apple.com" style={{ color: AMBER, textDecoration: "none" }}>Download the app</a> to sign up.
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function EliteBanner() {
   return (
     <div
@@ -458,7 +554,7 @@ export default function Home() {
           <UpcomingEvents events={events} />
         )}
 
-        <EliteBanner />
+        <EliteSection />
 
         <LatestUpdates posts={posts} />
 

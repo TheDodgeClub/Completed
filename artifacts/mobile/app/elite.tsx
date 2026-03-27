@@ -286,7 +286,7 @@ export default function EliteScreen() {
         ) : isElite ? (
           <Pressable
             style={styles.manageBtn}
-            onPress={() => openWebsite("/account")}
+            onPress={() => openWebsite("/manage")}
           >
             <Text style={styles.manageBtnText}>Manage Subscription</Text>
           </Pressable>
