@@ -4,7 +4,7 @@ import { fetchApi } from "@/lib/api";
 export type CheckoutField = {
   id: string;
   label: string;
-  type: "text" | "email" | "phone" | "date" | "textarea" | "select";
+  type: "text" | "email" | "phone" | "date" | "textarea" | "select" | "yes_no";
   required: boolean;
   options?: string[];
 };

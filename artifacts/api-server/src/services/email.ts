@@ -90,7 +90,7 @@ export function buildStructuredEmailHtml(opts: {
     ? `<img src="${headerImageUrl}" alt="Event" style="width:100%;display:block;border-radius:0;" />`
     : "";
 
-  const bodyLines = (bodyText || "Hey {{userName}},\n\nYou're in! Here are your details below.")
+  const bodyLines = (bodyText || "Hey {{userName}},\n\nYou're in for {{eventName}} on {{eventDate}}!\n\nYour ticket details are below. See you on the court!")
     .split("\n")
     .map((l) => l.trim() === "" ? "<br/>" : `<p style="margin:0 0 12px;color:rgba(255,255,255,0.85);font-size:15px;line-height:1.6;">${l}</p>`)
     .join("\n");

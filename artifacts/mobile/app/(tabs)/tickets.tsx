@@ -1042,6 +1042,28 @@ function CheckoutFormModal({
   };
 
   const renderField = (field: CheckoutField) => {
+    if (field.type === "yes_no") {
+      const val = formData[field.id] ?? "";
+      return (
+        <View key={field.id} style={cfStyles.fieldGroup}>
+          <Text style={cfStyles.fieldLabel}>{field.label}{field.required ? " *" : ""}</Text>
+          <View style={cfStyles.chipRow}>
+            {["Yes", "No"].map((opt) => (
+              <TouchableOpacity
+                key={opt}
+                style={[cfStyles.optionChip, { minWidth: 80, alignItems: "center" }, val === opt && cfStyles.optionChipActive]}
+                onPress={() => setFormData((d) => ({ ...d, [field.id]: opt }))}
+              >
+                <Text style={[cfStyles.optionChipText, val === opt && cfStyles.optionChipTextActive]}>
+                  {opt}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      );
+    }
+
     if (field.type === "select" && field.options?.length) {
       return (
         <View

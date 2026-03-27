@@ -297,7 +297,7 @@ function EventCard({
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Date & Time</Label>
-              <Input type="datetime-local" value={date} onChange={e => setDate(e.target.value)} className="bg-background border-border/50 rounded-xl h-9 text-sm [color-scheme:dark]" />
+              <Input type="datetime-local" value={date} onChange={e => setDate(e.target.value)} className="bg-background border-border/50 rounded-xl h-9 text-sm dark:[color-scheme:dark]" />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Ticket URL (Optional)</Label>
@@ -308,13 +308,6 @@ function EventCard({
               <Textarea value={description} onChange={e => setDescription(e.target.value)} className="bg-background border-border/50 rounded-xl min-h-[80px] text-sm resize-none" />
             </div>
           </div>
-
-          {/* Cover image */}
-          <ImageUploader
-            label="Cover Image"
-            value={imageUrl}
-            onChange={(url) => setImageUrl(url || "")}
-          />
 
           {/* XP + PIN row */}
           <div className="grid grid-cols-2 gap-4">
@@ -501,6 +494,8 @@ function CheckoutFormModal({ event, onClose }: { event: Event; onClose: () => vo
                 className="bg-background border border-border rounded-xl px-2 text-sm text-foreground"
               >
                 <option value="text">Text</option>
+                <option value="yes_no">Yes / No</option>
+                <option value="select">Dropdown</option>
                 <option value="email">Email</option>
                 <option value="phone">Phone</option>
                 <option value="date">Date</option>
@@ -521,7 +516,7 @@ function CheckoutFormModal({ event, onClose }: { event: Event; onClose: () => vo
                   <div key={field.id} className="flex items-center gap-3 px-3 py-2 rounded-xl border border-border/50 bg-background">
                     <GripVertical className="w-4 h-4 text-muted-foreground/40 shrink-0" />
                     <span className="flex-1 text-sm">{field.label}</span>
-                    <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md">{field.type}</span>
+                    <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md">{field.type === "yes_no" ? "yes / no" : field.type}</span>
                     <div className="flex items-center gap-1.5">
                       <span className="text-xs text-muted-foreground">Required</span>
                       <Switch
@@ -1180,8 +1175,13 @@ function EmailConfigModal({ event, onClose }: { event: Event; onClose: () => voi
             </div>
             <div className="space-y-2">
               <Label className="text-xs">Email Body Text</Label>
-              <Textarea value={emailBodyText} onChange={e => setEmailBodyText(e.target.value)} rows={5} className="bg-background border-border rounded-xl resize-none text-sm" placeholder="Thanks for getting your ticket, {name}! We can't wait to see you there…" />
-              <p className="text-xs text-muted-foreground">Variables: <code className="bg-secondary px-1 rounded">{'{userName}'}</code> <code className="bg-secondary px-1 rounded">{'{eventName}'}</code> <code className="bg-secondary px-1 rounded">{'{eventDate}'}</code></p>
+              <Textarea value={emailBodyText} onChange={e => setEmailBodyText(e.target.value)} rows={5} className="bg-background border-border rounded-xl resize-none text-sm" placeholder={"Hey {{userName}},\n\nYou're in for {{eventName}} on {{eventDate}}!\n\nYour ticket details are below. See you on the court!"} />
+              <div className="flex flex-wrap gap-1 items-center">
+                <span className="text-xs text-muted-foreground">Available variables:</span>
+                {["{{userName}}", "{{eventName}}", "{{eventDate}}", "{{eventLocation}}", "{{ticketCode}}"].map(v => (
+                  <code key={v} className="bg-secondary text-foreground px-1.5 py-0.5 rounded text-[11px]">{v}</code>
+                ))}
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
@@ -1213,7 +1213,12 @@ function EmailConfigModal({ event, onClose }: { event: Event; onClose: () => voi
             <div className="space-y-2">
               <Label className="text-xs">Email Body Text</Label>
               <Textarea value={giftEmailBodyText} onChange={e => setGiftEmailBodyText(e.target.value)} rows={5} className="bg-background border-border rounded-xl resize-none text-sm" placeholder="Great news, {recipient}! {gifter} has gifted you a ticket…" />
-              <p className="text-xs text-muted-foreground">Variables: <code className="bg-secondary px-1 rounded">{'{recipientName}'}</code> <code className="bg-secondary px-1 rounded">{'{gifterName}'}</code> <code className="bg-secondary px-1 rounded">{'{eventName}'}</code></p>
+              <div className="flex flex-wrap gap-1 items-center">
+                <span className="text-xs text-muted-foreground">Available variables:</span>
+                {["{{recipientName}}", "{{gifterName}}", "{{eventName}}", "{{eventDate}}", "{{eventLocation}}"].map(v => (
+                  <code key={v} className="bg-secondary text-foreground px-1.5 py-0.5 rounded text-[11px]">{v}</code>
+                ))}
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
@@ -1498,6 +1503,27 @@ function TicketsTab() {
             </div>
             {currentEventFields.map(field => {
               const val = fieldFilters[field.id] ?? "";
+              // For yes_no fields: show Yes / No buttons
+              if (field.type === "yes_no") {
+                return (
+                  <div key={field.id} className="flex items-center gap-1">
+                    <span className="text-xs text-muted-foreground mr-1">{field.label}:</span>
+                    {["", "Yes", "No"].map((opt) => (
+                      <button
+                        key={opt}
+                        onClick={() => setFieldFilters(prev => ({ ...prev, [field.id]: opt }))}
+                        className={`rounded-lg border px-2.5 py-1.5 text-xs transition-colors ${
+                          (fieldFilters[field.id] ?? "") === opt
+                            ? "border-primary bg-primary/10 text-primary font-medium"
+                            : "border-border/50 bg-card text-muted-foreground hover:border-primary/30"
+                        }`}
+                      >
+                        {opt === "" ? "All" : opt}
+                      </button>
+                    ))}
+                  </div>
+                );
+              }
               // For select fields: show a dropdown of options
               if (field.type === "select" && field.options?.length) {
                 return (
