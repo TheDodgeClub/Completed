@@ -755,7 +755,6 @@ function CheckoutFormModal({
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const currentStroke = useRef<string>("");
   const scrollRef = useRef<RNScrollView>(null);
-  const fieldYPositions = useRef<Record<string, number>>({});
 
   const fields: CheckoutField[] = event.checkoutFields ?? [];
   const hasWaiver = !!event.waiverText;
@@ -799,15 +798,6 @@ function CheckoutFormModal({
 
   const SCREEN_HEIGHT = Dimensions.get("window").height;
 
-  const scrollToField = useCallback((fieldId: string) => {
-    const y = fieldYPositions.current[fieldId];
-    if (y !== undefined) {
-      // Small delay so the keyboard is already animating
-      setTimeout(() => {
-        scrollRef.current?.scrollTo({ y: Math.max(0, y - 12), animated: true });
-      }, 80);
-    }
-  }, []);
 
   const cfStyles = StyleSheet.create({
     backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", flexDirection: "column" },
@@ -876,7 +866,6 @@ function CheckoutFormModal({
         <View
           key={field.id}
           style={cfStyles.fieldGroup}
-          onLayout={(e) => { fieldYPositions.current[field.id] = e.nativeEvent.layout.y; }}
         >
           <Text style={cfStyles.fieldLabel}>{field.label}{field.required ? " *" : ""}</Text>
           <View style={cfStyles.chipRow}>
@@ -901,14 +890,12 @@ function CheckoutFormModal({
       <View
         key={field.id}
         style={cfStyles.fieldGroup}
-        onLayout={(e) => { fieldYPositions.current[field.id] = e.nativeEvent.layout.y; }}
       >
         <Text style={cfStyles.fieldLabel}>{field.label}{field.required ? " *" : ""}</Text>
         <TextInput
           style={isMultiline ? cfStyles.inputMulti : cfStyles.input}
           value={formData[field.id] ?? ""}
           onChangeText={(val) => setFormData((d) => ({ ...d, [field.id]: val }))}
-          onFocus={() => scrollToField(field.id)}
           placeholder={field.type === "date" ? "DD/MM/YYYY" : field.type === "email" ? "you@example.com" : field.type === "phone" ? "+44 7000 000000" : ""}
           placeholderTextColor={Colors.textMuted}
           keyboardType={field.type === "email" ? "email-address" : field.type === "phone" ? "phone-pad" : "default"}
@@ -958,7 +945,6 @@ function CheckoutFormModal({
               contentContainerStyle={cfStyles.scrollContent}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
-              automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
               scrollEnabled={scrollEnabled}
             >
               {fields.map(renderField)}
