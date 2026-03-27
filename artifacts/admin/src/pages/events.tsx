@@ -29,9 +29,6 @@ export default function Events() {
   const [pageTab, setPageTab] = useState<"events" | "tickets">("events");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [ticketEvent, setTicketEvent] = useState<Event | null>(null);
-  const [checkoutEvent, setCheckoutEvent] = useState<Event | null>(null);
-  const [emailEvent, setEmailEvent] = useState<Event | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -124,9 +121,6 @@ export default function Events() {
                 event={event}
                 isExpanded={expandedId === event.id}
                 onToggle={() => setExpandedId(expandedId === event.id ? null : event.id)}
-                onTickets={() => setTicketEvent(event)}
-                onCheckout={() => setCheckoutEvent(event)}
-                onEmail={() => setEmailEvent(event)}
                 onDuplicate={() => handleDuplicate(event)}
                 onDelete={() => setDeleteId(event.id)}
                 isDuplicating={isDuplicating}
@@ -138,9 +132,6 @@ export default function Events() {
       )}
 
       {isCreateOpen && <EventFormModal onClose={() => setIsCreateOpen(false)} />}
-      {ticketEvent && <TicketPricingModal event={ticketEvent} onClose={() => setTicketEvent(null)} />}
-      {checkoutEvent && <CheckoutFormModal event={checkoutEvent} onClose={() => setCheckoutEvent(null)} />}
-      {emailEvent && <EmailConfigModal event={emailEvent} onClose={() => setEmailEvent(null)} />}
 
       <DeleteConfirmDialog
         id={deleteId}
@@ -153,20 +144,20 @@ export default function Events() {
   );
 }
 
+type CardTab = "details" | "tickets" | "checkout" | "email";
+
 function EventCard({
-  event, isExpanded, onToggle, onTickets, onCheckout, onEmail, onDuplicate, onDelete, isDuplicating, toast,
+  event, isExpanded, onToggle, onDuplicate, onDelete, isDuplicating, toast,
 }: {
   event: Event;
   isExpanded: boolean;
   onToggle: () => void;
-  onTickets: () => void;
-  onCheckout: () => void;
-  onEmail: () => void;
   onDuplicate: () => void;
   onDelete: () => void;
   isDuplicating: boolean;
   toast: any;
 }) {
+  const [cardTab, setCardTab] = useState<CardTab>("details");
   const { mutate: update, isPending: saving } = useUpdateEvent();
   const { mutate: publish } = usePublishEvent();
 
@@ -259,7 +250,7 @@ function EventCard({
         </div>
 
         {/* Right side badges */}
-        <div className="flex items-center gap-2 shrink-0" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-1.5 shrink-0" onClick={e => e.stopPropagation()}>
           <div className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-md">
             <Users className="w-3 h-3" />{event.attendeeCount}
           </div>
@@ -279,104 +270,103 @@ function EventCard({
             {event.isPublished ? <Globe className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
             {event.isPublished ? "Live" : "Draft"}
           </Button>
+          <Button
+            variant="ghost" size="icon"
+            className="h-7 w-7 rounded-lg text-muted-foreground hover:text-violet-400 hover:bg-violet-400/10"
+            onClick={onDuplicate} disabled={isDuplicating} title="Duplicate"
+          >
+            <Copy className="w-3.5 h-3.5" />
+          </Button>
+          <Button
+            variant="ghost" size="icon"
+            className="h-7 w-7 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+            onClick={onDelete} title="Delete"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </Button>
         </div>
       </div>
 
       {/* ── Expanded panel ── */}
       {isExpanded && (
-        <div className="border-t border-border/40 px-5 py-5 space-y-5">
-          {/* Basic fields grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Title</Label>
-              <Input value={title} onChange={e => setTitle(e.target.value)} className="bg-background border-border/50 rounded-xl h-9 text-sm" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Location</Label>
-              <Input value={location} onChange={e => setLocation(e.target.value)} className="bg-background border-border/50 rounded-xl h-9 text-sm" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Date & Time</Label>
-              <Input type="datetime-local" value={date} onChange={e => setDate(e.target.value)} className="bg-background border-border/50 rounded-xl h-9 text-sm dark:[color-scheme:dark]" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Ticket URL (Optional)</Label>
-              <Input type="url" value={ticketUrl} onChange={e => setTicketUrl(e.target.value)} placeholder="https://..." className="bg-background border-border/50 rounded-xl h-9 text-sm" />
-            </div>
-            <div className="sm:col-span-2 space-y-1.5">
-              <Label className="text-xs">Description</Label>
-              <Textarea value={description} onChange={e => setDescription(e.target.value)} className="bg-background border-border/50 rounded-xl min-h-[80px] text-sm resize-none" />
-            </div>
-          </div>
-
-          {/* XP + PIN row */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5 p-3 bg-emerald-500/5 rounded-xl border border-emerald-500/20">
-              <Label className="text-xs text-emerald-400 font-semibold">⚡ XP Reward</Label>
-              <Input type="number" min={0} value={xpReward} onChange={e => setXpReward(e.target.value)} className="bg-background border-border/50 rounded-lg h-8 text-sm" />
-              <p className="text-[10px] text-muted-foreground">XP awarded on check-in</p>
-            </div>
-            <div className="space-y-1.5 p-3 bg-blue-500/5 rounded-xl border border-blue-500/20">
-              <Label className="text-xs text-blue-400 font-semibold">🔑 Check-In PIN</Label>
-              <Input
-                value={checkInPin}
-                onChange={e => setCheckInPin(e.target.value.toUpperCase())}
-                maxLength={8}
-                placeholder="e.g. DODGE7"
-                className="bg-background border-border/50 rounded-lg h-8 text-sm font-mono uppercase tracking-widest"
-              />
-              <p className="text-[10px] text-muted-foreground">Shown to door staff</p>
-            </div>
-          </div>
-
-          {/* Save button */}
-          <div className="flex justify-end">
-            <Button onClick={handleSave} disabled={saving} className="rounded-xl bg-primary hover:bg-primary/90 text-white px-6">
-              {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</> : <><Check className="w-4 h-4 mr-2" />Save Changes</>}
-            </Button>
-          </div>
-
-          {/* Action buttons */}
-          <div className="border-t border-border/30 pt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <button
-              onClick={onTickets}
-              className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-accent/30 bg-accent/5 hover:bg-accent/10 transition-colors text-accent group"
-            >
-              <TicketIcon className="w-4 h-4" />
-              <span className="text-xs font-semibold">Tickets</span>
-              <span className="text-[10px] text-muted-foreground">Types & pricing</span>
-            </button>
-            <button
-              onClick={onCheckout}
-              className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-blue-400/30 bg-blue-400/5 hover:bg-blue-400/10 transition-colors text-blue-400 group"
-            >
-              <ClipboardList className="w-4 h-4" />
-              <span className="text-xs font-semibold">Checkout Form</span>
-              <span className="text-[10px] text-muted-foreground">Fields & waiver</span>
-            </button>
-            <button
-              onClick={onEmail}
-              className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-emerald-400/30 bg-emerald-400/5 hover:bg-emerald-400/10 transition-colors text-emerald-400 group"
-            >
-              <Mail className="w-4 h-4" />
-              <span className="text-xs font-semibold">Email Templates</span>
-              <span className="text-[10px] text-muted-foreground">Confirmation & gift</span>
-            </button>
-            <div className="flex flex-col gap-1.5">
+        <div className="border-t border-border/40">
+          {/* Tab bar */}
+          <div className="flex border-b border-border/30 px-2 pt-2 overflow-x-auto">
+            {([ 
+              { tab: "details" as CardTab, icon: CalendarDays, label: "Details" },
+              { tab: "tickets" as CardTab, icon: TicketIcon, label: "Tickets" },
+              { tab: "checkout" as CardTab, icon: ClipboardList, label: "Checkout" },
+              { tab: "email" as CardTab, icon: Mail, label: "Email" },
+            ]).map(({ tab, icon: Icon, label }) => (
               <button
-                onClick={onDuplicate}
-                disabled={isDuplicating}
-                className="flex items-center justify-center gap-1.5 p-2 rounded-xl border border-violet-400/30 bg-violet-400/5 hover:bg-violet-400/10 transition-colors text-violet-400 text-xs font-semibold"
+                key={tab}
+                onClick={() => setCardTab(tab)}
+                className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 -mb-px transition-colors ${
+                  cardTab === tab
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
+                }`}
               >
-                <Copy className="w-3.5 h-3.5" /> Duplicate
+                <Icon className="w-3.5 h-3.5" />
+                {label}
               </button>
-              <button
-                onClick={onDelete}
-                className="flex items-center justify-center gap-1.5 p-2 rounded-xl border border-destructive/30 bg-destructive/5 hover:bg-destructive/10 transition-colors text-destructive text-xs font-semibold"
-              >
-                <Trash2 className="w-3.5 h-3.5" /> Delete
-              </button>
-            </div>
+            ))}
+          </div>
+
+          {/* Tab content */}
+          <div className="px-5 py-5">
+            {cardTab === "details" && (
+              <div className="space-y-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Title</Label>
+                    <Input value={title} onChange={e => setTitle(e.target.value)} className="bg-background border-border/50 rounded-xl h-9 text-sm" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Location</Label>
+                    <Input value={location} onChange={e => setLocation(e.target.value)} className="bg-background border-border/50 rounded-xl h-9 text-sm" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Date & Time</Label>
+                    <Input type="datetime-local" value={date} onChange={e => setDate(e.target.value)} className="bg-background border-border/50 rounded-xl h-9 text-sm dark:[color-scheme:dark]" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Ticket URL (Optional)</Label>
+                    <Input type="url" value={ticketUrl} onChange={e => setTicketUrl(e.target.value)} placeholder="https://..." className="bg-background border-border/50 rounded-xl h-9 text-sm" />
+                  </div>
+                  <div className="sm:col-span-2 space-y-1.5">
+                    <Label className="text-xs">Description</Label>
+                    <Textarea value={description} onChange={e => setDescription(e.target.value)} className="bg-background border-border/50 rounded-xl min-h-[80px] text-sm resize-none" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5 p-3 bg-emerald-500/5 rounded-xl border border-emerald-500/20">
+                    <Label className="text-xs text-emerald-400 font-semibold">⚡ XP Reward</Label>
+                    <Input type="number" min={0} value={xpReward} onChange={e => setXpReward(e.target.value)} className="bg-background border-border/50 rounded-lg h-8 text-sm" />
+                    <p className="text-[10px] text-muted-foreground">XP awarded on check-in</p>
+                  </div>
+                  <div className="space-y-1.5 p-3 bg-blue-500/5 rounded-xl border border-blue-500/20">
+                    <Label className="text-xs text-blue-400 font-semibold">🔑 Check-In PIN</Label>
+                    <Input
+                      value={checkInPin}
+                      onChange={e => setCheckInPin(e.target.value.toUpperCase())}
+                      maxLength={8}
+                      placeholder="e.g. DODGE7"
+                      className="bg-background border-border/50 rounded-lg h-8 text-sm font-mono uppercase tracking-widest"
+                    />
+                    <p className="text-[10px] text-muted-foreground">Shown to door staff</p>
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <Button onClick={handleSave} disabled={saving} className="rounded-xl bg-primary hover:bg-primary/90 text-white px-6">
+                    {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</> : <><Check className="w-4 h-4 mr-2" />Save Changes</>}
+                  </Button>
+                </div>
+              </div>
+            )}
+            {cardTab === "tickets" && <TicketPricingPanel event={event} toast={toast} />}
+            {cardTab === "checkout" && <CheckoutFormPanel event={event} />}
+            {cardTab === "email" && <EmailConfigPanel event={event} />}
           </div>
         </div>
       )}
@@ -395,7 +385,7 @@ const PRESET_FIELDS: Array<{ id: string; label: string; type: CheckoutField["typ
 
 const TSHIRT_OPTIONS = ["XS", "S", "M", "L", "XL", "XXL"];
 
-function CheckoutFormModal({ event, onClose }: { event: Event; onClose: () => void }) {
+function CheckoutFormPanel({ event }: { event: Event }) {
   const { mutate: updateCheckout, isPending } = useUpdateCheckoutForm();
   const { toast } = useToast();
   const [fields, setFields] = useState<CheckoutField[]>(event.checkoutFields ?? []);
@@ -434,24 +424,13 @@ function CheckoutFormModal({ event, onClose }: { event: Event; onClose: () => vo
 
   const handleSave = () => {
     updateCheckout({ id: event.id, checkoutFields: fields, waiverText }, {
-      onSuccess: () => { toast({ title: "Form & waiver saved" }); onClose(); },
+      onSuccess: () => { toast({ title: "Form & waiver saved" }); },
       onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
     });
   };
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[560px] max-h-[90vh] overflow-y-auto bg-card border-border/50 text-foreground">
-        <DialogHeader>
-          <DialogTitle className="font-display text-xl flex items-center gap-2">
-            <ClipboardList className="w-5 h-5 text-blue-400" /> Checkout Form & Waiver
-          </DialogTitle>
-          <DialogDescription className="text-muted-foreground">
-            Configure what buyers must fill out before purchasing a ticket for <span className="text-foreground font-medium">{event.title}</span>.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-6 py-2">
+    <div className="space-y-6">
           {/* Preset fields */}
           <div className="space-y-2">
             <Label className="text-sm font-semibold">Quick-Add Fields</Label>
@@ -550,52 +529,36 @@ function CheckoutFormModal({ event, onClose }: { event: Event; onClose: () => vo
               className="bg-background border-border rounded-xl min-h-[100px] text-sm"
             />
           </div>
-        </div>
 
-        <DialogFooter className="pt-2">
-          <Button variant="outline" onClick={onClose} disabled={isPending} className="rounded-xl border-border/50 hover:bg-secondary">Cancel</Button>
-          <Button onClick={handleSave} disabled={isPending} className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-lg">
-            {isPending ? "Saving…" : "Save Form & Waiver"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <div className="flex justify-end pt-2">
+            <Button onClick={handleSave} disabled={isPending} className="rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-lg">
+              {isPending ? "Saving…" : "Save Form & Waiver"}
+            </Button>
+          </div>
+        </div>
   );
 }
 
-function TicketPricingModal({ event, onClose }: { event: Event; onClose: () => void }) {
-  const { toast } = useToast();
+function TicketPricingPanel({ event, toast }: { event: Event; toast: any }) {
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[780px] max-h-[90vh] flex flex-col bg-card border-border/50 text-foreground p-0 gap-0">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/40 shrink-0">
-          <DialogTitle className="font-display text-xl flex items-center gap-2">
-            <TicketIcon className="w-5 h-5 text-accent" /> Ticket Management
-          </DialogTitle>
-          <DialogDescription className="text-muted-foreground">
-            Manage ticket types and discount codes for <span className="text-foreground font-medium">{event.title}</span>
-          </DialogDescription>
-        </DialogHeader>
-        <div className="flex-1 overflow-auto">
-          <Tabs defaultValue="types" className="h-full">
-            <TabsList className="mx-6 mt-4 mb-0 rounded-xl bg-secondary/60 border border-border/30">
-              <TabsTrigger value="types" className="rounded-lg gap-1.5"><TicketIcon className="w-3.5 h-3.5" /> Ticket Types</TabsTrigger>
-              <TabsTrigger value="codes" className="rounded-lg gap-1.5"><Tag className="w-3.5 h-3.5" /> Discount Codes</TabsTrigger>
-              <TabsTrigger value="legacy" className="rounded-lg gap-1.5"><CreditCard className="w-3.5 h-3.5" /> Base Pricing</TabsTrigger>
-            </TabsList>
-            <TabsContent value="types" className="p-6 pt-4 m-0">
-              <TicketTypesTab event={event} toast={toast} />
-            </TabsContent>
-            <TabsContent value="codes" className="p-6 pt-4 m-0">
-              <DiscountCodesTab event={event} toast={toast} />
-            </TabsContent>
-            <TabsContent value="legacy" className="p-6 pt-4 m-0">
-              <LegacyPricingTab event={event} toast={toast} onClose={onClose} />
-            </TabsContent>
-          </Tabs>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <div>
+      <Tabs defaultValue="types">
+        <TabsList className="rounded-xl bg-secondary/60 border border-border/30">
+          <TabsTrigger value="types" className="rounded-lg gap-1.5"><TicketIcon className="w-3.5 h-3.5" /> Ticket Types</TabsTrigger>
+          <TabsTrigger value="codes" className="rounded-lg gap-1.5"><Tag className="w-3.5 h-3.5" /> Discount Codes</TabsTrigger>
+          <TabsTrigger value="legacy" className="rounded-lg gap-1.5"><CreditCard className="w-3.5 h-3.5" /> Base Pricing</TabsTrigger>
+        </TabsList>
+        <TabsContent value="types" className="pt-4 m-0">
+          <TicketTypesTab event={event} toast={toast} />
+        </TabsContent>
+        <TabsContent value="codes" className="pt-4 m-0">
+          <DiscountCodesTab event={event} toast={toast} />
+        </TabsContent>
+        <TabsContent value="legacy" className="pt-4 m-0">
+          <LegacyPricingTab event={event} toast={toast} />
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }
 
@@ -868,7 +831,7 @@ function DiscountCodesTab({ event, toast }: { event: Event; toast: any }) {
   );
 }
 
-function LegacyPricingTab({ event, toast, onClose }: { event: Event; toast: any; onClose: () => void }) {
+function LegacyPricingTab({ event, toast, onClose }: { event: Event; toast: any; onClose?: () => void }) {
   const { mutate: setTicketPricing, isPending } = useSetTicketPricing();
   const [price, setPrice] = useState(event.ticketPrice != null ? String(event.ticketPrice) : "");
   const [capacity, setCapacity] = useState(event.ticketCapacity != null ? String(event.ticketCapacity) : "");
@@ -877,7 +840,7 @@ function LegacyPricingTab({ event, toast, onClose }: { event: Event; toast: any;
     const priceNum = parseFloat(price) || 0;
     const capacityNum = parseInt(capacity) || undefined;
     setTicketPricing({ id: event.id, price: priceNum, capacity: capacityNum }, {
-      onSuccess: () => { toast({ title: priceNum > 0 ? "Ticket pricing configured in Stripe" : "Event marked as free" }); onClose(); },
+      onSuccess: () => { toast({ title: priceNum > 0 ? "Ticket pricing configured in Stripe" : "Event marked as free" }); onClose?.(); },
       onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
     });
   };
@@ -909,7 +872,6 @@ function LegacyPricingTab({ event, toast, onClose }: { event: Event; toast: any;
         <Button onClick={handleSave} disabled={isPending} className="rounded-xl bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20">
           {isPending ? "Saving to Stripe..." : "Save Pricing"}
         </Button>
-        <Button variant="outline" onClick={onClose} disabled={isPending} className="rounded-xl border-border/50">Cancel</Button>
       </div>
     </div>
   );
@@ -1074,7 +1036,7 @@ function EventFormModal({ event, onClose }: { event?: Event; onClose: () => void
   );
 }
 
-function EmailConfigModal({ event, onClose }: { event: Event; onClose: () => void }) {
+function EmailConfigPanel({ event }: { event: Event }) {
   const { mutate: update, isPending: saving } = useUpdateEvent();
   const { toast } = useToast();
 
@@ -1131,34 +1093,28 @@ function EmailConfigModal({ event, onClose }: { event: Event; onClose: () => voi
       giftEmailCtaUrl: giftEmailCtaUrl || null,
       giftEmailVideoUrl: giftEmailVideoUrl || null,
     } as any, {
-      onSuccess: () => { toast({ title: "Email templates saved" }); onClose(); },
+      onSuccess: () => { toast({ title: "Email templates saved" }); },
       onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
     });
   };
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[560px] bg-card border-border/50 text-foreground max-h-[90vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="px-6 pt-6 pb-3 shrink-0 border-b border-border/30">
-          <DialogTitle className="font-display text-xl flex items-center gap-2">
-            <Mail className="w-5 h-5 text-emerald-400" /> Email Templates
-          </DialogTitle>
-          <p className="text-xs text-muted-foreground mt-1">
-            Override default email templates for <span className="font-semibold text-foreground">{event.title}</span>. Leave blank to use global defaults.
-          </p>
-        </DialogHeader>
+    <div className="space-y-4">
+      <p className="text-xs text-muted-foreground">
+        Override default email templates for <span className="font-semibold text-foreground">{event.title}</span>. Leave blank to use global defaults.
+      </p>
 
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "ticket" | "gift")} className="flex flex-col flex-1 min-h-0">
-          <TabsList className="mx-6 mt-4 mb-0 rounded-xl bg-secondary/60 border border-border/30 shrink-0">
-            <TabsTrigger value="ticket" className="rounded-lg gap-1.5 text-xs">
-              <Send className="w-3.5 h-3.5" /> Ticket Confirmation
-            </TabsTrigger>
-            <TabsTrigger value="gift" className="rounded-lg gap-1.5 text-xs">
-              <Gift className="w-3.5 h-3.5" /> Gift Ticket
-            </TabsTrigger>
-          </TabsList>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "ticket" | "gift")}>
+        <TabsList className="rounded-xl bg-secondary/60 border border-border/30">
+          <TabsTrigger value="ticket" className="rounded-lg gap-1.5 text-xs">
+            <Send className="w-3.5 h-3.5" /> Ticket Confirmation
+          </TabsTrigger>
+          <TabsTrigger value="gift" className="rounded-lg gap-1.5 text-xs">
+            <Gift className="w-3.5 h-3.5" /> Gift Ticket
+          </TabsTrigger>
+        </TabsList>
 
-          <TabsContent value="ticket" className="flex-1 overflow-y-auto px-6 pb-2 pt-4 m-0 space-y-4">
+        <TabsContent value="ticket" className="pt-4 m-0 space-y-4">
             <div className="space-y-2">
               <Label className="text-xs">Subject Line</Label>
               <Input value={emailSubject} onChange={e => setEmailSubject(e.target.value)} className="bg-background border-border rounded-xl" placeholder="Your ticket for {event} is confirmed!" />
@@ -1233,40 +1189,38 @@ function EmailConfigModal({ event, onClose }: { event: Event; onClose: () => voi
           </TabsContent>
         </Tabs>
 
-        {/* Send test email */}
-        <div className="px-6 pt-3 pb-0 shrink-0 border-t border-border/30">
-          <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1.5">
-            <Send className="w-3 h-3" /> Send a test — uses the <span className="font-semibold text-foreground">{activeTab === "ticket" ? "Ticket Confirmation" : "Gift Ticket"}</span> template with current values
-          </p>
-          <div className="flex gap-2">
-            <Input
-              type="email"
-              value={testEmail}
-              onChange={e => setTestEmail(e.target.value)}
-              placeholder="your@email.com"
-              className="bg-background border-border/50 rounded-xl h-9 text-sm"
-              onKeyDown={e => e.key === "Enter" && handleSendTest()}
-            />
-            <Button
-              variant="outline"
-              onClick={handleSendTest}
-              disabled={isSendingTest || !testEmail.trim()}
-              className="shrink-0 rounded-xl border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 gap-1.5"
-            >
-              {isSendingTest ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-              {isSendingTest ? "Sending…" : "Send Test"}
-            </Button>
-          </div>
-        </div>
-
-        <div className="px-6 py-4 border-t border-border/30 flex justify-end gap-2 shrink-0">
-          <Button variant="outline" onClick={onClose} disabled={saving} className="rounded-xl border-border/50 hover:bg-secondary">Cancel</Button>
-          <Button onClick={handleSave} disabled={saving} className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white">
-            {saving ? "Saving…" : "Save Templates"}
+      {/* Send test email */}
+      <div className="pt-3 border-t border-border/30">
+        <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1.5">
+          <Send className="w-3 h-3" /> Send a test — uses the <span className="font-semibold text-foreground">{activeTab === "ticket" ? "Ticket Confirmation" : "Gift Ticket"}</span> template with current values
+        </p>
+        <div className="flex gap-2">
+          <Input
+            type="email"
+            value={testEmail}
+            onChange={e => setTestEmail(e.target.value)}
+            placeholder="your@email.com"
+            className="bg-background border-border/50 rounded-xl h-9 text-sm"
+            onKeyDown={e => e.key === "Enter" && handleSendTest()}
+          />
+          <Button
+            variant="outline"
+            onClick={handleSendTest}
+            disabled={isSendingTest || !testEmail.trim()}
+            className="shrink-0 rounded-xl border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 gap-1.5"
+          >
+            {isSendingTest ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+            {isSendingTest ? "Sending…" : "Send Test"}
           </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+
+      <div className="pt-3 border-t border-border/30 flex justify-end">
+        <Button onClick={handleSave} disabled={saving} className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white">
+          {saving ? "Saving…" : "Save Templates"}
+        </Button>
+      </div>
+    </div>
   );
 }
 
