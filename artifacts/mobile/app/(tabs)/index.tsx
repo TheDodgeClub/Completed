@@ -327,7 +327,7 @@ export default function HomeScreen() {
                   router.push("/elite");
                 }}
               >
-                <Text style={styles.heroBtnEliteText}>Go Elite</Text>
+                <Text style={styles.heroBtnEliteText}>★ Go Elite</Text>
               </Pressable>
             )
           )}
