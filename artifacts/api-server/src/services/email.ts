@@ -13,7 +13,13 @@ function interpolate(template: string, vars: Record<string, string>): string {
 function toAbsoluteUrl(url: string | null | undefined): string | null {
   if (!url) return null;
   if (url.startsWith("http://") || url.startsWith("https://")) return url;
-  const base = (process.env.APP_URL ?? "https://thedodgeclub.co.uk").replace(/\/$/, "");
+  // APP_URL takes priority (set in production deployments).
+  // Fall back to the live Replit dev domain so test emails always resolve.
+  const replitDomain = process.env.REPLIT_DOMAINS?.split(",")[0]?.trim();
+  const base = (
+    process.env.APP_URL ||
+    (replitDomain ? `https://${replitDomain}` : "https://thedodgeclub.co.uk")
+  ).replace(/\/$/, "");
   return `${base}${url.startsWith("/") ? "" : "/"}${url}`;
 }
 

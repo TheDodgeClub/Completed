@@ -109,6 +109,12 @@ router.post("/checkout", requireAuth, async (req: any, res) => {
   const [event] = await db.select().from(eventsTable).where(eq(eventsTable.id, eventId)).limit(1);
   if (!event) { res.status(404).json({ error: "Event not found" }); return; }
 
+  // Server-side waiver enforcement
+  if (event.waiverText && checkoutData?.__waiver_signed !== "true") {
+    res.status(400).json({ error: "You must sign the waiver before purchasing a ticket." });
+    return;
+  }
+
   // Resolve ticket type
   let resolvedStripePriceId = event.stripePriceId;
   let resolvedStripeProductId = event.stripeProductId;
@@ -441,6 +447,12 @@ router.post("/free", requireAuth, async (req: any, res) => {
   const quantity = Math.max(1, Math.min(10, Number(rawQuantity) || 1));
   const [event] = await db.select().from(eventsTable).where(eq(eventsTable.id, eventId)).limit(1);
   if (!event) { res.status(404).json({ error: "Event not found" }); return; }
+
+  // Server-side waiver enforcement
+  if (event.waiverText && checkoutData?.__waiver_signed !== "true") {
+    res.status(400).json({ error: "You must sign the waiver before registering for this event." });
+    return;
+  }
 
   let resolvedTicketTypeId: number | null = null;
   let effectivelyfree = !event.ticketPrice || Number(event.ticketPrice) === 0;
