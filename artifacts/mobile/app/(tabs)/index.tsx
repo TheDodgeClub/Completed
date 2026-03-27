@@ -457,7 +457,7 @@ export default function HomeScreen() {
             </View>
             <View style={styles.gameCardBody}>
               <Text style={styles.gameCardTitle}>DAILY DODGE</Text>
-              <Text style={styles.gameCardSub}>Play today's game — earn up to +50 XP</Text>
+              <Text style={styles.gameCardSub}>Daily Dodge Mini Game</Text>
             </View>
             <View style={styles.gameCardArrow}>
               <Feather name="play-circle" size={28} color="#FFC107" />

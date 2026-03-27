@@ -468,7 +468,6 @@ export default function DodgeGame() {
                   Hold anywhere to aim, then release to throw.{"\n"}
                   You have 4 lives. Good luck.
                 </Text>
-                <Text style={[styles.overlaySub, { color: "#FFD700" }]}>Earn up to +50 XP</Text>
               </>
             )}
             {phase === "dead" && (
