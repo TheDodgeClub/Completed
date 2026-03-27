@@ -83,8 +83,8 @@ export default function TicketsScreen() {
   const { mutate: registerFree, isPending: registeringFree } = useMutation({
     mutationFn: ({ eventId, checkoutData, ticketTypeId, quantity }: { eventId: number; checkoutData?: Record<string, string>; ticketTypeId?: number; quantity?: number }) =>
       registerFreeTicket(eventId, checkoutData, ticketTypeId, quantity),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["my-tickets"] });
+    onSuccess: async () => {
+      await refetchTickets();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setActiveTab("my");
     },
