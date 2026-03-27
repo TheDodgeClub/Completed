@@ -1,11 +1,10 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
   ScrollView,
   Pressable,
   StyleSheet,
-  ActivityIndicator,
   Linking,
   Alert,
 } from "react-native";
@@ -13,11 +12,13 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import { useColors } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
-import { getEliteStatus, startEliteSubscription, getEliteManageUrl } from "@/lib/api";
+import { getEliteStatus } from "@/lib/api";
+
+const WEBSITE_URL = process.env.EXPO_PUBLIC_WEBSITE_URL ?? "https://dodgeclub.co.uk";
 
 const BENEFITS = [
   { icon: "clock", title: "Early Ticket Access", desc: "Get first pick on every event — before general sale opens." },
@@ -26,6 +27,14 @@ const BENEFITS = [
   { icon: "tag", title: "Discounted Tickets", desc: "Elite members enjoy discounts on selected events." },
   { icon: "shield", title: "Elite Badge", desc: "Stand out in the community with your exclusive Elite badge." },
 ];
+
+function openWebsite(path: string) {
+  const url = `${WEBSITE_URL}${path}`;
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  Linking.openURL(url).catch(() => {
+    Alert.alert("Could not open browser", "Please visit dodgeclub.co.uk to manage your membership.");
+  });
+}
 
 function makeStyles(Colors: ReturnType<typeof useColors>) {
   return StyleSheet.create({
@@ -202,35 +211,11 @@ export default function EliteScreen() {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const { user, isAuthenticated } = useAuth();
-  const queryClient = useQueryClient();
-  const [busy, setBusy] = useState(false);
 
-  const { data: eliteStatus, isLoading } = useQuery({
+  const { data: eliteStatus } = useQuery({
     queryKey: ["elite-status"],
     queryFn: getEliteStatus,
     enabled: isAuthenticated,
-  });
-
-  const subscribeMutation = useMutation({
-    mutationFn: startEliteSubscription,
-    onSuccess: async (data) => {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      Linking.openURL(data.url).catch(() => {
-        Alert.alert("Error", "Could not open checkout. Please try again.");
-      });
-    },
-    onError: () => {
-      Alert.alert("Error", "Could not start checkout. Please try again.");
-    },
-  });
-
-  const manageMutation = useMutation({
-    mutationFn: getEliteManageUrl,
-    onSuccess: async (data) => {
-      Linking.openURL(data.url).catch(() => {
-        Alert.alert("Error", "Could not open billing portal.");
-      });
-    },
   });
 
   const isElite = eliteStatus?.isElite ?? user?.isElite ?? false;
@@ -301,31 +286,23 @@ export default function EliteScreen() {
         ) : isElite ? (
           <Pressable
             style={styles.manageBtn}
-            onPress={() => manageMutation.mutate()}
-            disabled={manageMutation.isPending}
+            onPress={() => openWebsite("/account")}
           >
-            <Text style={styles.manageBtnText}>
-              {manageMutation.isPending ? "Opening…" : "Manage Subscription"}
-            </Text>
+            <Text style={styles.manageBtnText}>Manage Subscription</Text>
           </Pressable>
         ) : (
           <Pressable
             style={styles.ctaBtn}
-            onPress={() => subscribeMutation.mutate()}
-            disabled={subscribeMutation.isPending || isLoading}
+            onPress={() => openWebsite("/#elite")}
           >
             <LinearGradient colors={[Colors.accent, "#B8860B"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.ctaGradient}>
-              {subscribeMutation.isPending ? (
-                <ActivityIndicator color={Colors.background} />
-              ) : (
-                <Text style={styles.ctaText}>Join Elite — £8.99/month</Text>
-              )}
+              <Text style={styles.ctaText}>Join Elite — £8.99/month</Text>
             </LinearGradient>
           </Pressable>
         )}
 
         <Text style={styles.disclaimer}>
-          Subscription renews monthly. Cancel any time through your account settings or the App Store. Payment is charged to your card on file.
+          Elite membership is managed through our website. You will be taken to dodgeclub.co.uk to subscribe or manage your membership.
         </Text>
       </ScrollView>
     </View>

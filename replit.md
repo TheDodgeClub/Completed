@@ -77,6 +77,8 @@ workspace/
 - `GET /api/elite/success` — verifies session after payment, grants elite status, redirects to mobile app
 - `GET /api/elite/manage` — creates Stripe Customer Portal session for self-service subscription management
 - Mobile paywall: `artifacts/mobile/app/elite.tsx` — navigate with `router.push('/elite')`
+  - **iOS App Store compliant**: "Join Elite" and "Manage Subscription" buttons open `EXPO_PUBLIC_WEBSITE_URL` (defaults to `https://dodgeclub.co.uk`) in the browser — no in-app Stripe payment
+  - Set `EXPO_PUBLIC_WEBSITE_URL` env var to your deployed website URL before App Store submission
 - Content gating: `isEliteOnly` on posts, `eliteEarlyAccess`/`eliteDiscountPercent` on events
 - Admin: elite badge on Members table; isEliteOnly checkbox on Posts form; Elite perks section on Events form
 
