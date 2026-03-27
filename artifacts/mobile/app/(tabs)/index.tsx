@@ -77,6 +77,18 @@ function getCountdown(dateStr: string): string | null {
   return "Starting soon!";
 }
 
+function pulseTypeColor(type: string): string {
+  switch (type) {
+    case "ticket":    return "#3B82F6"; // blue
+    case "elite":     return "#F59E0B"; // amber
+    case "comment":   return "#06B6D4"; // cyan
+    case "ring":      return "#A855F7"; // purple
+    case "medal":     return "#F97316"; // orange
+    case "newMember": return "#22C55E"; // green
+    default:          return "#6B7280"; // grey
+  }
+}
+
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
@@ -136,7 +148,8 @@ export default function HomeScreen() {
   const { data: activityItems, refetch: refetchActivity } = useQuery({
     queryKey: ["activity"],
     queryFn: getActivity,
-    staleTime: 2 * 60 * 1000,
+    staleTime: 30 * 1000,
+    refetchInterval: 30 * 1000,
   });
 
   const { data: merch } = useQuery({
@@ -514,9 +527,13 @@ export default function HomeScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Community Pulse</Text>
+              <View style={styles.pulseLiveBadge}>
+                <View style={styles.pulseLiveDot} />
+                <Text style={styles.pulseLiveLabel}>LIVE</Text>
+              </View>
             </View>
             <View style={styles.pulseCard}>
-              {activityItems.slice(0, 5).map((item: ActivityItem, idx: number) => (
+              {activityItems.slice(0, 6).map((item: ActivityItem, idx: number) => (
                 <View key={item.id}>
                   {idx > 0 && <View style={styles.pulseDivider} />}
                   <View style={styles.pulseRow}>
@@ -531,6 +548,7 @@ export default function HomeScreen() {
                           <Text style={styles.pulseAvatarInitial}>{item.userName.charAt(0).toUpperCase()}</Text>
                         </View>
                       )}
+                      <View style={[styles.pulseTypeDot, { backgroundColor: pulseTypeColor(item.type) }]} />
                     </View>
                     <Text style={styles.pulseText} numberOfLines={2}>{item.text}</Text>
                     <Text style={styles.pulseTime}>{timeAgo(item.timestamp)}</Text>
@@ -1090,6 +1108,27 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       paddingBottom: 10,
     },
     /* ── Community Pulse ── */
+    pulseLiveBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 5,
+      backgroundColor: "#EF444422",
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 20,
+    },
+    pulseLiveDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: "#EF4444",
+    },
+    pulseLiveLabel: {
+      fontFamily: "Inter_700Bold",
+      fontSize: 10,
+      color: "#EF4444",
+      letterSpacing: 0.8,
+    },
     pulseCard: {
       backgroundColor: Colors.card,
       borderRadius: 14,
@@ -1112,6 +1151,17 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     pulseAvatarWrap: {
       width: 32,
       height: 32,
+      position: "relative",
+    },
+    pulseTypeDot: {
+      position: "absolute",
+      bottom: -1,
+      right: -2,
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      borderWidth: 1.5,
+      borderColor: Colors.card,
     },
     pulseAvatar: {
       width: 32,

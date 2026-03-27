@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, usersTable, attendanceTable, eventsTable, awardsTable, teamHistoryTable, eventRegistrationsTable } from "@workspace/db";
-import { eq, gt, desc, lte } from "drizzle-orm";
+import { db, usersTable, attendanceTable, eventsTable, awardsTable, teamHistoryTable, eventRegistrationsTable, postCommentsTable } from "@workspace/db";
+import { eq, gt, desc, lte, isNotNull } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -193,16 +193,38 @@ router.get("/me/rank", async (req, res) => {
 
 /* GET /api/users/activity — recent community activity feed (public) */
 router.get("/activity", async (_req, res) => {
-  const [recentAwards, recentMembers] = await Promise.all([
+  const [recentAwards, recentMembers, recentRegistrations, eliteUpgrades, recentComments] = await Promise.all([
     db.query.awardsTable.findMany({
       with: { user: { columns: { id: true, name: true, avatarUrl: true } } },
       orderBy: [desc(awardsTable.awardedAt)],
-      limit: 10,
+      limit: 8,
     }),
     db.query.usersTable.findMany({
       columns: { id: true, name: true, avatarUrl: true, createdAt: true, isAdmin: true },
       orderBy: [desc(usersTable.createdAt)],
       limit: 6,
+    }),
+    db.query.eventRegistrationsTable.findMany({
+      with: {
+        user: { columns: { id: true, name: true, avatarUrl: true } },
+        event: { columns: { title: true } },
+      },
+      orderBy: [desc(eventRegistrationsTable.registeredAt)],
+      limit: 8,
+    }),
+    db.query.usersTable.findMany({
+      columns: { id: true, name: true, avatarUrl: true, eliteSince: true },
+      where: isNotNull(usersTable.eliteSince),
+      orderBy: [desc(usersTable.eliteSince)],
+      limit: 6,
+    }),
+    db.query.postCommentsTable.findMany({
+      with: {
+        user: { columns: { id: true, name: true, avatarUrl: true } },
+        post: { columns: { title: true } },
+      },
+      orderBy: [desc(postCommentsTable.createdAt)],
+      limit: 8,
     }),
   ]);
 
@@ -234,6 +256,43 @@ router.get("/activity", async (_req, res) => {
       userAvatar: member.avatarUrl ?? null,
       text: `${member.name} just joined the Dodge Club 👋`,
       timestamp: member.createdAt.toISOString(),
+    });
+  }
+
+  for (const reg of recentRegistrations) {
+    items.push({
+      id: `reg-${reg.id}`,
+      type: "ticket",
+      userId: reg.userId,
+      userName: reg.user.name,
+      userAvatar: reg.user.avatarUrl ?? null,
+      text: `${reg.user.name} grabbed tickets to ${reg.event.title} 🎟️`,
+      timestamp: reg.registeredAt.toISOString(),
+    });
+  }
+
+  for (const u of eliteUpgrades) {
+    if (!u.eliteSince) continue;
+    items.push({
+      id: `elite-${u.id}`,
+      type: "elite",
+      userId: u.id,
+      userName: u.name,
+      userAvatar: u.avatarUrl ?? null,
+      text: `${u.name} went Elite ⚡`,
+      timestamp: u.eliteSince.toISOString(),
+    });
+  }
+
+  for (const comment of recentComments) {
+    items.push({
+      id: `comment-${comment.id}`,
+      type: "comment",
+      userId: comment.userId,
+      userName: comment.user.name,
+      userAvatar: comment.user.avatarUrl ?? null,
+      text: `${comment.user.name} commented on "${comment.post.title}" 💬`,
+      timestamp: comment.createdAt.toISOString(),
     });
   }
 
