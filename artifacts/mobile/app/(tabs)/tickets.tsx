@@ -507,9 +507,9 @@ function EventBuyCard({
   const priceLabel = !hasTicketing
     ? null
     : hasActiveTypes
-      ? (minTypePrice === 0 ? "FREE" : `From £${((minTypePrice ?? 0) / 100).toFixed(2)}`)
+      ? (minTypePrice === 0 ? "Limited" : `From £${((minTypePrice ?? 0) / 100).toFixed(2)}`)
       : isFree
-        ? "FREE"
+        ? "Limited"
         : `£${event.ticketPrice?.toFixed(2)}`;
 
   const { data: attendees } = useQuery<EventAttendee[]>({
@@ -546,8 +546,8 @@ function EventBuyCard({
           )}
         </View>
         {priceLabel && (
-          <View style={[styles.priceBadge, isFree && styles.priceBadgeFree]}>
-            <Text style={[styles.priceText, isFree && styles.priceTextFree]}>{priceLabel}</Text>
+          <View style={[styles.priceBadge, isFree && styles.priceBadgeLimited]}>
+            <Text style={[styles.priceText, isFree && styles.priceTextLimited]}>{priceLabel}</Text>
           </View>
         )}
       </View>
@@ -1477,13 +1477,13 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       alignSelf: "flex-start",
       flexShrink: 0,
     },
-    priceBadgeFree: { backgroundColor: Colors.accent + "22" },
+    priceBadgeLimited: { backgroundColor: "#FF3B3022" },
     priceText: {
       fontFamily: "Poppins_800ExtraBold",
       fontSize: 13,
       color: Colors.primary,
     },
-    priceTextFree: { color: Colors.accent },
+    priceTextLimited: { color: "#FF3B30" },
     buyBtn: {
       flexDirection: "row",
       alignItems: "center",
