@@ -64,7 +64,7 @@ async function getUserStats(userId: number, bonusXp: number = 0, gameXp: number 
   const [records, awards, pastEvents] = await Promise.all([
     db.query.attendanceTable.findMany({ where: eq(attendanceTable.userId, userId) }),
     db.query.awardsTable.findMany({ where: eq(awardsTable.userId, userId) }),
-    db.select({ id: eventsTable.id, xpReward: eventsTable.xpReward }).from(eventsTable).where(lte(eventsTable.date, new Date())).orderBy(eventsTable.date),
+    db.select({ id: eventsTable.id, xpReward: eventsTable.xpReward }).from(eventsTable).where(lte(eventsTable.date, new Date(Date.now() + 30 * 60 * 1000))).orderBy(eventsTable.date),
   ]);
   const attendedIds = new Set(records.map(r => r.eventId));
   const { eventXP, currentStreak, bestStreak, eventsAttended } = computeAttendanceXP(attendedIds, pastEvents);
@@ -102,7 +102,7 @@ router.get("/leaderboard", async (_req, res) => {
     }),
     db.query.attendanceTable.findMany({ columns: { userId: true, eventId: true, earnedMedal: true } }),
     db.query.awardsTable.findMany({ columns: { userId: true, type: true } }),
-    db.select({ id: eventsTable.id, xpReward: eventsTable.xpReward }).from(eventsTable).where(lte(eventsTable.date, new Date())).orderBy(eventsTable.date),
+    db.select({ id: eventsTable.id, xpReward: eventsTable.xpReward }).from(eventsTable).where(lte(eventsTable.date, new Date(Date.now() + 30 * 60 * 1000))).orderBy(eventsTable.date),
   ]);
 
   const attendanceEventsByUser = new Map<number, Set<number>>();
@@ -161,7 +161,7 @@ router.get("/me/rank", async (req, res) => {
     }),
     db.query.attendanceTable.findMany({ columns: { userId: true, eventId: true, earnedMedal: true } }),
     db.query.awardsTable.findMany({ columns: { userId: true, type: true } }),
-    db.select({ id: eventsTable.id, xpReward: eventsTable.xpReward }).from(eventsTable).where(lte(eventsTable.date, new Date())).orderBy(eventsTable.date),
+    db.select({ id: eventsTable.id, xpReward: eventsTable.xpReward }).from(eventsTable).where(lte(eventsTable.date, new Date(Date.now() + 30 * 60 * 1000))).orderBy(eventsTable.date),
   ]);
 
   const attendanceEventsByUser = new Map<number, Set<number>>();
@@ -422,7 +422,7 @@ router.get("/:id/attendance", async (req, res) => {
       where: eq(attendanceTable.userId, userId),
       with: { event: true },
     }),
-    db.select({ id: eventsTable.id, xpReward: eventsTable.xpReward }).from(eventsTable).where(lte(eventsTable.date, new Date())).orderBy(eventsTable.date),
+    db.select({ id: eventsTable.id, xpReward: eventsTable.xpReward }).from(eventsTable).where(lte(eventsTable.date, new Date(Date.now() + 30 * 60 * 1000))).orderBy(eventsTable.date),
   ]);
 
   // Compute per-event XP (same streak/milestone algorithm used in getUserStats)

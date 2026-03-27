@@ -131,7 +131,7 @@ async function getUserStats(userId: number, bonusXp: number = 0, gameXp: number 
   const [records, awards, pastEvents] = await Promise.all([
     db.select().from(attendanceTable).where(eq(attendanceTable.userId, userId)),
     db.select().from(awardsTable).where(eq(awardsTable.userId, userId)),
-    db.select({ id: eventsTable.id, xpReward: eventsTable.xpReward }).from(eventsTable).where(lte(eventsTable.date, new Date())).orderBy(eventsTable.date),
+    db.select({ id: eventsTable.id, xpReward: eventsTable.xpReward }).from(eventsTable).where(lte(eventsTable.date, new Date(Date.now() + 30 * 60 * 1000))).orderBy(eventsTable.date),
   ]);
   const attendedIds = new Set(records.map(r => r.eventId));
   const { eventXP, currentStreak, bestStreak, eventsAttended } = computeAttendanceXP(attendedIds, pastEvents);

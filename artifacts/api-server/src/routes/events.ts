@@ -14,6 +14,34 @@ function isCheckInWindowOpen(eventDate: Date): boolean {
   return now >= start && now <= end;
 }
 
+// XP computation helpers (mirrors auth.ts / users.ts logic)
+const ATTENDANCE_MILESTONES = [
+  { events: 5,  bonus: 100  },
+  { events: 10, bonus: 250  },
+  { events: 25, bonus: 500  },
+  { events: 50, bonus: 1000 },
+];
+
+function calcCheckInXP(
+  attendedBefore: Set<number>,
+  newEventId: number,
+  chronoEvents: { id: number; xpReward: number }[],
+): number {
+  function sumXP(ids: Set<number>): number {
+    let streak = 0, xp = 0, count = 0;
+    for (const ev of chronoEvents) {
+      if (ids.has(ev.id)) {
+        streak++; count++;
+        xp += (ev.xpReward ?? 50) + (streak >= 8 ? 50 : streak >= 4 ? 25 : streak >= 2 ? 10 : 0);
+        for (const m of ATTENDANCE_MILESTONES) { if (count === m.events) { xp += m.bonus; break; } }
+      } else { streak = 0; }
+    }
+    return xp;
+  }
+  const withNew = new Set([...attendedBefore, newEventId]);
+  return sumXP(withNew) - sumXP(attendedBefore);
+}
+
 const router: IRouter = Router();
 
 function toEvent(e: typeof eventsTable.$inferSelect, ticketTypes?: any[]) {
@@ -180,7 +208,16 @@ router.post("/:id/checkin", async (req, res) => {
   });
   if (existing) { res.json({ alreadyCheckedIn: true, xpGained: 0 }); return; }
 
-  const xpGained = event.xpReward ?? 50;
+  // Compute accurate xpGained including streak + milestone bonuses
+  const [attendanceRows, chronoEvents] = await Promise.all([
+    db.select({ eventId: attendanceTable.eventId }).from(attendanceTable).where(eq(attendanceTable.userId, userId)),
+    db.select({ id: eventsTable.id, xpReward: eventsTable.xpReward })
+      .from(eventsTable)
+      .where(lte(eventsTable.date, event.date))
+      .orderBy(eventsTable.date),
+  ]);
+  const attendedBefore = new Set(attendanceRows.map(r => r.eventId));
+  const xpGained = calcCheckInXP(attendedBefore, eventId, chronoEvents);
 
   await Promise.all([
     db.insert(attendanceTable).values({ userId, eventId, earnedMedal: false }),
@@ -219,7 +256,16 @@ router.post("/:id/checkin-scan", requireAdmin, async (req, res) => {
     return;
   }
 
-  const xpGained = event.xpReward ?? 50;
+  // Compute accurate xpGained including streak + milestone bonuses
+  const [attendanceRows, chronoEvents] = await Promise.all([
+    db.select({ eventId: attendanceTable.eventId }).from(attendanceTable).where(eq(attendanceTable.userId, Number(userId))),
+    db.select({ id: eventsTable.id, xpReward: eventsTable.xpReward })
+      .from(eventsTable)
+      .where(lte(eventsTable.date, event.date))
+      .orderBy(eventsTable.date),
+  ]);
+  const attendedBefore = new Set(attendanceRows.map(r => r.eventId));
+  const xpGained = calcCheckInXP(attendedBefore, eventId, chronoEvents);
 
   // Insert attendance, tick ticket checkedIn, increment event attendeeCount — all in parallel
   await Promise.all([

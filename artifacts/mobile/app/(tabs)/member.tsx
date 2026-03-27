@@ -337,7 +337,7 @@ function MemberQRCard({ userId, Colors, styles }: { userId: number; Colors: any;
   );
 }
 
-function MemberTicketRow({ ticket, Colors, styles }: { ticket: Ticket; Colors: any; styles: any }) {
+const MemberTicketRow = ({ ticket, Colors, styles }: { ticket: Ticket; Colors: any; styles: any }) => {
   const date = new Date(ticket.eventDate);
   const isCheckedIn = ticket.checkedIn;
   const isToday = date.toDateString() === new Date().toDateString();
@@ -374,7 +374,7 @@ function MemberTicketRow({ ticket, Colors, styles }: { ticket: Ticket; Colors: a
       </View>
     </View>
   );
-}
+};
 
 /* ======= Main Screen ======= */
 export default function MemberScreen() {
