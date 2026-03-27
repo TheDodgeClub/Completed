@@ -844,15 +844,16 @@ function CheckoutFormModal({
   const insets = useSafeAreaInsets();
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [waiverExpanded, setWaiverExpanded] = useState(false);
-  // Signature pad state
+  // Signature pad state (shared native + web)
   const [signaturePaths, setSignaturePaths] = useState<string[]>([]);
   const [, setRenderTick] = useState(0);
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const currentStroke = useRef<string>("");
   const scrollRef = useRef<RNScrollView>(null);
-  // For web: store reference to the SVG container to compute local coords
+  // Ref to the signature pad container (View/div)
   const sigContainerRef = useRef<any>(null);
-  const sigContainerRect = useRef<{ left: number; top: number } | null>(null);
+  // Track whether pointer is down (web only)
+  const pointerDownRef = useRef(false);
 
   const fields: CheckoutField[] = event.checkoutFields ?? [];
   const hasWaiver = !!event.waiverText;
@@ -867,40 +868,95 @@ function CheckoutFormModal({
     }
   }, []);
 
-  // Helper: get local coords within the sig pad, handling web offset
-  function getLocalCoords(nativeEvent: any) {
-    if (Platform.OS === "web" && sigContainerRect.current) {
-      return {
-        x: (nativeEvent.pageX ?? nativeEvent.clientX ?? 0) - sigContainerRect.current.left,
-        y: (nativeEvent.pageY ?? nativeEvent.clientY ?? 0) - sigContainerRect.current.top,
-      };
-    }
-    return { x: nativeEvent.locationX ?? 0, y: nativeEvent.locationY ?? 0 };
-  }
+  // ── Web-only: attach DOM pointer events directly to the sig pad ──
+  // PanResponder locationX/Y is unreliable on web; pointer events + getBoundingClientRect
+  // give pixel-perfect coordinates.
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    if (!waiverExpanded) return;
 
+    let rafId: number;
+    // cleanupListeners is set inside the rAF callback so it can be called from useEffect cleanup
+    let cleanupListeners: (() => void) | null = null;
+
+    rafId = requestAnimationFrame(() => {
+      const el: HTMLElement | null = sigContainerRef.current;
+      if (!el) return;
+
+      el.style.touchAction = "none";
+      el.style.cursor = "crosshair";
+      (el.style as any).userSelect = "none";
+
+      function localCoords(e: PointerEvent) {
+        const rect = el!.getBoundingClientRect();
+        return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      }
+
+      function onDown(e: PointerEvent) {
+        e.preventDefault();
+        pointerDownRef.current = true;
+        el!.setPointerCapture(e.pointerId);
+        const { x, y } = localCoords(e);
+        currentStroke.current = `M${x.toFixed(1)},${y.toFixed(1)}`;
+        setScrollEnabled(false);
+        setRenderTick(t => t + 1);
+      }
+
+      function onMove(e: PointerEvent) {
+        if (!pointerDownRef.current) return;
+        e.preventDefault();
+        const { x, y } = localCoords(e);
+        currentStroke.current += ` L${x.toFixed(1)},${y.toFixed(1)}`;
+        setRenderTick(t => t + 1);
+      }
+
+      function onUp(e: PointerEvent) {
+        if (!pointerDownRef.current) return;
+        pointerDownRef.current = false;
+        try { el!.releasePointerCapture(e.pointerId); } catch {}
+        if (currentStroke.current) {
+          const completed = currentStroke.current;
+          currentStroke.current = "";
+          setSignaturePaths(prev => [...prev, completed]);
+        }
+        setScrollEnabled(true);
+        setRenderTick(t => t + 1);
+      }
+
+      el.addEventListener("pointerdown", onDown);
+      el.addEventListener("pointermove", onMove);
+      el.addEventListener("pointerup", onUp);
+      el.addEventListener("pointercancel", onUp);
+
+      cleanupListeners = () => {
+        el.removeEventListener("pointerdown", onDown);
+        el.removeEventListener("pointermove", onMove);
+        el.removeEventListener("pointerup", onUp);
+        el.removeEventListener("pointercancel", onUp);
+      };
+    });
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      cleanupListeners?.();
+    };
+  }, [waiverExpanded]);
+
+  // ── Native-only: PanResponder for touch drawing ──
   const signaturePanResponder = useRef(
     PanResponder.create({
-      // Capture phase — claim the touch before ScrollView can intercept it
       onStartShouldSetPanResponderCapture: () => true,
       onMoveShouldSetPanResponderCapture: () => true,
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: (e) => {
-        // On web, snapshot the container rect so we can offset coords correctly
-        if (Platform.OS === "web" && sigContainerRef.current) {
-          try {
-            const node = (sigContainerRef.current as any);
-            const rect = node.getBoundingClientRect?.() ?? node._nativeTag?.getBoundingClientRect?.();
-            if (rect) sigContainerRect.current = { left: rect.left, top: rect.top };
-          } catch {}
-        }
-        const { x, y } = getLocalCoords(e.nativeEvent);
+        const { locationX: x, locationY: y } = e.nativeEvent;
         currentStroke.current = `M${x.toFixed(1)},${y.toFixed(1)}`;
         setScrollEnabled(false);
         setRenderTick(t => t + 1);
       },
       onPanResponderMove: (e) => {
-        const { x, y } = getLocalCoords(e.nativeEvent);
+        const { locationX: x, locationY: y } = e.nativeEvent;
         currentStroke.current += ` L${x.toFixed(1)},${y.toFixed(1)}`;
         setRenderTick(t => t + 1);
       },
@@ -911,14 +967,11 @@ function CheckoutFormModal({
           setSignaturePaths(prev => [...prev, completed]);
         }
         setScrollEnabled(true);
-        sigContainerRect.current = null;
         setRenderTick(t => t + 1);
       },
       onPanResponderTerminate: () => {
-        // Gesture stolen by system (e.g. notification) — re-enable scroll
         currentStroke.current = "";
         setScrollEnabled(true);
-        sigContainerRect.current = null;
         setRenderTick(t => t + 1);
       },
     })
@@ -1112,10 +1165,10 @@ function CheckoutFormModal({
                           </View>
                         )}
 
-                        {/* Drawing canvas */}
+                        {/* Drawing canvas — panHandlers native only; web uses DOM pointer events */}
                         <Svg
                           style={{ flex: 1 }}
-                          {...signaturePanResponder.panHandlers}
+                          {...(Platform.OS !== "web" ? signaturePanResponder.panHandlers : {})}
                         >
                           {signaturePaths.map((d, i) => (
                             <SvgPath
