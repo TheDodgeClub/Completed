@@ -33,4 +33,4 @@ channel = "stable-25_05"
 
 [userenv.shared]
 BREVO_SMTP_USER = "info@thedodgeclub.co.uk"
-EXPO_PUBLIC_WEBSITE_URL = "https://workspace.quasonmatthews.replit.app/landing"
+EXPO_PUBLIC_WEBSITE_URL = "https://thedodgeclub.co.uk/landing"

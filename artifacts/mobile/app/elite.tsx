@@ -18,7 +18,7 @@ import { useColors } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import { getEliteStatus } from "@/lib/api";
 
-const WEBSITE_URL = process.env.EXPO_PUBLIC_WEBSITE_URL ?? "https://dodgeclub.co.uk";
+const WEBSITE_URL = process.env.EXPO_PUBLIC_WEBSITE_URL ?? "https://thedodgeclub.co.uk/landing";
 
 const BENEFITS = [
   { icon: "clock", title: "Early Ticket Access", desc: "Get first pick on every event — before general sale opens." },
@@ -32,7 +32,7 @@ function openWebsite(path: string) {
   const url = `${WEBSITE_URL}${path}`;
   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   Linking.openURL(url).catch(() => {
-    Alert.alert("Could not open browser", "Please visit dodgeclub.co.uk to manage your membership.");
+    Alert.alert("Could not open browser", "Please visit thedodgeclub.co.uk to manage your membership.");
   });
 }
 
@@ -302,7 +302,7 @@ export default function EliteScreen() {
         )}
 
         <Text style={styles.disclaimer}>
-          Elite membership is managed through our website. You will be taken to dodgeclub.co.uk to subscribe or manage your membership.
+          Elite membership is managed through our website. You will be taken to thedodgeclub.co.uk to subscribe or manage your membership.
         </Text>
       </ScrollView>
     </View>
