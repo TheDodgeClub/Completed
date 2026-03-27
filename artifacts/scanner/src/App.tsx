@@ -80,7 +80,7 @@ function LoginScreen({ onLogin }: { onLogin: (u: AdminUser) => void }) {
               <label className="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-widest">Email</label>
               <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                 className="w-full bg-[#1c1c1e] border border-[#2c2c2e] text-white rounded-2xl px-5 py-4 text-base focus:outline-none focus:border-[hsl(355,78%,56%)] transition-colors"
-                placeholder="admin@dodgeclub.co.uk" autoComplete="email" required />
+                placeholder="your@email.com" autoComplete="email" required />
             </div>
             <div>
               <label className="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-widest">Password</label>
@@ -105,10 +105,49 @@ function LoginScreen({ onLogin }: { onLogin: (u: AdminUser) => void }) {
 }
 
 /* ─── Events ─────────────────────────────────────────────────── */
+function EventCard({ ev, onSelect }: { ev: ActiveEvent; onSelect: (e: ActiveEvent) => void }) {
+  return (
+    <button onClick={() => onSelect(ev)}
+      className="w-full bg-[#141414] border border-[#2a2a2a] rounded-2xl p-4 text-left active:opacity-70 transition-opacity">
+      <div className="flex items-start gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-0.5">
+            {ev.checkInOpen && (
+              <span className="inline-flex items-center gap-1 bg-green-900/50 border border-green-700/40 text-green-400 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">
+                <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse inline-block" />
+                Live
+              </span>
+            )}
+          </div>
+          <h3 className="font-bold text-base text-white leading-tight truncate">{ev.title}</h3>
+          <p className="text-xs text-gray-400 mt-0.5 truncate">{ev.location}</p>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {new Date(ev.date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}
+            {" · "}
+            {new Date(ev.date).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+          </p>
+        </div>
+        {ev.checkInPin && (
+          <div className="shrink-0 bg-[hsl(355,78%,56%)]/15 border border-[hsl(355,78%,56%)]/30 rounded-xl px-2.5 py-2 text-center">
+            <p className="text-[8px] text-[hsl(355,78%,56%)] font-bold uppercase tracking-wider">PIN</p>
+            <p className="text-lg font-mono font-bold text-white mt-0.5 tracking-widest">{ev.checkInPin}</p>
+          </div>
+        )}
+      </div>
+      <div className="mt-3 flex items-center justify-between">
+        <span className="text-[hsl(355,78%,56%)] font-semibold text-xs">Open Dashboard →</span>
+      </div>
+    </button>
+  );
+}
+
 function EventsScreen({ events, user, onSelect, onRefresh, onLogout }: {
   events: ActiveEvent[]; user: AdminUser;
   onSelect: (e: ActiveEvent) => void; onRefresh: () => void; onLogout: () => void;
 }) {
+  const activeEvents = events.filter(e => e.checkInOpen);
+  const upcomingEvents = events.filter(e => !e.checkInOpen);
+
   return (
     <div className="fixed inset-0 flex flex-col bg-[#0a0a0a] text-white"
       style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}>
@@ -122,43 +161,35 @@ function EventsScreen({ events, user, onSelect, onRefresh, onLogout }: {
           <button onClick={onLogout} className="min-h-[44px] px-4 bg-[#1c1c1e] rounded-xl text-sm text-gray-400 active:opacity-70">Sign out</button>
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-6">
-        <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 px-1">Open for check-in now</p>
-        {events.length === 0 ? (
+      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-6 space-y-5">
+
+        {/* Active now section */}
+        {activeEvents.length > 0 && (
+          <div>
+            <p className="text-xs font-bold text-green-500 uppercase tracking-widest mb-2 px-1">● Active now</p>
+            <div className="space-y-3">
+              {activeEvents.map(ev => <EventCard key={ev.id} ev={ev} onSelect={onSelect} />)}
+            </div>
+          </div>
+        )}
+
+        {/* Upcoming section */}
+        {upcomingEvents.length > 0 && (
+          <div>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 px-1">Upcoming events</p>
+            <div className="space-y-3">
+              {upcomingEvents.map(ev => <EventCard key={ev.id} ev={ev} onSelect={onSelect} />)}
+            </div>
+          </div>
+        )}
+
+        {/* Empty state */}
+        {events.length === 0 && (
           <div className="flex flex-col items-center justify-center h-64 text-center px-6">
             <div className="text-5xl mb-4">🗓</div>
-            <p className="text-base font-semibold text-gray-300">No active events</p>
-            <p className="text-sm text-gray-500 mt-2 leading-relaxed">Events appear here from 30 min before start until 2 hrs after.</p>
+            <p className="text-base font-semibold text-gray-300">No upcoming events</p>
+            <p className="text-sm text-gray-500 mt-2 leading-relaxed">Published events in the next 7 days will appear here.</p>
             <button onClick={onRefresh} className="mt-6 min-h-[48px] px-6 bg-[#1c1c1e] border border-[#2c2c2e] text-[hsl(355,78%,56%)] rounded-2xl text-base font-semibold active:opacity-70">Check Again</button>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {events.map(ev => (
-              <button key={ev.id} onClick={() => onSelect(ev)}
-                className="w-full bg-[#141414] border border-[#2a2a2a] rounded-2xl p-5 text-left active:opacity-70 transition-opacity">
-                <div className="flex items-start gap-3">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-lg text-white leading-tight truncate">{ev.title}</h3>
-                    <p className="text-sm text-gray-400 mt-1 truncate">{ev.location}</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {new Date(ev.date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}
-                      {" · "}
-                      {new Date(ev.date).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
-                    </p>
-                  </div>
-                  {ev.checkInPin && (
-                    <div className="shrink-0 bg-[hsl(355,78%,56%)]/15 border border-[hsl(355,78%,56%)]/30 rounded-xl px-3 py-2.5 text-center">
-                      <p className="text-[9px] text-[hsl(355,78%,56%)] font-bold uppercase tracking-wider">PIN</p>
-                      <p className="text-xl font-mono font-bold text-white mt-0.5 tracking-widest">{ev.checkInPin}</p>
-                    </div>
-                  )}
-                </div>
-                <div className="mt-4 flex items-center justify-between">
-                  <span className="text-[hsl(355,78%,56%)] font-semibold text-sm">Open Dashboard</span>
-                  <span className="text-gray-600 text-sm">→</span>
-                </div>
-              </button>
-            ))}
           </div>
         )}
       </div>

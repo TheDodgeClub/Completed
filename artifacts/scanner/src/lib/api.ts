@@ -22,7 +22,7 @@ export async function fetchApi<T>(path: string, opts: RequestInit = {}): Promise
 }
 
 export type AdminUser = { id: number; name: string; email: string; isAdmin: boolean };
-export type ActiveEvent = { id: number; title: string; date: string; location: string; checkInPin: string | null };
+export type ActiveEvent = { id: number; title: string; date: string; location: string; checkInPin: string | null; checkInOpen: boolean };
 export type CheckInResult = { success?: boolean; alreadyCheckedIn?: boolean; xpGained?: number; member: { id: number; name: string; avatarUrl: string | null; accountType?: string } };
 export type CheckInStats = { checkedIn: { id: number; name: string; avatarUrl: string | null; checkedInAt: string | null }[]; expectedCount: number };
 

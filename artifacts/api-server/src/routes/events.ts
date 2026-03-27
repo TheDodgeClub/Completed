@@ -93,13 +93,14 @@ router.get("/upcoming", async (_req, res) => {
 /* MUST be registered before /:id to avoid Express matching "checkin-active" as an id param */
 router.get("/checkin-active", requireAdmin, async (_req, res) => {
   const now = new Date();
-  const windowStart = new Date(now.getTime() - CHECK_IN_AFTER_MS);
-  const windowEnd = new Date(now.getTime() + CHECK_IN_BEFORE_MS);
+  // Show events from 2 hrs ago up to 7 days ahead so staff can see & prep for upcoming events
+  const rangeStart = new Date(now.getTime() - CHECK_IN_AFTER_MS);
+  const rangeEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
   const events = await db.select().from(eventsTable)
     .where(and(
       eq(eventsTable.isPublished, true),
-      gte(eventsTable.date, windowStart),
-      lte(eventsTable.date, windowEnd),
+      gte(eventsTable.date, rangeStart),
+      lte(eventsTable.date, rangeEnd),
     ))
     .orderBy(eventsTable.date);
   res.json(events.map(e => ({
@@ -108,6 +109,7 @@ router.get("/checkin-active", requireAdmin, async (_req, res) => {
     date: e.date.toISOString(),
     location: e.location,
     checkInPin: e.checkInPin ?? null,
+    checkInOpen: isCheckInWindowOpen(e.date),
   })));
 });
 
