@@ -19,7 +19,6 @@ router.get("/", async (_req, res) => {
     createdAt: p.createdAt.toISOString(),
     authorName: p.author.name,
     isMembersOnly: p.isMembersOnly,
-    isEliteOnly: p.isEliteOnly,
   }));
 
   res.json(result);

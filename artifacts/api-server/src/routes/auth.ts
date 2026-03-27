@@ -234,7 +234,7 @@ router.post("/login", async (req, res) => {
     return;
   }
 
-  const stats = await getUserStats(user.id, user.bonusXp ?? 0, user.isElite ?? false);
+  const stats = await getUserStats(user.id, user.bonusXp ?? 0);
   req.session = { userId: user.id };
   res.json({ user: toProfile(user, stats), token: String(user.id) });
 });
@@ -280,7 +280,7 @@ router.post("/google", async (req, res) => {
   }
 
   req.session = { userId: user.id };
-  const stats = await getUserStats(user.id, user.bonusXp ?? 0, user.isElite ?? false);
+  const stats = await getUserStats(user.id, user.bonusXp ?? 0);
   res.json({ user: toProfile(user, stats), token: String(user.id) });
 });
 

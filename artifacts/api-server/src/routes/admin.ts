@@ -30,8 +30,6 @@ function toAdminEvent(e: typeof eventsTable.$inferSelect, ttSummary?: TicketType
     stripePriceId: e.stripePriceId ?? null,
     checkoutFields: (e.checkoutFields as any[]) ?? [],
     waiverText: e.waiverText ?? null,
-    eliteEarlyAccess: e.eliteEarlyAccess,
-    eliteDiscountPercent: e.eliteDiscountPercent ?? null,
     xpReward: e.xpReward ?? 50,
     checkInPin: e.checkInPin ?? null,
     ticketTypeCount: ttSummary?.count ?? 0,
@@ -86,7 +84,7 @@ router.post("/events", async (req, res) => {
 router.put("/events/:id", async (req, res) => {
   const {
     title, description, date, location, ticketUrl, imageUrl,
-    eliteEarlyAccess, eliteDiscountPercent, xpReward, checkInPin,
+    xpReward, checkInPin,
     emailSubject, emailHeaderImageUrl, emailBodyText, emailCtaText, emailCtaUrl, emailVideoUrl,
     giftEmailSubject, giftEmailHeaderImageUrl, giftEmailBodyText, giftEmailCtaText, giftEmailCtaUrl, giftEmailVideoUrl,
   } = req.body;
@@ -97,8 +95,6 @@ router.put("/events/:id", async (req, res) => {
   if (location !== undefined) setData.location = location;
   if (ticketUrl !== undefined) setData.ticketUrl = ticketUrl || null;
   if (imageUrl !== undefined) setData.imageUrl = imageUrl || null;
-  if (eliteEarlyAccess !== undefined) setData.eliteEarlyAccess = !!eliteEarlyAccess;
-  if (eliteDiscountPercent != null) setData.eliteDiscountPercent = Number(eliteDiscountPercent);
   if (xpReward != null) setData.xpReward = Number(xpReward);
   if (checkInPin !== undefined) setData.checkInPin = checkInPin || null;
   if (emailSubject !== undefined) setData.emailSubject = emailSubject || null;
@@ -150,8 +146,6 @@ router.post("/events/:id/duplicate", async (req, res) => {
     checkoutFields: source.checkoutFields,
     waiverText: source.waiverText,
     xpReward: source.xpReward,
-    eliteEarlyAccess: source.eliteEarlyAccess,
-    eliteDiscountPercent: source.eliteDiscountPercent,
     isPublished: false,
   }).returning();
 
@@ -488,15 +482,14 @@ router.get("/posts", async (_req, res) => {
     createdAt: p.createdAt.toISOString(),
     authorName: p.author.name,
     isMembersOnly: p.isMembersOnly,
-    isEliteOnly: p.isEliteOnly,
   })));
 });
 
 /* POST /api/admin/posts — create */
 router.post("/posts", async (req, res) => {
-  const { title, content, imageUrl, isMembersOnly, isEliteOnly } = req.body;
+  const { title, content, imageUrl, isMembersOnly } = req.body;
   const [post] = await db.insert(postsTable)
-    .values({ title, content, imageUrl: imageUrl || null, isMembersOnly: !!isMembersOnly, isEliteOnly: !!isEliteOnly, authorId: req.session!.userId })
+    .values({ title, content, imageUrl: imageUrl || null, isMembersOnly: !!isMembersOnly, authorId: req.session!.userId })
     .returning();
   const author = await db.query.usersTable.findFirst({ where: eq(usersTable.id, post.authorId) });
   res.status(201).json({
@@ -507,15 +500,14 @@ router.post("/posts", async (req, res) => {
     createdAt: post.createdAt.toISOString(),
     authorName: author?.name ?? "Admin",
     isMembersOnly: post.isMembersOnly,
-    isEliteOnly: post.isEliteOnly,
   });
 });
 
 /* PUT /api/admin/posts/:id — update */
 router.put("/posts/:id", async (req, res) => {
-  const { title, content, imageUrl, isMembersOnly, isEliteOnly } = req.body;
+  const { title, content, imageUrl, isMembersOnly } = req.body;
   const [post] = await db.update(postsTable)
-    .set({ title, content, imageUrl: imageUrl || null, isMembersOnly: !!isMembersOnly, isEliteOnly: !!isEliteOnly })
+    .set({ title, content, imageUrl: imageUrl || null, isMembersOnly: !!isMembersOnly })
     .where(eq(postsTable.id, Number(req.params.id)))
     .returning();
   if (!post) { res.status(404).json({ error: "Not found" }); return; }
@@ -528,7 +520,6 @@ router.put("/posts/:id", async (req, res) => {
     createdAt: post.createdAt.toISOString(),
     authorName: author?.name ?? "Admin",
     isMembersOnly: post.isMembersOnly,
-    isEliteOnly: post.isEliteOnly,
   });
 });
 
@@ -620,7 +611,7 @@ function computeAttendanceXP(attendedEventIds: Set<number>, pastEvents: { id: nu
   }
   return { eventXP, currentStreak: streak, bestStreak, eventsAttended: attendedCount };
 }
-function computeXP(eventXP: number, medals: number, rings: number, bonus: number = 0, isElite: boolean = false) { return eventXP + medals * 300 + rings * 1000 + bonus + (isElite ? 500 : 0); }
+function computeXP(eventXP: number, medals: number, rings: number, bonus: number = 0) { return eventXP + medals * 300 + rings * 1000 + bonus; }
 function computeLevel(xp: number) {
   let level = 1;
   for (let i = 1; i < LEVEL_THRESHOLDS.length; i++) {
@@ -663,7 +654,7 @@ router.get("/members", async (_req, res) => {
     const { eventXP, eventsAttended, currentStreak, bestStreak } = computeAttendanceXP(attendanceEventsByUser.get(u.id) ?? new Set(), pastEvents);
     const medalsEarned = (attendanceMedalsByUser.get(u.id) ?? 0) + awards.filter(a => a.type === "medal").length;
     const ringsEarned = awards.filter(a => a.type === "ring").length;
-    const xp = computeXP(eventXP, medalsEarned, ringsEarned, u.bonusXp ?? 0, u.isElite ?? false);
+    const xp = computeXP(eventXP, medalsEarned, ringsEarned, u.bonusXp ?? 0);
     return {
       id: u.id,
       name: u.name,
@@ -681,9 +672,6 @@ router.get("/members", async (_req, res) => {
       username: u.username ?? null,
       preferredRole: u.preferredRole ?? null,
       bio: u.bio ?? null,
-      isElite: u.isElite,
-      eliteSince: u.eliteSince?.toISOString() ?? null,
-      stripeSubscriptionId: u.stripeSubscriptionId ?? null,
       accountType: u.accountType ?? "player",
       referralCode: u.referralCode ?? null,
       referredByName: u.referredBy ? (userNameMap.get(u.referredBy) ?? null) : null,
@@ -715,7 +703,7 @@ router.put("/members/:id", async (req, res) => {
   const { eventXP, eventsAttended, currentStreak, bestStreak } = computeAttendanceXP(attendedIds, pastEvents);
   const medalsEarned = records.filter(r => r.earnedMedal).length + awards.filter(a => a.type === "medal").length;
   const ringsEarned = awards.filter(a => a.type === "ring").length;
-  const xp = computeXP(eventXP, medalsEarned, ringsEarned, user.bonusXp ?? 0, user.isElite ?? false);
+  const xp = computeXP(eventXP, medalsEarned, ringsEarned, user.bonusXp ?? 0);
   res.json({
     id: user.id, name: user.name, email: user.email, isAdmin: user.isAdmin,
     memberSince: (user.memberSince ?? user.createdAt).toISOString(), eventsAttended, medalsEarned, ringsEarned, xp,
@@ -1155,41 +1143,6 @@ router.get("/sessions/stats", async (_req, res) => {
       avgDuration: Math.round(Number(d.avgDuration ?? 0)),
     })),
   });
-});
-
-/* ========== ELITE MANAGEMENT ========== */
-
-/* POST /api/admin/elite/grant — manually grant Elite to any user */
-router.post("/elite/grant", async (req: any, res) => {
-  const { userId } = req.body as { userId?: number };
-  if (!userId) { res.status(400).json({ error: "userId required" }); return; }
-
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
-  if (!user) { res.status(404).json({ error: "User not found" }); return; }
-
-  await db.update(usersTable)
-    .set({
-      isElite: true,
-      eliteSince: user.eliteSince ?? new Date(),
-    })
-    .where(eq(usersTable.id, userId));
-
-  res.json({ ok: true });
-});
-
-/* POST /api/admin/elite/revoke — manually revoke Elite from a user */
-router.post("/elite/revoke", async (req: any, res) => {
-  const { userId } = req.body as { userId?: number };
-  if (!userId) { res.status(400).json({ error: "userId required" }); return; }
-
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
-  if (!user) { res.status(404).json({ error: "User not found" }); return; }
-
-  await db.update(usersTable)
-    .set({ isElite: false, stripeSubscriptionId: null })
-    .where(eq(usersTable.id, userId));
-
-  res.json({ ok: true });
 });
 
 /* ========== TICKET TYPES ========== */

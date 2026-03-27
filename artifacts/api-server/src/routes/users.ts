@@ -520,7 +520,7 @@ router.put("/me", async (req, res) => {
   const [user] = await db.update(usersTable).set(updates).where(eq(usersTable.id, userId)).returning();
   if (!user) { res.status(404).json({ error: "Not found" }); return; }
 
-  const stats = await getUserStats(user.id, user.bonusXp ?? 0, user.isElite ?? false);
+  const stats = await getUserStats(user.id, user.bonusXp ?? 0);
   res.json(toProfile(user, stats));
 });
 
