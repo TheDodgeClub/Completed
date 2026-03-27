@@ -294,10 +294,7 @@ export default function DodgeGame() {
         setAwardedXp(earned);
         if (earned > 0) {
           awardGameXp(earned)
-            .then(() => {
-              refreshUserRef.current();
-              return AsyncStorage.setItem("pending_xp_award", String(earned));
-            })
+            .then(() => { refreshUserRef.current(); })
             .catch(() => {});
         }
         return;

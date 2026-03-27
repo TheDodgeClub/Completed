@@ -160,34 +160,6 @@ export default function HomeScreen() {
   const supporterBarAnim = useRef(new Animated.Value(0)).current;
   const xpTargetRef = useRef(0);
   const supporterTargetRef = useRef(0);
-  const [xpToastAmount, setXpToastAmount] = useState(0);
-  const toastAnim = useRef(new Animated.Value(0)).current;
-  const prevXpRef = useRef<number | null>(null);
-
-  const showXpToast = useCallback((amount: number) => {
-    if (amount <= 0) return;
-    setXpToastAmount(amount);
-    toastAnim.setValue(0);
-    Animated.sequence([
-      Animated.timing(toastAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-      Animated.delay(2200),
-      Animated.timing(toastAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
-    ]).start(() => setXpToastAmount(0));
-  }, [toastAnim]);
-
-  // Show toast whenever XP increases (admin grants, attendance, any server-side award)
-  useEffect(() => {
-    const currentXp = user?.xp;
-    if (currentXp === undefined) return;
-    if (prevXpRef.current === null) {
-      prevXpRef.current = currentXp; // initialise on first load, no toast
-      return;
-    }
-    const diff = currentXp - prevXpRef.current;
-    prevXpRef.current = currentXp;
-    if (diff > 0) showXpToast(diff);
-  }, [user?.xp, showXpToast]);
-
   useEffect(() => {
     const pct = xpProgress?.pct ?? 0;
     xpTargetRef.current = pct;
@@ -216,18 +188,7 @@ export default function HomeScreen() {
       Animated.timing(xpBarAnim, { toValue: xpTargetRef.current, duration: 1200, useNativeDriver: false }).start();
       Animated.timing(supporterBarAnim, { toValue: supporterTargetRef.current, duration: 1200, useNativeDriver: false }).start();
 
-      AsyncStorage.getItem("pending_xp_award").then(val => {
-        if (val) {
-          const amount = parseInt(val, 10);
-          if (amount > 0) {
-            AsyncStorage.removeItem("pending_xp_award");
-            // Advance prevXpRef so the user?.xp watcher doesn't fire a duplicate toast
-            if (prevXpRef.current !== null) prevXpRef.current += amount;
-            showXpToast(amount);
-          }
-        }
-      });
-    }, [xpBarAnim, supporterBarAnim, showXpToast, refreshUser])
+    }, [xpBarAnim, supporterBarAnim, refreshUser])
   );
 
   const publicPosts = posts?.filter(p => !p.isMembersOnly).slice(0, 3) ?? [];
@@ -665,22 +626,6 @@ export default function HomeScreen() {
       <PostDetailModal post={selectedPost} onClose={() => setSelectedPost(null)} />
     )}
 
-    {xpToastAmount > 0 && (
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          styles.xpToast,
-          {
-            top: insets.top + 14,
-            opacity: toastAnim,
-            transform: [{ translateY: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }],
-          },
-        ]}
-      >
-        <Text style={styles.xpToastIcon}>⚡</Text>
-        <Text style={styles.xpToastText}>+{xpToastAmount} XP Awarded!</Text>
-      </Animated.View>
-    )}
   </>
   );
 }
@@ -780,36 +725,6 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       fontFamily: "Inter_400Regular",
       fontSize: 10,
       color: "rgba(255,255,255,0.5)",
-    },
-    xpToast: {
-      position: "absolute",
-      alignSelf: "center",
-      left: 40,
-      right: 40,
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 6,
-      backgroundColor: "#0B5E2F",
-      borderRadius: 28,
-      paddingVertical: 11,
-      paddingHorizontal: 22,
-      borderWidth: 1.5,
-      borderColor: "#FFD700",
-      shadowColor: "#000",
-      shadowOpacity: 0.35,
-      shadowRadius: 10,
-      shadowOffset: { width: 0, height: 4 },
-      elevation: 10,
-    },
-    xpToastIcon: {
-      fontSize: 16,
-    },
-    xpToastText: {
-      fontFamily: "Inter_700Bold",
-      fontSize: 15,
-      color: "#FFD700",
-      letterSpacing: 0.3,
     },
     /* ── Hero CTAs ── */
     heroCTARow: {
