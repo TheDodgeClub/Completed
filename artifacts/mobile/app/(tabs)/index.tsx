@@ -94,7 +94,7 @@ export default function HomeScreen() {
   const { width: screenWidth } = useWindowDimensions();
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, refreshUser } = useAuth();
   const logoHeight = screenWidth * 0.084 * 1.2;
 
   const ONBOARD_KEY = user ? `supporter_onboarding_collapsed_${user.id}` : null;
@@ -151,7 +151,7 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = React.useState(false);
   const handleRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([refetchEvents(), refetchPosts(), refetchRank(), refetchActivity()]);
+    await Promise.all([refetchEvents(), refetchPosts(), refetchRank(), refetchActivity(), refreshUser()]);
     setRefreshing(false);
   };
 
@@ -164,17 +164,28 @@ export default function HomeScreen() {
   const toastAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    xpTargetRef.current = xpProgress?.pct ?? 0;
+    const pct = xpProgress?.pct ?? 0;
+    xpTargetRef.current = pct;
+    // Re-animate whenever XP data arrives or changes (handles load-after-focus race condition)
+    xpBarAnim.setValue(0);
+    Animated.timing(xpBarAnim, { toValue: pct, duration: 1200, useNativeDriver: false }).start();
   }, [xpProgress?.pct]);
 
   useEffect(() => {
     if (user?.accountType === "supporter") {
-      supporterTargetRef.current = getSupporterProgress(user.xp ?? 0).progress;
+      const pct = getSupporterProgress(user.xp ?? 0).progress;
+      supporterTargetRef.current = pct;
+      supporterBarAnim.setValue(0);
+      Animated.timing(supporterBarAnim, { toValue: pct, duration: 1200, useNativeDriver: false }).start();
     }
   }, [user?.xp, user?.accountType]);
 
   useFocusEffect(
     useCallback(() => {
+      // Refresh user data so XP is always up to date when returning to home
+      refreshUser();
+
+      // Animate to whatever the latest known target is when re-entering the screen
       xpBarAnim.setValue(0);
       supporterBarAnim.setValue(0);
       Animated.timing(xpBarAnim, { toValue: xpTargetRef.current, duration: 1200, useNativeDriver: false }).start();
@@ -195,7 +206,7 @@ export default function HomeScreen() {
           }
         }
       });
-    }, [xpBarAnim, supporterBarAnim, toastAnim])
+    }, [xpBarAnim, supporterBarAnim, toastAnim, refreshUser])
   );
 
   const publicPosts = posts?.filter(p => !p.isMembersOnly).slice(0, 3) ?? [];
