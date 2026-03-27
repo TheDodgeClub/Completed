@@ -360,7 +360,7 @@ router.post("/free", requireAuth, async (req: any, res) => {
   const [existing] = await db
     .select()
     .from(ticketsTable)
-    .where(and(eq(ticketsTable.userId, userId), eq(ticketsTable.eventId, eventId)))
+    .where(and(eq(ticketsTable.userId, userId), eq(ticketsTable.eventId, eventId), eq(ticketsTable.status, "paid")))
     .limit(1);
   if (existing) {
     res.json({ ticket: existing });
@@ -418,11 +418,11 @@ router.post("/gift", requireAuth, async (req: any, res) => {
   const recipient = await db.query.usersTable.findFirst({ where: eq(usersTable.email, normalizedEmail) });
 
   if (recipient) {
-    // Account exists — check they don't already have a ticket
+    // Account exists — check they don't already have an active paid ticket
     const [existing] = await db
       .select()
       .from(ticketsTable)
-      .where(and(eq(ticketsTable.userId, recipient.id), eq(ticketsTable.eventId, eventId)))
+      .where(and(eq(ticketsTable.userId, recipient.id), eq(ticketsTable.eventId, eventId), eq(ticketsTable.status, "paid")))
       .limit(1);
     if (existing) {
       res.status(409).json({ error: "That person already has a ticket for this event." });
@@ -465,7 +465,7 @@ router.post("/gift", requireAuth, async (req: any, res) => {
   const [existingPending] = await db
     .select()
     .from(ticketsTable)
-    .where(and(eq(ticketsTable.eventId, eventId), eq(ticketsTable.giftRecipientEmail as any, normalizedEmail)))
+    .where(and(eq(ticketsTable.eventId, eventId), eq(ticketsTable.giftRecipientEmail as any, normalizedEmail), eq(ticketsTable.status, "paid")))
     .limit(1);
   if (existingPending) {
     res.status(409).json({ error: "A gift ticket has already been sent to that email address for this event." });
