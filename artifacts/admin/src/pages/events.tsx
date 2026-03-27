@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useEvents, useCreateEvent, useUpdateEvent, useDeleteEvent, usePublishEvent, useSetTicketPricing, useUpdateCheckoutForm, useDuplicateEvent, Event, EventInput, CheckoutField } from "@/hooks/use-events";
+import { useTicketTypes, useCreateTicketType, useUpdateTicketType, useDeleteTicketType, useDiscountCodes, useCreateDiscountCode, useUpdateDiscountCode, useDeleteDiscountCode, TicketType, DiscountCode } from "@/hooks/use-ticket-types";
 import { formatDateTime, toDateTimeInput } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,8 +11,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit2, Trash2, MapPin, Users, CalendarDays, ArrowUpDown, ArrowUp, ArrowDown, Globe, EyeOff, CreditCard, CheckCircle, ClipboardList, X, GripVertical, Copy, Star } from "lucide-react";
+import { Plus, Edit2, Trash2, MapPin, Users, CalendarDays, ArrowUpDown, ArrowUp, ArrowDown, Globe, EyeOff, CreditCard, CheckCircle, ClipboardList, X, GripVertical, Copy, Star, Tag, Percent, TicketIcon } from "lucide-react";
 import { ImageUploader } from "@/components/image-uploader";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
@@ -439,8 +441,306 @@ function CheckoutFormModal({ event, onClose }: { event: Event; onClose: () => vo
 }
 
 function TicketPricingModal({ event, onClose }: { event: Event; onClose: () => void }) {
-  const { mutate: setTicketPricing, isPending } = useSetTicketPricing();
   const { toast } = useToast();
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[780px] max-h-[90vh] flex flex-col bg-card border-border/50 text-foreground p-0 gap-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/40 shrink-0">
+          <DialogTitle className="font-display text-xl flex items-center gap-2">
+            <TicketIcon className="w-5 h-5 text-accent" /> Ticket Management
+          </DialogTitle>
+          <DialogDescription className="text-muted-foreground">
+            Manage ticket types and discount codes for <span className="text-foreground font-medium">{event.title}</span>
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex-1 overflow-auto">
+          <Tabs defaultValue="types" className="h-full">
+            <TabsList className="mx-6 mt-4 mb-0 rounded-xl bg-secondary/60 border border-border/30">
+              <TabsTrigger value="types" className="rounded-lg gap-1.5"><TicketIcon className="w-3.5 h-3.5" /> Ticket Types</TabsTrigger>
+              <TabsTrigger value="codes" className="rounded-lg gap-1.5"><Tag className="w-3.5 h-3.5" /> Discount Codes</TabsTrigger>
+              <TabsTrigger value="legacy" className="rounded-lg gap-1.5"><CreditCard className="w-3.5 h-3.5" /> Base Pricing</TabsTrigger>
+            </TabsList>
+            <TabsContent value="types" className="p-6 pt-4 m-0">
+              <TicketTypesTab event={event} toast={toast} />
+            </TabsContent>
+            <TabsContent value="codes" className="p-6 pt-4 m-0">
+              <DiscountCodesTab event={event} toast={toast} />
+            </TabsContent>
+            <TabsContent value="legacy" className="p-6 pt-4 m-0">
+              <LegacyPricingTab event={event} toast={toast} onClose={onClose} />
+            </TabsContent>
+          </Tabs>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function TicketTypesTab({ event, toast }: { event: Event; toast: any }) {
+  const { data: types, isLoading } = useTicketTypes(event.id);
+  const { mutate: createType, isPending: creating } = useCreateTicketType(event.id);
+  const { mutate: updateType, isPending: updating } = useUpdateTicketType(event.id);
+  const { mutate: deleteType } = useDeleteTicketType(event.id);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ name: "", description: "", price: "", quantity: "", saleStartsAt: "", saleEndsAt: "", isActive: true });
+
+  const resetForm = () => setForm({ name: "", description: "", price: "", quantity: "", saleStartsAt: "", saleEndsAt: "", isActive: true });
+
+  const openEdit = (t: TicketType) => {
+    setForm({
+      name: t.name, description: t.description ?? "", price: (t.price / 100).toFixed(2),
+      quantity: t.quantity != null ? String(t.quantity) : "",
+      saleStartsAt: t.saleStartsAt ? t.saleStartsAt.slice(0, 16) : "",
+      saleEndsAt: t.saleEndsAt ? t.saleEndsAt.slice(0, 16) : "",
+      isActive: t.isActive,
+    });
+    setEditingId(t.id);
+    setShowForm(true);
+  };
+
+  const handleSubmit = () => {
+    if (!form.name) return;
+    const payload = {
+      name: form.name, description: form.description || null,
+      price: parseFloat(form.price) || 0,
+      quantity: form.quantity ? parseInt(form.quantity) : null,
+      saleStartsAt: form.saleStartsAt || null,
+      saleEndsAt: form.saleEndsAt || null,
+      isActive: form.isActive,
+    };
+    if (editingId !== null) {
+      updateType({ id: editingId, ...payload }, {
+        onSuccess: () => { toast({ title: "Ticket type updated" }); setShowForm(false); resetForm(); setEditingId(null); },
+        onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+      });
+    } else {
+      createType(payload, {
+        onSuccess: () => { toast({ title: "Ticket type created" }); setShowForm(false); resetForm(); },
+        onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">Add multiple ticket tiers (e.g. Early Bird, General, VIP) for this event.</p>
+        <Button size="sm" className="rounded-xl gap-1.5" onClick={() => { resetForm(); setEditingId(null); setShowForm(true); }}>
+          <Plus className="w-4 h-4" /> Add Type
+        </Button>
+      </div>
+      {showForm && (
+        <div className="rounded-xl border border-border/50 bg-secondary/30 p-4 space-y-3">
+          <p className="text-sm font-semibold">{editingId !== null ? "Edit Ticket Type" : "New Ticket Type"}</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Name *</Label>
+              <Input placeholder="e.g. Early Bird" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="bg-background border-border/50 rounded-lg h-8 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Price (£)</Label>
+              <Input type="number" min="0" step="0.50" placeholder="0.00" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} className="bg-background border-border/50 rounded-lg h-8 text-sm" />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Description</Label>
+            <Input placeholder="Optional description" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="bg-background border-border/50 rounded-lg h-8 text-sm" />
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Quantity (blank = unlimited)</Label>
+              <Input type="number" min="1" placeholder="Unlimited" value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))} className="bg-background border-border/50 rounded-lg h-8 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Sale Opens</Label>
+              <Input type="datetime-local" value={form.saleStartsAt} onChange={e => setForm(f => ({ ...f, saleStartsAt: e.target.value }))} className="bg-background border-border/50 rounded-lg h-8 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Sale Closes</Label>
+              <Input type="datetime-local" value={form.saleEndsAt} onChange={e => setForm(f => ({ ...f, saleEndsAt: e.target.value }))} className="bg-background border-border/50 rounded-lg h-8 text-sm" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch checked={form.isActive} onCheckedChange={v => setForm(f => ({ ...f, isActive: v }))} />
+            <Label className="text-xs">Active (visible to buyers)</Label>
+          </div>
+          <div className="flex gap-2 pt-1">
+            <Button size="sm" className="rounded-lg" onClick={handleSubmit} disabled={creating || updating}>
+              {creating || updating ? "Saving..." : editingId !== null ? "Update" : "Create"}
+            </Button>
+            <Button size="sm" variant="outline" className="rounded-lg border-border/50" onClick={() => { setShowForm(false); resetForm(); setEditingId(null); }}>Cancel</Button>
+          </div>
+        </div>
+      )}
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground">Loading...</p>
+      ) : !types?.length ? (
+        <div className="rounded-xl border border-dashed border-border/40 p-8 text-center">
+          <TicketIcon className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">No ticket types yet. Add one to enable multi-tier ticketing.</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {types.map(t => (
+            <div key={t.id} className="flex items-center gap-3 rounded-xl border border-border/40 bg-secondary/20 px-4 py-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-sm">{t.name}</span>
+                  {!t.isActive && <Badge variant="secondary" className="text-xs">Inactive</Badge>}
+                  {t.quantity !== null && t.quantitySold >= t.quantity && <Badge variant="destructive" className="text-xs">Sold Out</Badge>}
+                </div>
+                <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                  <span className="font-semibold text-foreground/80">£{(t.price / 100).toFixed(2)}</span>
+                  {t.quantity !== null && <span>{t.quantitySold}/{t.quantity} sold</span>}
+                  {t.description && <span className="truncate">{t.description}</span>}
+                </div>
+              </div>
+              <div className="flex gap-1.5 shrink-0">
+                <Button size="icon" variant="ghost" className="h-7 w-7 rounded-lg" onClick={() => openEdit(t)}><Edit2 className="w-3.5 h-3.5" /></Button>
+                <Button size="icon" variant="ghost" className="h-7 w-7 rounded-lg hover:text-destructive" onClick={() => { if (confirm(`Delete "${t.name}"?`)) deleteType(t.id, { onSuccess: () => toast({ title: "Deleted" }), onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }) }); }}><Trash2 className="w-3.5 h-3.5" /></Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DiscountCodesTab({ event, toast }: { event: Event; toast: any }) {
+  const { data: codes, isLoading } = useDiscountCodes(event.id);
+  const { mutate: createCode, isPending: creating } = useCreateDiscountCode(event.id);
+  const { mutate: updateCode, isPending: updating } = useUpdateDiscountCode(event.id);
+  const { mutate: deleteCode } = useDeleteDiscountCode(event.id);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ code: "", discountType: "percent" as "percent" | "fixed", discountAmount: "", maxUses: "", expiresAt: "", isActive: true });
+
+  const resetForm = () => setForm({ code: "", discountType: "percent", discountAmount: "", maxUses: "", expiresAt: "", isActive: true });
+
+  const openEdit = (c: DiscountCode) => {
+    setForm({
+      code: c.code, discountType: c.discountType,
+      discountAmount: c.discountType === "fixed" ? (c.discountAmount / 100).toFixed(2) : String(c.discountAmount),
+      maxUses: c.maxUses != null ? String(c.maxUses) : "",
+      expiresAt: c.expiresAt ? c.expiresAt.slice(0, 16) : "",
+      isActive: c.isActive,
+    });
+    setEditingId(c.id);
+    setShowForm(true);
+  };
+
+  const handleSubmit = () => {
+    if (!form.code || !form.discountAmount) return;
+    const payload = {
+      code: form.code.toUpperCase().trim(),
+      discountType: form.discountType,
+      discountAmount: parseFloat(form.discountAmount) || 0,
+      maxUses: form.maxUses ? parseInt(form.maxUses) : null,
+      expiresAt: form.expiresAt || null,
+      isActive: form.isActive,
+    };
+    if (editingId !== null) {
+      updateCode({ id: editingId, ...payload }, {
+        onSuccess: () => { toast({ title: "Discount code updated" }); setShowForm(false); resetForm(); setEditingId(null); },
+        onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+      });
+    } else {
+      createCode(payload, {
+        onSuccess: () => { toast({ title: "Discount code created" }); setShowForm(false); resetForm(); },
+        onError: (e: any) => toast({ title: e.message?.includes("already exists") ? "Code already exists" : "Error", description: e.message, variant: "destructive" }),
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">Create discount codes for this event (percent off or fixed amount).</p>
+        <Button size="sm" className="rounded-xl gap-1.5" onClick={() => { resetForm(); setEditingId(null); setShowForm(true); }}>
+          <Plus className="w-4 h-4" /> Add Code
+        </Button>
+      </div>
+      {showForm && (
+        <div className="rounded-xl border border-border/50 bg-secondary/30 p-4 space-y-3">
+          <p className="text-sm font-semibold">{editingId !== null ? "Edit Discount Code" : "New Discount Code"}</p>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Code *</Label>
+              <Input placeholder="DODGEBALL10" value={form.code} onChange={e => setForm(f => ({ ...f, code: e.target.value.toUpperCase() }))} className="bg-background border-border/50 rounded-lg h-8 text-sm font-mono" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Discount Type</Label>
+              <select value={form.discountType} onChange={e => setForm(f => ({ ...f, discountType: e.target.value as "percent" | "fixed" }))} className="w-full h-8 rounded-lg border border-border/50 bg-background text-sm px-2">
+                <option value="percent">Percent (%)</option>
+                <option value="fixed">Fixed (£)</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Amount {form.discountType === "percent" ? "(%)" : "(£)"}</Label>
+              <Input type="number" min="0" step={form.discountType === "percent" ? "1" : "0.50"} placeholder={form.discountType === "percent" ? "10" : "5.00"} value={form.discountAmount} onChange={e => setForm(f => ({ ...f, discountAmount: e.target.value }))} className="bg-background border-border/50 rounded-lg h-8 text-sm" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Max Uses (blank = unlimited)</Label>
+              <Input type="number" min="1" placeholder="Unlimited" value={form.maxUses} onChange={e => setForm(f => ({ ...f, maxUses: e.target.value }))} className="bg-background border-border/50 rounded-lg h-8 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Expires</Label>
+              <Input type="datetime-local" value={form.expiresAt} onChange={e => setForm(f => ({ ...f, expiresAt: e.target.value }))} className="bg-background border-border/50 rounded-lg h-8 text-sm" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Switch checked={form.isActive} onCheckedChange={v => setForm(f => ({ ...f, isActive: v }))} />
+            <Label className="text-xs">Active</Label>
+          </div>
+          <div className="flex gap-2 pt-1">
+            <Button size="sm" className="rounded-lg" onClick={handleSubmit} disabled={creating || updating}>
+              {creating || updating ? "Saving..." : editingId !== null ? "Update" : "Create"}
+            </Button>
+            <Button size="sm" variant="outline" className="rounded-lg border-border/50" onClick={() => { setShowForm(false); resetForm(); setEditingId(null); }}>Cancel</Button>
+          </div>
+        </div>
+      )}
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground">Loading...</p>
+      ) : !codes?.length ? (
+        <div className="rounded-xl border border-dashed border-border/40 p-8 text-center">
+          <Tag className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">No discount codes yet.</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {codes.map(c => (
+            <div key={c.id} className="flex items-center gap-3 rounded-xl border border-border/40 bg-secondary/20 px-4 py-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono font-semibold text-sm text-accent">{c.code}</span>
+                  {!c.isActive && <Badge variant="secondary" className="text-xs">Inactive</Badge>}
+                  {c.maxUses !== null && c.usesCount >= c.maxUses && <Badge variant="destructive" className="text-xs">Used Up</Badge>}
+                </div>
+                <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                  <span>{c.discountType === "percent" ? `${c.discountAmount}% off` : `£${(c.discountAmount / 100).toFixed(2)} off`}</span>
+                  {c.maxUses !== null ? <span>{c.usesCount}/{c.maxUses} used</span> : <span>{c.usesCount} used</span>}
+                  {c.expiresAt && <span>Expires {new Date(c.expiresAt).toLocaleDateString()}</span>}
+                </div>
+              </div>
+              <div className="flex gap-1.5 shrink-0">
+                <Button size="icon" variant="ghost" className="h-7 w-7 rounded-lg" onClick={() => openEdit(c)}><Edit2 className="w-3.5 h-3.5" /></Button>
+                <Button size="icon" variant="ghost" className="h-7 w-7 rounded-lg hover:text-destructive" onClick={() => { if (confirm(`Delete code "${c.code}"?`)) deleteCode(c.id, { onSuccess: () => toast({ title: "Deleted" }), onError: (e: any) => toast({ title: "Error", description: e.message, variant: "destructive" }) }); }}><Trash2 className="w-3.5 h-3.5" /></Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LegacyPricingTab({ event, toast, onClose }: { event: Event; toast: any; onClose: () => void }) {
+  const { mutate: setTicketPricing, isPending } = useSetTicketPricing();
   const [price, setPrice] = useState(event.ticketPrice != null ? String(event.ticketPrice) : "");
   const [capacity, setCapacity] = useState(event.ticketCapacity != null ? String(event.ticketCapacity) : "");
 
@@ -454,60 +754,35 @@ function TicketPricingModal({ event, onClose }: { event: Event; onClose: () => v
   };
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[420px] bg-card border-border/50 text-foreground">
-        <DialogHeader>
-          <DialogTitle className="font-display text-xl flex items-center gap-2">
-            <CreditCard className="w-5 h-5 text-accent" /> Configure Tickets
-          </DialogTitle>
-          <DialogDescription className="text-muted-foreground">
-            Set a ticket price for <span className="text-foreground font-medium">{event.title}</span>. Leave price at 0 for a free event.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label>Ticket Price (£)</Label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold">£</span>
-              <Input
-                type="number"
-                min="0"
-                step="0.50"
-                placeholder="0.00"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                className="bg-background border-border rounded-xl pl-7"
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">Set to 0 for a free event. Paid events create a Stripe product automatically.</p>
-          </div>
-          <div className="space-y-2">
-            <Label>Capacity (optional)</Label>
-            <Input
-              type="number"
-              min="1"
-              placeholder="Unlimited"
-              value={capacity}
-              onChange={(e) => setCapacity(e.target.value)}
-              className="bg-background border-border rounded-xl"
-            />
-            <p className="text-xs text-muted-foreground">Maximum number of tickets that can be sold.</p>
-          </div>
-          {event.stripePriceId && (
-            <div className="flex items-center gap-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-3 py-2">
-              <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
-              <p className="text-xs text-emerald-400">Stripe product active. Updating price will archive the old one.</p>
-            </div>
-          )}
+    <div className="space-y-4">
+      <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 px-4 py-3">
+        <p className="text-xs text-amber-400">Use <strong>Ticket Types</strong> for multi-tier pricing. Base Pricing is for simple single-price events and is used as a fallback when no ticket types are defined.</p>
+      </div>
+      <div className="space-y-2">
+        <Label>Ticket Price (£)</Label>
+        <div className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold">£</span>
+          <Input type="number" min="0" step="0.50" placeholder="0.00" value={price} onChange={e => setPrice(e.target.value)} className="bg-background border-border rounded-xl pl-7" />
         </div>
-        <DialogFooter className="pt-2">
-          <Button variant="outline" onClick={onClose} disabled={isPending} className="rounded-xl border-border/50 hover:bg-secondary">Cancel</Button>
-          <Button onClick={handleSave} disabled={isPending} className="rounded-xl bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20">
-            {isPending ? "Saving to Stripe..." : "Save Pricing"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        <p className="text-xs text-muted-foreground">Set to 0 for a free event.</p>
+      </div>
+      <div className="space-y-2">
+        <Label>Capacity (optional)</Label>
+        <Input type="number" min="1" placeholder="Unlimited" value={capacity} onChange={e => setCapacity(e.target.value)} className="bg-background border-border rounded-xl" />
+      </div>
+      {event.stripePriceId && (
+        <div className="flex items-center gap-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-3 py-2">
+          <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+          <p className="text-xs text-emerald-400">Stripe product active.</p>
+        </div>
+      )}
+      <div className="flex gap-2 pt-2">
+        <Button onClick={handleSave} disabled={isPending} className="rounded-xl bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20">
+          {isPending ? "Saving to Stripe..." : "Save Pricing"}
+        </Button>
+        <Button variant="outline" onClick={onClose} disabled={isPending} className="rounded-xl border-border/50">Cancel</Button>
+      </div>
+    </div>
   );
 }
 

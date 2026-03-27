@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, eventsTable, postsTable, merchTable, usersTable, attendanceTable, awardsTable, videosTable, teamHistoryTable, eventRegistrationsTable, userSessionsTable, ticketsTable, announcementsTable } from "@workspace/db";
-import { eq, desc, and, avg, count, sum, gte, sql, lte } from "drizzle-orm";
+import { db, eventsTable, postsTable, merchTable, usersTable, attendanceTable, awardsTable, videosTable, teamHistoryTable, eventRegistrationsTable, userSessionsTable, ticketsTable, announcementsTable, ticketTypesTable, discountCodesTable } from "@workspace/db";
+import { eq, desc, and, avg, count, sum, gte, sql, lte, or, isNull } from "drizzle-orm";
 import { getUncachableStripeClient } from "../stripeClient";
 import { requireAdmin } from "../middlewares/requireAdmin";
 
@@ -1052,6 +1052,212 @@ router.post("/elite/revoke", async (req: any, res) => {
     .set({ isElite: false, stripeSubscriptionId: null })
     .where(eq(usersTable.id, userId));
 
+  res.json({ ok: true });
+});
+
+/* ========== TICKET TYPES ========== */
+
+function toTicketType(t: typeof ticketTypesTable.$inferSelect) {
+  return {
+    id: t.id,
+    eventId: t.eventId,
+    name: t.name,
+    description: t.description ?? null,
+    price: t.price,
+    quantity: t.quantity ?? null,
+    quantitySold: t.quantitySold,
+    saleStartsAt: t.saleStartsAt?.toISOString() ?? null,
+    saleEndsAt: t.saleEndsAt?.toISOString() ?? null,
+    isActive: t.isActive,
+    sortOrder: t.sortOrder,
+    stripeProductId: t.stripeProductId ?? null,
+    stripePriceId: t.stripePriceId ?? null,
+    createdAt: t.createdAt.toISOString(),
+  };
+}
+
+router.get("/events/:id/ticket-types", async (req, res) => {
+  const eventId = Number(req.params.id);
+  const types = await db.select().from(ticketTypesTable)
+    .where(eq(ticketTypesTable.eventId, eventId))
+    .orderBy(ticketTypesTable.sortOrder, ticketTypesTable.createdAt);
+  res.json(types.map(toTicketType));
+});
+
+router.post("/events/:id/ticket-types", async (req, res) => {
+  const eventId = Number(req.params.id);
+  const { name, description, price, quantity, saleStartsAt, saleEndsAt, isActive } = req.body;
+  if (!name) { res.status(400).json({ error: "name required" }); return; }
+
+  const priceInPence = Math.round((Number(price) || 0) * 100);
+  let stripeProductId: string | null = null;
+  let stripePriceId: string | null = null;
+
+  if (priceInPence > 0) {
+    const [event] = await db.select().from(eventsTable).where(eq(eventsTable.id, eventId)).limit(1);
+    if (event) {
+      try {
+        const stripe = await getUncachableStripeClient();
+        const product = await stripe.products.create({
+          name: `${event.title} — ${name}`,
+          metadata: { eventId: String(eventId) },
+        });
+        const sp = await stripe.prices.create({ product: product.id, unit_amount: priceInPence, currency: "gbp" });
+        stripeProductId = product.id;
+        stripePriceId = sp.id;
+      } catch (err) { console.error("Stripe error creating ticket type:", err); }
+    }
+  }
+
+  const existing = await db.select().from(ticketTypesTable).where(eq(ticketTypesTable.eventId, eventId));
+  const [type] = await db.insert(ticketTypesTable).values({
+    eventId,
+    name,
+    description: description || null,
+    price: priceInPence,
+    quantity: quantity ? Number(quantity) : null,
+    saleStartsAt: saleStartsAt ? new Date(saleStartsAt) : null,
+    saleEndsAt: saleEndsAt ? new Date(saleEndsAt) : null,
+    isActive: isActive !== false,
+    sortOrder: existing.length,
+    stripeProductId,
+    stripePriceId,
+  }).returning();
+  res.status(201).json(toTicketType(type));
+});
+
+router.put("/ticket-types/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  const { name, description, price, quantity, saleStartsAt, saleEndsAt, isActive, sortOrder } = req.body;
+  const [existing] = await db.select().from(ticketTypesTable).where(eq(ticketTypesTable.id, id)).limit(1);
+  if (!existing) { res.status(404).json({ error: "Not found" }); return; }
+
+  const priceInPence = price !== undefined ? Math.round(Number(price) * 100) : existing.price;
+  let stripePriceId = existing.stripePriceId;
+  let stripeProductId = existing.stripeProductId;
+
+  if (price !== undefined && priceInPence !== existing.price) {
+    if (priceInPence > 0) {
+      try {
+        const stripe = await getUncachableStripeClient();
+        const [event] = await db.select().from(eventsTable).where(eq(eventsTable.id, existing.eventId)).limit(1);
+        if (!stripeProductId) {
+          const prod = await stripe.products.create({ name: `${event?.title ?? "Event"} — ${name ?? existing.name}`, metadata: { eventId: String(existing.eventId) } });
+          stripeProductId = prod.id;
+        }
+        if (stripePriceId) { await stripe.prices.update(stripePriceId, { active: false }); }
+        const np = await stripe.prices.create({ product: stripeProductId, unit_amount: priceInPence, currency: "gbp" });
+        stripePriceId = np.id;
+      } catch (err) { console.error("Stripe error updating ticket type:", err); }
+    } else {
+      if (stripePriceId) { try { const stripe = await getUncachableStripeClient(); await stripe.prices.update(stripePriceId, { active: false }); } catch {} }
+      stripePriceId = null;
+      stripeProductId = null;
+    }
+  }
+
+  const [updated] = await db.update(ticketTypesTable).set({
+    ...(name !== undefined && { name }),
+    ...(description !== undefined && { description: description || null }),
+    price: priceInPence,
+    ...(quantity !== undefined && { quantity: quantity ? Number(quantity) : null }),
+    ...(saleStartsAt !== undefined && { saleStartsAt: saleStartsAt ? new Date(saleStartsAt) : null }),
+    ...(saleEndsAt !== undefined && { saleEndsAt: saleEndsAt ? new Date(saleEndsAt) : null }),
+    ...(isActive !== undefined && { isActive }),
+    ...(sortOrder !== undefined && { sortOrder }),
+    stripeProductId,
+    stripePriceId,
+  }).where(eq(ticketTypesTable.id, id)).returning();
+  res.json(toTicketType(updated));
+});
+
+router.delete("/ticket-types/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  const [type] = await db.select().from(ticketTypesTable).where(eq(ticketTypesTable.id, id)).limit(1);
+  if (!type) { res.status(404).json({ error: "Not found" }); return; }
+  if (type.stripePriceId) {
+    try { const stripe = await getUncachableStripeClient(); await stripe.prices.update(type.stripePriceId, { active: false }); } catch {}
+  }
+  await db.delete(ticketTypesTable).where(eq(ticketTypesTable.id, id));
+  res.json({ ok: true });
+});
+
+/* ========== DISCOUNT CODES ========== */
+
+function toDiscountCode(c: typeof discountCodesTable.$inferSelect) {
+  return {
+    id: c.id,
+    eventId: c.eventId ?? null,
+    code: c.code,
+    discountType: c.discountType,
+    discountAmount: c.discountAmount,
+    maxUses: c.maxUses ?? null,
+    usesCount: c.usesCount,
+    expiresAt: c.expiresAt?.toISOString() ?? null,
+    isActive: c.isActive,
+    createdAt: c.createdAt.toISOString(),
+  };
+}
+
+router.get("/events/:id/discount-codes", async (req, res) => {
+  const eventId = Number(req.params.id);
+  const codes = await db.select().from(discountCodesTable)
+    .where(eq(discountCodesTable.eventId, eventId))
+    .orderBy(desc(discountCodesTable.createdAt));
+  res.json(codes.map(toDiscountCode));
+});
+
+router.post("/events/:id/discount-codes", async (req, res) => {
+  const eventId = Number(req.params.id);
+  const { code, discountType, discountAmount, maxUses, expiresAt, isActive } = req.body;
+  if (!code || !discountType || discountAmount === undefined) { res.status(400).json({ error: "code, discountType, discountAmount required" }); return; }
+  if (!["percent", "fixed"].includes(discountType)) { res.status(400).json({ error: "discountType must be 'percent' or 'fixed'" }); return; }
+
+  const amount = discountType === "percent" ? Number(discountAmount) : Math.round(Number(discountAmount) * 100);
+  try {
+    const [dc] = await db.insert(discountCodesTable).values({
+      eventId,
+      code: (code as string).toUpperCase().trim(),
+      discountType,
+      discountAmount: amount,
+      maxUses: maxUses ? Number(maxUses) : null,
+      expiresAt: expiresAt ? new Date(expiresAt) : null,
+      isActive: isActive !== false,
+    }).returning();
+    res.status(201).json(toDiscountCode(dc));
+  } catch (err: any) {
+    if (err.code === "23505") { res.status(409).json({ error: "That discount code already exists" }); }
+    else { throw err; }
+  }
+});
+
+router.put("/discount-codes/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  const { code, discountType, discountAmount, maxUses, expiresAt, isActive } = req.body;
+  const [existing] = await db.select().from(discountCodesTable).where(eq(discountCodesTable.id, id)).limit(1);
+  if (!existing) { res.status(404).json({ error: "Not found" }); return; }
+  const resolvedType = discountType ?? existing.discountType;
+  const amount = discountAmount !== undefined
+    ? (resolvedType === "percent" ? Number(discountAmount) : Math.round(Number(discountAmount) * 100))
+    : existing.discountAmount;
+  try {
+    const [updated] = await db.update(discountCodesTable).set({
+      ...(code !== undefined && { code: (code as string).toUpperCase().trim() }),
+      ...(discountType !== undefined && { discountType }),
+      discountAmount: amount,
+      ...(maxUses !== undefined && { maxUses: maxUses ? Number(maxUses) : null }),
+      ...(expiresAt !== undefined && { expiresAt: expiresAt ? new Date(expiresAt) : null }),
+      ...(isActive !== undefined && { isActive }),
+    }).where(eq(discountCodesTable.id, id)).returning();
+    res.json(toDiscountCode(updated));
+  } catch (err: any) {
+    if (err.code === "23505") { res.status(409).json({ error: "That discount code already exists" }); }
+    else { throw err; }
+  }
+});
+
+router.delete("/discount-codes/:id", async (req, res) => {
+  await db.delete(discountCodesTable).where(eq(discountCodesTable.id, Number(req.params.id)));
   res.json({ ok: true });
 });
 

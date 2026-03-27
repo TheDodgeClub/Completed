@@ -1,6 +1,8 @@
 import { pgTable, serial, integer, text, timestamp, boolean, jsonb } from "drizzle-orm/pg-core";
 import { usersTable } from "./users";
 import { eventsTable } from "./events";
+import { ticketTypesTable } from "./ticket_types";
+import { discountCodesTable } from "./discount_codes";
 
 export const ticketsTable = pgTable("tickets", {
   id: serial("id").primaryKey(),
@@ -14,7 +16,10 @@ export const ticketsTable = pgTable("tickets", {
   checkedInAt: timestamp("checked_in_at"),
   amountPaid: integer("amount_paid").notNull().default(0), // in cents
   checkoutData: jsonb("checkout_data").$type<Record<string, string>>(),
-  giftRecipientEmail: text("gift_recipient_email"), // set when gifted to a non-account email
+  giftRecipientEmail: text("gift_recipient_email"),
+  ticketTypeId: integer("ticket_type_id").references(() => ticketTypesTable.id, { onDelete: "set null" }),
+  discountCodeId: integer("discount_code_id").references(() => discountCodesTable.id, { onDelete: "set null" }),
+  originalAmountPaid: integer("original_amount_paid"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

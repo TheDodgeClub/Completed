@@ -39,7 +39,7 @@ workspace/
 ### Mobile App (Expo)
 - **Updates tab** — Published videos (horizontal scroll carousel with thumbnails, tap to open URL) + posts/announcements
 - **Home** — Hero section, community stats, upcoming events (published only), latest updates, merch CTA
-- **Tickets** — My Tickets (QR codes for purchased tickets) + Buy Tickets (Stripe Checkout or free registration); pre-checkout buyer form with configurable fields + waiver agreement modal shown before purchase
+- **Tickets** — My Tickets (QR codes for purchased tickets) + Buy Tickets (Stripe Checkout or free registration); pre-checkout buyer form with configurable fields + waiver agreement modal shown before purchase; **ticket type selector** (bottom sheet modal with type cards when an event has multiple tiers defined); **discount code field** in the type selector (validate against API, shows discounted price preview, passes to checkout)
 - **Merch** — Product grid with buy links (external URL, Shopify-ready)
 - **Updates** — Message board; guests see public posts, members see all; elite-only posts locked behind Elite paywall
 - **Member Zone** — Protected dashboard with player/supporter split; achievement progress bars with share button (player only); referral code card with copy/share (all users); event history (player only); XP progress (player only); supporter badge; "Refer a Friend" section
@@ -80,13 +80,18 @@ workspace/
 - Content gating: `isEliteOnly` on posts, `eliteEarlyAccess`/`eliteDiscountPercent` on events
 - Admin: elite badge on Members table; isEliteOnly checkbox on Posts form; Elite perks section on Events form
 
-### Stripe Ticket Purchasing
-- Admin configures ticket price/capacity per event via "Configure Tickets" (CreditCard icon) in Events table
-- Paid events: admin sets £ price → creates Stripe product + price automatically
-- Free events: set price = 0, users register with one tap
-- Mobile checkout: `POST /api/tickets/checkout` → Stripe Checkout URL → `expo-web-browser` → redirect back to app → ticket issued
-- Tickets stored with unique 16-char QR code, displayed in My Tickets tab as scannable QR code
-- API routes: `GET /api/tickets/my`, `GET /api/tickets/event/:id`, `POST /api/tickets/checkout`, `POST /api/tickets/free`, `GET /api/tickets/success`, `POST /api/tickets/gift`, `GET /api/tickets/gift-success`
+### Stripe Ticket Purchasing + Ticket Types + Discount Codes
+- Admin manages tickets per event via "Ticket Management" modal (3 tabs: Ticket Types, Discount Codes, Base Pricing)
+- **Ticket Types** (`ticket_types` table): multiple tiers per event (name, price, quantity, sale window, active flag); each gets its own Stripe product+price created automatically; quantity sold tracked
+- **Discount Codes** (`discount_codes` table): percent or fixed-amount codes per event; max uses, expiry, active flag; uses count incremented atomically on checkout success
+- **Base Pricing** (legacy): event-level `ticketPrice` + `stripePriceId`; used when no ticket types defined
+- Mobile checkout flow: if event has active ticket types → show `TicketTypeModal` (bottom sheet) → user picks type + optional discount code → validated client-side preview + server-side validation → checkout or free registration
+- `GET /api/tickets/validate-code?eventId=&code=` — validates discount code (auth required); returns `discountType`, `discountAmount`
+- `POST /api/tickets/checkout` accepts `ticketTypeId`, `discountCode`; calculates final amount in pence, passes `unit_amount` to Stripe `price_data` override; increments `quantity_sold` + `uses_count` on success
+- `POST /api/tickets/free` accepts `ticketTypeId`; increments `quantity_sold`
+- Admin CRUD: `GET/POST /api/admin/events/:id/ticket-types`, `PUT/DELETE /api/admin/ticket-types/:id`, `GET/POST /api/admin/events/:id/discount-codes`, `PUT/DELETE /api/admin/discount-codes/:id`
+- Tickets stored with unique QR code, displayed in My Tickets tab
+- API routes: `GET /api/tickets/my`, `GET /api/tickets/event/:id`, `POST /api/tickets/checkout`, `POST /api/tickets/free`, `GET /api/tickets/validate-code`, `GET /api/tickets/success`, `POST /api/tickets/gift`, `GET /api/tickets/gift-success`
 - `GET /api/events/:id/attendees` — returns attendees (users with confirmed tickets) for an event
 - `POST /api/admin/notify-event-reminders` — sends 48h push notification reminders to ticket holders for events within the next 48 hours
 

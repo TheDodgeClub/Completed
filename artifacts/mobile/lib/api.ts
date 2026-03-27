@@ -61,6 +61,21 @@ export type CheckoutField = {
   options?: string[];
 };
 
+export type TicketType = {
+  id: number;
+  name: string;
+  description: string | null;
+  price: number;
+  quantity: number | null;
+  quantitySold: number;
+  available: number | null;
+  isSoldOut: boolean;
+  saleStartsAt: string | null;
+  saleEndsAt: string | null;
+  isActive: boolean;
+  saleOpen: boolean;
+};
+
 export type Event = {
   id: number;
   title: string;
@@ -77,6 +92,7 @@ export type Event = {
   checkoutFields: CheckoutField[];
   waiverText: string | null;
   xpReward: number;
+  ticketTypes: TicketType[];
 };
 
 export type Ticket = {
@@ -552,18 +568,36 @@ export async function getEventTicket(eventId: number): Promise<{ ticket: Ticket 
   return apiFetch<{ ticket: Ticket | null }>(`/tickets/event/${eventId}`);
 }
 
-export async function createCheckoutSession(eventId: number, checkoutData?: Record<string, string>): Promise<{ url: string; sessionId: string }> {
+export async function createCheckoutSession(
+  eventId: number,
+  checkoutData?: Record<string, string>,
+  ticketTypeId?: number,
+  discountCode?: string,
+): Promise<{ url: string; sessionId: string }> {
   return apiFetch<{ url: string; sessionId: string }>("/tickets/checkout", {
     method: "POST",
-    body: JSON.stringify({ eventId, checkoutData }),
+    body: JSON.stringify({ eventId, checkoutData, ticketTypeId, discountCode }),
   });
 }
 
-export async function registerFreeTicket(eventId: number, checkoutData?: Record<string, string>): Promise<{ ticket: Ticket }> {
+export async function registerFreeTicket(
+  eventId: number,
+  checkoutData?: Record<string, string>,
+  ticketTypeId?: number,
+): Promise<{ ticket: Ticket }> {
   return apiFetch<{ ticket: Ticket }>("/tickets/free", {
     method: "POST",
-    body: JSON.stringify({ eventId, checkoutData }),
+    body: JSON.stringify({ eventId, checkoutData, ticketTypeId }),
   });
+}
+
+export async function validateDiscountCode(
+  eventId: number,
+  code: string,
+): Promise<{ valid: boolean; discountType: "percent" | "fixed"; discountAmount: number; code: string }> {
+  return apiFetch<{ valid: boolean; discountType: "percent" | "fixed"; discountAmount: number; code: string }>(
+    `/tickets/validate-code?eventId=${eventId}&code=${encodeURIComponent(code)}`
+  );
 }
 
 /* ---- admin: send push notification ---- */

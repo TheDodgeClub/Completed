@@ -31,10 +31,12 @@ import {
   getMyTickets,
   createCheckoutSession,
   registerFreeTicket,
+  validateDiscountCode,
   getEventAttendees,
   giftTicket,
   Event,
   Ticket,
+  TicketType,
   CheckoutField,
   EventAttendee,
 } from "@/lib/api";
@@ -79,8 +81,8 @@ export default function TicketsScreen() {
   });
 
   const { mutate: registerFree, isPending: registeringFree } = useMutation({
-    mutationFn: ({ eventId, checkoutData }: { eventId: number; checkoutData?: Record<string, string> }) =>
-      registerFreeTicket(eventId, checkoutData),
+    mutationFn: ({ eventId, checkoutData, ticketTypeId }: { eventId: number; checkoutData?: Record<string, string>; ticketTypeId?: number }) =>
+      registerFreeTicket(eventId, checkoutData, ticketTypeId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-tickets"] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -91,37 +93,44 @@ export default function TicketsScreen() {
 
   const [buyingEventId, setBuyingEventId] = useState<number | null>(null);
   const [checkoutFormEvent, setCheckoutFormEvent] = useState<Event | null>(null);
+  const [checkoutContext, setCheckoutContext] = useState<{ ticketTypeId?: number; discountCode?: string } | null>(null);
   const [giftEvent, setGiftEvent] = useState<{ id: number; title: string } | null>(null);
   const [giftEmail, setGiftEmail] = useState("");
   const [giftingEventId, setGiftingEventId] = useState<number | null>(null);
+  const [ticketTypeModalEvent, setTicketTypeModalEvent] = useState<Event | null>(null);
 
   const needsForm = (event: Event) =>
     (event.checkoutFields?.length ?? 0) > 0 || !!event.waiverText;
 
-  const doBuyTicket = useCallback(async (event: Event, checkoutData?: Record<string, string>) => {
-    // Free event
-    if (!event.stripePriceId) {
-      if (event.ticketPrice === 0) {
-        registerFree({ eventId: event.id, checkoutData });
+  const hasActiveTicketTypes = (event: Event) =>
+    (event.ticketTypes?.filter(t => t.isActive && t.saleOpen).length ?? 0) > 0;
+
+  const doBuyTicket = useCallback(async (event: Event, checkoutData?: Record<string, string>, ticketTypeId?: number, discountCode?: string) => {
+    // If a specific ticket type is provided and it's free (or discount makes it free), use free flow
+    const selectedType = ticketTypeId ? event.ticketTypes?.find(t => t.id === ticketTypeId) : null;
+    const typePrice = selectedType?.price ?? null;
+    const isFreeType = selectedType !== null && typePrice === 0;
+
+    // Free event (no type selected, or free type)
+    if (isFreeType || (!ticketTypeId && !event.stripePriceId)) {
+      if (isFreeType || event.ticketPrice === 0) {
+        registerFree({ eventId: event.id, checkoutData, ticketTypeId });
       } else {
         Alert.alert("Tickets not available", "This event does not have tickets configured yet.");
       }
       return;
     }
 
-    // Paid event — launch Stripe Checkout
+    // Paid — launch Stripe Checkout (server handles discount calculation)
     setBuyingEventId(event.id);
     try {
-      const { url } = await createCheckoutSession(event.id, checkoutData);
-      // openBrowserAsync opens SFSafariViewController on iOS (no OAuth dialog)
-      // It resolves when the user dismisses the browser
+      const { url } = await createCheckoutSession(event.id, checkoutData, ticketTypeId, discountCode);
       await WebBrowser.openBrowserAsync(url, {
         presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
         dismissButtonStyle: "done",
         toolbarColor: "#0B5E2F",
         controlsColor: "#FFD700",
       });
-      // After browser closes, poll for the ticket (payment may have completed)
       const fresh = await refetchTickets();
       const newTicket = (fresh.data ?? []).find(t => t.eventId === event.id);
       if (newTicket) {
@@ -142,7 +151,6 @@ export default function TicketsScreen() {
       return;
     }
 
-    // Check if already has ticket
     const existing = myTickets?.find(t => t.eventId === event.id);
     if (existing) {
       setSelectedTicket(existing);
@@ -152,13 +160,19 @@ export default function TicketsScreen() {
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
-    // If event has checkout form or waiver, show modal first
+    // If event has active ticket types, show the type selector first
+    if (hasActiveTicketTypes(event)) {
+      setTicketTypeModalEvent(event);
+      return;
+    }
+
+    // If event has checkout form or waiver, show modal
     if (needsForm(event)) {
+      setCheckoutContext(null);
       setCheckoutFormEvent(event);
       return;
     }
 
-    // No form — proceed directly
     await doBuyTicket(event, undefined);
   }, [user, myTickets, doBuyTicket]);
 
@@ -369,11 +383,32 @@ export default function TicketsScreen() {
         <CheckoutFormModal
           event={checkoutFormEvent}
           Colors={Colors}
-          onClose={() => setCheckoutFormEvent(null)}
+          onClose={() => { setCheckoutFormEvent(null); setCheckoutContext(null); }}
           onSubmit={(formData) => {
             const event = checkoutFormEvent;
+            const ctx = checkoutContext;
             setCheckoutFormEvent(null);
-            doBuyTicket(event, formData);
+            setCheckoutContext(null);
+            doBuyTicket(event, formData, ctx?.ticketTypeId, ctx?.discountCode);
+          }}
+        />
+      )}
+
+      {/* Ticket Type Selector Modal */}
+      {ticketTypeModalEvent && (
+        <TicketTypeModal
+          event={ticketTypeModalEvent}
+          Colors={Colors}
+          onClose={() => setTicketTypeModalEvent(null)}
+          onSelect={(ticketTypeId, discountCode) => {
+            const event = ticketTypeModalEvent;
+            setTicketTypeModalEvent(null);
+            if (needsForm(event)) {
+              setCheckoutContext({ ticketTypeId, discountCode });
+              setCheckoutFormEvent(event);
+            } else {
+              doBuyTicket(event, undefined, ticketTypeId, discountCode);
+            }
           }}
         />
       )}
@@ -879,6 +914,196 @@ function CheckoutFormModal({
                 <Text style={cfStyles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </KeyboardAvoidingView>
+      </View>
+    </Modal>
+  );
+}
+
+function TicketTypeModal({
+  event,
+  Colors,
+  onClose,
+  onSelect,
+}: {
+  event: Event;
+  Colors: any;
+  onClose: () => void;
+  onSelect: (ticketTypeId: number, discountCode?: string) => void;
+}) {
+  const activeTypes = event.ticketTypes?.filter(t => t.isActive && t.saleOpen) ?? [];
+  const [selectedId, setSelectedId] = useState<number | null>(activeTypes.length === 1 ? activeTypes[0].id : null);
+  const [discountInput, setDiscountInput] = useState("");
+  const [validating, setValidating] = useState(false);
+  const [appliedCode, setAppliedCode] = useState<{ code: string; discountType: "percent" | "fixed"; discountAmount: number } | null>(null);
+  const [codeError, setCodeError] = useState("");
+
+  const selectedType = activeTypes.find(t => t.id === selectedId) ?? null;
+  const discountedPrice = appliedCode && selectedType
+    ? (appliedCode.discountType === "percent"
+        ? Math.max(0, Math.round(selectedType.price * (1 - appliedCode.discountAmount / 100)))
+        : Math.max(0, selectedType.price - appliedCode.discountAmount))
+    : null;
+
+  const handleValidateCode = async () => {
+    if (!discountInput.trim()) return;
+    setValidating(true);
+    setCodeError("");
+    setAppliedCode(null);
+    try {
+      const result = await validateDiscountCode(event.id, discountInput.trim());
+      setAppliedCode({ code: result.code, discountType: result.discountType, discountAmount: result.discountAmount });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (err: any) {
+      setCodeError(err.message ?? "Invalid discount code");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setValidating(false);
+    }
+  };
+
+  const handleContinue = () => {
+    if (!selectedId) return;
+    onSelect(selectedId, appliedCode?.code);
+  };
+
+  return (
+    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" }}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
+          <View style={{ backgroundColor: Colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 }}>
+            {/* Handle */}
+            <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: Colors.border, alignSelf: "center", marginBottom: 20 }} />
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <Text style={{ color: Colors.text, fontSize: 18, fontWeight: "700" }}>Choose Ticket</Text>
+              <Pressable onPress={onClose} style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.border, alignItems: "center", justifyContent: "center" }}>
+                <Feather name="x" size={16} color={Colors.text} />
+              </Pressable>
+            </View>
+            <Text style={{ color: Colors.textSecondary, fontSize: 13, marginBottom: 16 }}>{event.title}</Text>
+
+            {/* Ticket Types */}
+            <View style={{ gap: 10, marginBottom: 20 }}>
+              {activeTypes.map(type => {
+                const isSelected = selectedId === type.id;
+                const isSoldOut = type.isSoldOut;
+                return (
+                  <Pressable
+                    key={type.id}
+                    onPress={() => { if (!isSoldOut) { setSelectedId(type.id); setAppliedCode(null); setCodeError(""); setDiscountInput(""); } }}
+                    style={{
+                      borderRadius: 14,
+                      borderWidth: 2,
+                      borderColor: isSelected ? Colors.primary : Colors.border,
+                      backgroundColor: isSelected ? `${Colors.primary}15` : Colors.background,
+                      padding: 14,
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      opacity: isSoldOut ? 0.5 : 1,
+                    }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: Colors.text, fontSize: 15, fontWeight: "600" }}>{type.name}</Text>
+                      {type.description && <Text style={{ color: Colors.textSecondary, fontSize: 12, marginTop: 2 }}>{type.description}</Text>}
+                      {type.available !== null && type.available <= 10 && !isSoldOut && (
+                        <Text style={{ color: "#F59E0B", fontSize: 11, marginTop: 4, fontWeight: "600" }}>Only {type.available} left!</Text>
+                      )}
+                      {isSoldOut && <Text style={{ color: "#EF4444", fontSize: 11, marginTop: 4, fontWeight: "600" }}>Sold Out</Text>}
+                    </View>
+                    <View style={{ alignItems: "flex-end", marginLeft: 12 }}>
+                      <Text style={{ color: Colors.primary, fontSize: 18, fontWeight: "700" }}>
+                        {type.price === 0 ? "FREE" : `£${(type.price / 100).toFixed(2)}`}
+                      </Text>
+                      {isSelected && <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center", marginTop: 6 }}><Feather name="check" size={12} color="#fff" /></View>}
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            {/* Discount Code */}
+            {selectedType && selectedType.price > 0 && (
+              <View style={{ marginBottom: 20 }}>
+                <Text style={{ color: Colors.textSecondary, fontSize: 12, fontWeight: "600", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>Discount Code (optional)</Text>
+                {appliedCode ? (
+                  <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#0B5E2F22", borderRadius: 12, borderWidth: 1, borderColor: Colors.primary, padding: 12, gap: 10 }}>
+                    <Feather name="tag" size={16} color={Colors.primary} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: Colors.primary, fontWeight: "700", fontSize: 14 }}>{appliedCode.code} applied!</Text>
+                      <Text style={{ color: Colors.textSecondary, fontSize: 12 }}>
+                        {appliedCode.discountType === "percent"
+                          ? `${appliedCode.discountAmount}% off`
+                          : `£${(appliedCode.discountAmount / 100).toFixed(2)} off`}
+                        {discountedPrice !== null && ` → £${(discountedPrice / 100).toFixed(2)}`}
+                        {discountedPrice === 0 && " (FREE!)"}
+                      </Text>
+                    </View>
+                    <Pressable onPress={() => { setAppliedCode(null); setDiscountInput(""); }} style={{ padding: 4 }}>
+                      <Feather name="x" size={16} color={Colors.textSecondary} />
+                    </Pressable>
+                  </View>
+                ) : (
+                  <View style={{ flexDirection: "row", gap: 8 }}>
+                    <TextInput
+                      value={discountInput}
+                      onChangeText={t => { setDiscountInput(t.toUpperCase()); setCodeError(""); }}
+                      placeholder="Enter code"
+                      placeholderTextColor={Colors.textSecondary}
+                      autoCapitalize="characters"
+                      style={{ flex: 1, backgroundColor: Colors.background, borderRadius: 12, borderWidth: 1, borderColor: codeError ? "#EF4444" : Colors.border, paddingHorizontal: 14, paddingVertical: 12, color: Colors.text, fontSize: 14, fontFamily: "monospace" }}
+                    />
+                    <Pressable
+                      onPress={handleValidateCode}
+                      disabled={validating || !discountInput.trim()}
+                      style={{ backgroundColor: Colors.primary, borderRadius: 12, paddingHorizontal: 16, justifyContent: "center", opacity: validating || !discountInput.trim() ? 0.5 : 1 }}
+                    >
+                      {validating ? <ActivityIndicator size="small" color="#fff" /> : <Text style={{ color: "#fff", fontWeight: "600", fontSize: 14 }}>Apply</Text>}
+                    </Pressable>
+                  </View>
+                )}
+                {!!codeError && <Text style={{ color: "#EF4444", fontSize: 12, marginTop: 6 }}>{codeError}</Text>}
+              </View>
+            )}
+
+            {/* Summary + CTA */}
+            {selectedType && (
+              <View style={{ backgroundColor: Colors.background, borderRadius: 14, padding: 14, marginBottom: 16, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                <View>
+                  <Text style={{ color: Colors.textSecondary, fontSize: 12 }}>Total</Text>
+                  <Text style={{ color: Colors.text, fontSize: 22, fontWeight: "700" }}>
+                    {discountedPrice === 0 || (selectedType.price === 0 && !appliedCode)
+                      ? "FREE"
+                      : discountedPrice !== null
+                        ? `£${(discountedPrice / 100).toFixed(2)}`
+                        : `£${(selectedType.price / 100).toFixed(2)}`}
+                  </Text>
+                  {appliedCode && discountedPrice !== null && discountedPrice > 0 && (
+                    <Text style={{ color: Colors.textSecondary, fontSize: 11, textDecorationLine: "line-through" }}>
+                      £{(selectedType.price / 100).toFixed(2)}
+                    </Text>
+                  )}
+                </View>
+                <Text style={{ color: Colors.textSecondary, fontSize: 13 }}>{selectedType.name}</Text>
+              </View>
+            )}
+
+            <Pressable
+              onPress={handleContinue}
+              disabled={!selectedId}
+              style={{
+                backgroundColor: Colors.primary,
+                borderRadius: 16,
+                paddingVertical: 16,
+                alignItems: "center",
+                opacity: selectedId ? 1 : 0.4,
+              }}
+            >
+              <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700" }}>
+                {selectedType?.price === 0 || discountedPrice === 0 ? "Get Free Ticket" : "Continue to Payment"}
+              </Text>
+            </Pressable>
           </View>
         </KeyboardAvoidingView>
       </View>
