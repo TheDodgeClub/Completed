@@ -8,7 +8,10 @@ import {
   RefreshControl,
   Pressable,
   Image,
+  Modal,
+  SafeAreaView,
 } from "react-native";
+import { VideoView, useVideoPlayer } from "expo-video";
 import * as WebBrowser from "expo-web-browser";
 import { router, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -58,15 +61,57 @@ function formatTimeAgo(date: Date): string {
   return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
+/* ─── Video player modal ─── */
+function VideoPlayerModal({ video, onClose }: { video: VideoClip; onClose: () => void }) {
+  const Colors = useColors();
+  const resolvedUrl = resolveImageUrl(video.url) ?? video.url;
+  const player = useVideoPlayer(resolvedUrl, p => { p.play(); });
+
+  return (
+    <Modal visible animationType="slide" onRequestClose={onClose} statusBarTranslucent>
+      <SafeAreaView style={{ flex: 1, backgroundColor: "#000" }}>
+        <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12 }}>
+          <Pressable onPress={onClose} style={{ padding: 4 }}>
+            <Feather name="x" size={24} color="#fff" />
+          </Pressable>
+          <Text style={{ flex: 1, fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#fff", marginLeft: 12 }} numberOfLines={1}>
+            {video.title}
+          </Text>
+        </View>
+        <VideoView
+          player={player}
+          style={{ flex: 1 }}
+          contentFit="contain"
+          nativeControls
+        />
+        {video.description ? (
+          <View style={{ padding: 16 }}>
+            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: "#ccc" }}>{video.description}</Text>
+          </View>
+        ) : null}
+      </SafeAreaView>
+    </Modal>
+  );
+}
+
 /* ─── Video card ─── */
-function VideoCard({ video }: { video: VideoClip }) {
+function VideoCard({ video, onPress }: { video: VideoClip; onPress: () => void }) {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
+
+  const isExternalLink = video.url.includes("youtube.com") || video.url.includes("youtu.be") || video.url.includes("vimeo.com");
 
   return (
     <Pressable
       style={({ pressed }) => [styles.videoCard, { opacity: pressed ? 0.85 : 1 }]}
-      onPress={() => WebBrowser.openBrowserAsync(video.url)}
+      onPress={() => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        if (isExternalLink) {
+          WebBrowser.openBrowserAsync(video.url);
+        } else {
+          onPress();
+        }
+      }}
     >
       <View style={styles.videoThumb}>
         {video.thumbnailUrl ? (
@@ -96,6 +141,7 @@ export default function UpdatesScreen() {
   const { isAuthenticated, user } = useAuth();
   const [refreshing, setRefreshing] = React.useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [selectedVideo, setSelectedVideo] = useState<VideoClip | null>(null);
   const [showAllAnnouncements, setShowAllAnnouncements] = useState(false);
   const queryClient = useQueryClient();
 
@@ -210,7 +256,7 @@ export default function UpdatesScreen() {
                   <Text style={styles.sectionTitle}>Videos</Text>
                 </View>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.videoList}>
-                  {videos.map(v => <VideoCard key={v.id} video={v} />)}
+                  {videos.map(v => <VideoCard key={v.id} video={v} onPress={() => setSelectedVideo(v)} />)}
                 </ScrollView>
               </View>
             )}
@@ -281,6 +327,10 @@ export default function UpdatesScreen() {
 
       {selectedPost && (
         <PostDetailModal post={selectedPost} onClose={() => setSelectedPost(null)} />
+      )}
+
+      {selectedVideo && (
+        <VideoPlayerModal video={selectedVideo} onClose={() => setSelectedVideo(null)} />
       )}
     </>
   );
