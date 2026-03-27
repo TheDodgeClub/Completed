@@ -457,6 +457,38 @@ export default function HomeScreen() {
           );
         })()}
 
+        {/* ── Feature 5: Community Pulse ── */}
+        {activityItems && activityItems.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Community Pulse</Text>
+            </View>
+            <View style={styles.pulseCard}>
+              {activityItems.slice(0, 5).map((item: ActivityItem, idx: number) => (
+                <View key={item.id}>
+                  {idx > 0 && <View style={styles.pulseDivider} />}
+                  <View style={styles.pulseRow}>
+                    <View style={styles.pulseAvatarWrap}>
+                      {item.userAvatar ? (
+                        <Image
+                          source={{ uri: resolveImageUrl(item.userAvatar) ?? item.userAvatar }}
+                          style={styles.pulseAvatar}
+                        />
+                      ) : (
+                        <View style={[styles.pulseAvatar, styles.pulseAvatarFallback]}>
+                          <Text style={styles.pulseAvatarInitial}>{item.userName.charAt(0).toUpperCase()}</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.pulseText} numberOfLines={2}>{item.text}</Text>
+                    <Text style={styles.pulseTime}>{timeAgo(item.timestamp)}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
         {/* ── Club Shop row ── */}
         {merch && merch.length > 0 && (
           <View style={styles.section}>
@@ -509,38 +541,6 @@ export default function HomeScreen() {
         {/* Go Elite Banner — players only */}
         {user?.accountType !== "supporter" && (
           <EliteBanner isElite={user?.isElite ?? false} isAuthenticated={isAuthenticated} />
-        )}
-
-        {/* ── Feature 5: Community Pulse ── */}
-        {activityItems && activityItems.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Community Pulse</Text>
-            </View>
-            <View style={styles.pulseCard}>
-              {activityItems.slice(0, 5).map((item: ActivityItem, idx: number) => (
-                <View key={item.id}>
-                  {idx > 0 && <View style={styles.pulseDivider} />}
-                  <View style={styles.pulseRow}>
-                    <View style={styles.pulseAvatarWrap}>
-                      {item.userAvatar ? (
-                        <Image
-                          source={{ uri: resolveImageUrl(item.userAvatar) ?? item.userAvatar }}
-                          style={styles.pulseAvatar}
-                        />
-                      ) : (
-                        <View style={[styles.pulseAvatar, styles.pulseAvatarFallback]}>
-                          <Text style={styles.pulseAvatarInitial}>{item.userName.charAt(0).toUpperCase()}</Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text style={styles.pulseText} numberOfLines={2}>{item.text}</Text>
-                    <Text style={styles.pulseTime}>{timeAgo(item.timestamp)}</Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-          </View>
         )}
 
         {/* Latest Updates */}
