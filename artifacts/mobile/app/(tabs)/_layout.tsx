@@ -53,7 +53,7 @@ function HeaderControls() {
   );
 }
 
-function NativeTabLayout({ isAdmin }: { isAdmin: boolean }) {
+function NativeTabLayout() {
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="index">
@@ -76,17 +76,11 @@ function NativeTabLayout({ isAdmin }: { isAdmin: boolean }) {
         <Icon sf={{ default: "person.badge.shield.checkmark", selected: "person.badge.shield.checkmark.fill" }} />
         <Label>Member</Label>
       </NativeTabs.Trigger>
-      {isAdmin && (
-        <NativeTabs.Trigger name="admin">
-          <Icon sf={{ default: "gearshape", selected: "gearshape.fill" }} />
-          <Label>Admin</Label>
-        </NativeTabs.Trigger>
-      )}
     </NativeTabs>
   );
 }
 
-function ClassicTabLayout({ isAdmin }: { isAdmin: boolean }) {
+function ClassicTabLayout() {
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
   const safeAreaInsets = useSafeAreaInsets();
@@ -169,28 +163,13 @@ function ClassicTabLayout({ isAdmin }: { isAdmin: boolean }) {
             isIOS ? <SymbolView name="person.circle" tintColor={color} size={22} /> : <Feather name="user" size={21} color={color} />,
         }}
       />
-      <Tabs.Screen
-        name="admin"
-        options={
-          isAdmin
-            ? {
-                title: "Admin",
-                tabBarIcon: ({ color }) =>
-                  isIOS ? <SymbolView name="gearshape" tintColor={color} size={22} /> : <Feather name="settings" size={21} color={color} />,
-              }
-            : { href: null }
-        }
-      />
     </Tabs>
   );
 }
 
 export default function TabLayout() {
-  const { user } = useAuth();
-  const isAdmin = user?.isAdmin === true;
-
   if (isLiquidGlassAvailable()) {
-    return <NativeTabLayout isAdmin={isAdmin} />;
+    return <NativeTabLayout />;
   }
-  return <ClassicTabLayout isAdmin={isAdmin} />;
+  return <ClassicTabLayout />;
 }
