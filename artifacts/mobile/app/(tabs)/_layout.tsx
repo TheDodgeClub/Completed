@@ -60,21 +60,21 @@ function NativeTabLayout() {
         <Icon sf={{ default: "house", selected: "house.fill" }} />
         <Label>Home</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="tickets">
-        <Icon sf={{ default: "ticket", selected: "ticket.fill" }} />
-        <Label>Tickets</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="member">
-        <Icon sf={{ default: "person.badge.shield.checkmark", selected: "person.badge.shield.checkmark.fill" }} />
-        <Label>Member</Label>
-      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="updates">
         <Icon sf={{ default: "megaphone", selected: "megaphone.fill" }} />
         <Label>Updates</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="tickets">
+        <Icon sf={{ default: "ticket", selected: "ticket.fill" }} />
+        <Label>Tickets</Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="community">
         <Icon sf={{ default: "person.2", selected: "person.2.fill" }} />
         <Label>Club</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="member">
+        <Icon sf={{ default: "person.badge.shield.checkmark", selected: "person.badge.shield.checkmark.fill" }} />
+        <Label>Member</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );
@@ -129,23 +129,6 @@ function ClassicTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="tickets"
-        options={{
-          title: "Tickets",
-          tabBarIcon: ({ color }) =>
-            isIOS ? <SymbolView name="ticket" tintColor={color} size={22} /> : <Feather name="tag" size={21} color={color} />,
-        }}
-      />
-      <Tabs.Screen name="merch" options={{ href: null, headerShown: false }} />
-      <Tabs.Screen
-        name="member"
-        options={{
-          title: "Member",
-          tabBarIcon: ({ color }) =>
-            isIOS ? <SymbolView name="person.circle" tintColor={color} size={22} /> : <Feather name="user" size={21} color={color} />,
-        }}
-      />
-      <Tabs.Screen
         name="updates"
         options={{
           title: "Updates",
@@ -156,11 +139,28 @@ function ClassicTabLayout() {
         }}
       />
       <Tabs.Screen
+        name="tickets"
+        options={{
+          title: "Tickets",
+          tabBarIcon: ({ color }) =>
+            isIOS ? <SymbolView name="ticket" tintColor={color} size={22} /> : <Feather name="tag" size={21} color={color} />,
+        }}
+      />
+      <Tabs.Screen name="merch" options={{ href: null, headerShown: false }} />
+      <Tabs.Screen
         name="community"
         options={{
           title: "Club",
           tabBarIcon: ({ color }) =>
             isIOS ? <SymbolView name="person.2" tintColor={color} size={22} /> : <Feather name="users" size={21} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="member"
+        options={{
+          title: "Member",
+          tabBarIcon: ({ color }) =>
+            isIOS ? <SymbolView name="person.circle" tintColor={color} size={22} /> : <Feather name="user" size={21} color={color} />,
         }}
       />
     </Tabs>
