@@ -13,3 +13,4 @@ export * from "./user_sessions";
 export * from "./tickets";
 export * from "./settings";
 export * from "./relations";
+export * from "./announcements";

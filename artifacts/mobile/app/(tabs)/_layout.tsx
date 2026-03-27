@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors, useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { useAnnouncements } from "@/hooks/useAnnouncements";
 import * as Haptics from "expo-haptics";
 
 function HeaderControls() {
@@ -91,6 +92,7 @@ function ClassicTabLayout({ isAdmin }: { isAdmin: boolean }) {
   const safeAreaInsets = useSafeAreaInsets();
   const Colors = useColors();
   const { isDark } = useTheme();
+  const { unreadCount } = useAnnouncements();
 
   const headerControls = () => <HeaderControls />;
 
@@ -145,6 +147,8 @@ function ClassicTabLayout({ isAdmin }: { isAdmin: boolean }) {
         name="updates"
         options={{
           title: "Updates",
+          tabBarBadge: unreadCount > 0 ? (unreadCount > 9 ? "9+" : unreadCount) : undefined,
+          tabBarBadgeStyle: { backgroundColor: Colors.primary, fontSize: 10 },
           tabBarIcon: ({ color }) =>
             isIOS ? <SymbolView name="megaphone" tintColor={color} size={22} /> : <Feather name="rss" size={21} color={color} />,
         }}

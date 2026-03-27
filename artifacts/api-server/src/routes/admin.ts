@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, eventsTable, postsTable, merchTable, usersTable, attendanceTable, awardsTable, videosTable, teamHistoryTable, eventRegistrationsTable, userSessionsTable, ticketsTable } from "@workspace/db";
+import { db, eventsTable, postsTable, merchTable, usersTable, attendanceTable, awardsTable, videosTable, teamHistoryTable, eventRegistrationsTable, userSessionsTable, ticketsTable, announcementsTable } from "@workspace/db";
 import { eq, desc, and, avg, count, sum, gte, sql, lte } from "drizzle-orm";
 import { getUncachableStripeClient } from "../stripeClient";
 import { requireAdmin } from "../middlewares/requireAdmin";
@@ -736,7 +736,24 @@ router.post("/notify", async (req, res) => {
     sent += batch.length;
   }
 
+  await db.insert(announcementsTable).values({
+    title,
+    body: notifBody,
+    sentCount: sent,
+    sentBy: "admin",
+  }).catch(() => null);
+
   res.json({ sent });
+});
+
+/* GET /api/admin/announcements — list sent announcements (admin only) */
+router.get("/announcements", async (_req, res) => {
+  const announcements = await db
+    .select()
+    .from(announcementsTable)
+    .orderBy(desc(announcementsTable.createdAt))
+    .limit(20);
+  res.json(announcements);
 });
 
 /* POST /api/admin/notify-event-reminders — send 48h reminders for events happening in the next 24–52h */

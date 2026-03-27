@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   Image,
 } from "react-native";
 import * as WebBrowser from "expo-web-browser";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -18,9 +18,45 @@ import * as Haptics from "expo-haptics";
 import { useColors } from "@/context/ThemeContext";
 import { resolveImageUrl } from "@/constants/api";
 import { useAuth } from "@/context/AuthContext";
-import { listPosts, listVideos, VideoClip, Post } from "@/lib/api";
+import { listPosts, listVideos, VideoClip, Post, Announcement } from "@/lib/api";
 import { PostCard } from "@/components/PostCard";
 import { PostDetailModal } from "@/components/PostDetailModal";
+import { useAnnouncements } from "@/hooks/useAnnouncements";
+
+/* ─── Announcement Card ─── */
+function AnnouncementCard({ item }: { item: Announcement }) {
+  const Colors = useColors();
+  const styles = useMemo(() => makeStyles(Colors), [Colors]);
+  const date = new Date(item.createdAt);
+  const timeAgo = formatTimeAgo(date);
+
+  return (
+    <View style={styles.announcementCard}>
+      <View style={styles.announcementHeader}>
+        <View style={styles.announcementIconWrap}>
+          <Feather name="bell" size={14} color={Colors.primary} />
+        </View>
+        <Text style={styles.announcementLabel}>Club Announcement</Text>
+        <Text style={styles.announcementTime}>{timeAgo}</Text>
+      </View>
+      <Text style={styles.announcementTitle}>{item.title}</Text>
+      <Text style={styles.announcementBody}>{item.body}</Text>
+    </View>
+  );
+}
+
+function formatTimeAgo(date: Date): string {
+  const now = Date.now();
+  const diff = now - date.getTime();
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return date.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+}
 
 /* ─── Video card ─── */
 function VideoCard({ video }: { video: VideoClip }) {
@@ -60,7 +96,16 @@ export default function UpdatesScreen() {
   const { isAuthenticated, user } = useAuth();
   const [refreshing, setRefreshing] = React.useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [showAllAnnouncements, setShowAllAnnouncements] = useState(false);
   const queryClient = useQueryClient();
+
+  const { announcements, isLoading: announcementsLoading, refetch: refetchAnnouncements, markAllSeen } = useAnnouncements();
+
+  useFocusEffect(
+    useCallback(() => {
+      markAllSeen();
+    }, [markAllSeen])
+  );
 
   const { data: posts, isLoading: postsLoading, refetch: refetchPosts } = useQuery({
     queryKey: ["posts"],
@@ -97,7 +142,7 @@ export default function UpdatesScreen() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([refetchPosts(), refetchVideos()]);
+    await Promise.all([refetchPosts(), refetchVideos(), refetchAnnouncements()]);
     setRefreshing(false);
   };
 
@@ -106,13 +151,14 @@ export default function UpdatesScreen() {
   const isLoading = postsLoading || videosLoading;
   const allPosts = posts ?? [];
 
-  // Members-only gate (unauthenticated)
   const visiblePosts = isAuthenticated
     ? allPosts.filter(p => isElite || !p.isEliteOnly)
     : allPosts.filter(p => !p.isMembersOnly && !p.isEliteOnly);
 
   const memberLockedPosts = !isAuthenticated ? allPosts.filter(p => p.isMembersOnly && !p.isEliteOnly) : [];
   const eliteLockedPosts = isAuthenticated && !isElite ? allPosts.filter(p => p.isEliteOnly) : [];
+
+  const visibleAnnouncements = showAllAnnouncements ? announcements : announcements.slice(0, 3);
 
   return (
     <>
@@ -126,6 +172,32 @@ export default function UpdatesScreen() {
           <Text style={styles.headerTitle}>Updates</Text>
           <Text style={styles.headerSubtitle}>Community news and announcements</Text>
         </View>
+
+        {isAuthenticated && announcements.length > 0 && (
+          <View style={styles.announcementsSection}>
+            <View style={styles.sectionHeader}>
+              <Feather name="bell" size={16} color={Colors.primary} />
+              <Text style={styles.sectionTitle}>Announcements</Text>
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{announcements.length}</Text>
+              </View>
+            </View>
+            {visibleAnnouncements.map(item => (
+              <AnnouncementCard key={item.id} item={item} />
+            ))}
+            {announcements.length > 3 && (
+              <Pressable
+                style={({ pressed }) => [styles.showMoreBtn, { opacity: pressed ? 0.7 : 1 }]}
+                onPress={() => setShowAllAnnouncements(v => !v)}
+              >
+                <Text style={styles.showMoreText}>
+                  {showAllAnnouncements ? "Show less" : `Show ${announcements.length - 3} more`}
+                </Text>
+                <Feather name={showAllAnnouncements ? "chevron-up" : "chevron-down"} size={14} color={Colors.primary} />
+              </Pressable>
+            )}
+          </View>
+        )}
 
         {isLoading ? (
           <ActivityIndicator color={Colors.primary} style={{ marginTop: 40 }} />
@@ -224,6 +296,91 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     },
     headerTitle: { fontFamily: "Poppins_800ExtraBold", fontSize: 36, color: Colors.text },
     headerSubtitle: { fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.textSecondary, marginTop: 2 },
+
+    announcementsSection: {
+      paddingTop: 20,
+      paddingHorizontal: 20,
+      paddingBottom: 4,
+    },
+    announcementCard: {
+      backgroundColor: Colors.surface,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: Colors.primary + "35",
+      padding: 16,
+      marginBottom: 12,
+      shadowColor: Colors.primary,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.08,
+      shadowRadius: 6,
+      elevation: 2,
+    },
+    announcementHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      marginBottom: 8,
+    },
+    announcementIconWrap: {
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      backgroundColor: Colors.primary + "20",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    announcementLabel: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 11,
+      color: Colors.primary,
+      flex: 1,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    announcementTime: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 11,
+      color: Colors.textMuted,
+    },
+    announcementTitle: {
+      fontFamily: "Inter_700Bold",
+      fontSize: 15,
+      color: Colors.text,
+      marginBottom: 6,
+    },
+    announcementBody: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 14,
+      color: Colors.textSecondary,
+      lineHeight: 20,
+    },
+
+    badge: {
+      backgroundColor: Colors.primary,
+      borderRadius: 10,
+      paddingHorizontal: 7,
+      paddingVertical: 2,
+      marginLeft: 4,
+    },
+    badgeText: {
+      fontFamily: "Inter_700Bold",
+      fontSize: 11,
+      color: "#fff",
+    },
+    showMoreBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      paddingVertical: 10,
+      marginBottom: 4,
+    },
+    showMoreText: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 13,
+      color: Colors.primary,
+    },
+
     videosSection: { paddingTop: 20, paddingBottom: 4 },
     sectionHeader: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 20, marginBottom: 12 },
     sectionTitle: { fontFamily: "Inter_700Bold", fontSize: 16, color: Colors.text },

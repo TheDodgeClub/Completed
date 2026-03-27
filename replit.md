@@ -136,15 +136,23 @@ All routes under `/api`:
 - `GET /api/merch` — all merch
 - `GET /api/stats` — community stats
 
-## Push Notifications
+## Push Notifications & In-App Announcements
 
 - `expo-notifications@0.32.x` installed in `artifacts/mobile`
 - DB columns: `push_token TEXT`, `notifications_enabled BOOLEAN DEFAULT false` on `users`
 - Hook: `artifacts/mobile/hooks/usePushNotifications.ts` — registers Expo push token, syncs status with API
 - Mobile Preferences section (member.tsx): toggle for notifications + dark/light mode in a unified card
 - API: `GET /users/me/notification-status`, `POST /users/me/push-token`, `PUT /users/me/notifications`
-- Admin broadcast: `POST /api/admin/notify` — sends to all opted-in members via Expo Push API (batches of 100)
-- Admin dashboard: "Push Notification Broadcast" card with title + body form and send result feedback
+- Admin broadcast: `POST /api/admin/notify` — sends to all opted-in members via Expo Push API (batches of 100); also saves to `announcements` DB table
+- Admin dashboard: "Push Notification Broadcast" card with title + body form and send result feedback; "Notification History" card shows all past broadcasts with recipient count
+
+### In-App Announcement System
+- DB table: `announcements` — stores every broadcast with `title`, `body`, `sent_count`, `sent_by`, `created_at`
+- API: `GET /api/announcements` (auth required) — returns recent announcements for the mobile app
+- API: `GET /api/admin/announcements` (admin only) — returns last 20 sent announcements for admin history
+- Hook: `artifacts/mobile/hooks/useAnnouncements.ts` — fetches announcements, tracks `lastSeenAnnouncementId` in AsyncStorage, computes `unreadCount`
+- Updates tab: Announcements section appears at the top of the screen with styled cards showing title, body, and time; badge count on the Updates tab icon when there are unread announcements; tabs open as "seen" via `useFocusEffect`
+- Member profile tab: Latest announcement shown as a notification banner between the hero section and the content body, visible for all users (players and supporters)
 
 ## Expanding Later
 

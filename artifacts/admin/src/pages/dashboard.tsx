@@ -26,6 +26,15 @@ type LiveUser = {
   lastSeenAt: string;
 };
 
+type AnnouncementRecord = {
+  id: number;
+  title: string;
+  body: string;
+  sentCount: number;
+  sentBy: string | null;
+  createdAt: string;
+};
+
 type LiveUsersData = {
   count: number;
   users: LiveUser[];
@@ -97,6 +106,12 @@ export default function Dashboard() {
     refetchInterval: 30000,
   });
 
+  const { data: announcementHistory, refetch: refetchHistory } = useQuery<AnnouncementRecord[]>({
+    queryKey: ["admin-announcements"],
+    queryFn: () => fetchApi<AnnouncementRecord[]>("/api/admin/announcements"),
+    staleTime: 30000,
+  });
+
   const [notifTitle, setNotifTitle] = useState("");
   const [notifBody, setNotifBody] = useState("");
   const [notifSending, setNotifSending] = useState(false);
@@ -130,6 +145,7 @@ export default function Dashboard() {
       setNotifResult({ sent: data.sent ?? 0, failed: data.failed ?? 0 });
       setNotifTitle("");
       setNotifBody("");
+      refetchHistory();
     } catch {
       setNotifResult({ sent: 0, failed: 1 });
     } finally {
@@ -535,6 +551,45 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Announcement History */}
+          {announcementHistory && announcementHistory.length > 0 && (
+            <Card className="bg-card border-border/50 shadow-lg shadow-black/20">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
+                    <Bell className="w-4 h-4 text-accent" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base">Notification History</CardTitle>
+                    <p className="text-xs text-muted-foreground mt-0.5">Last {announcementHistory.length} broadcast{announcementHistory.length !== 1 ? "s" : ""} sent</p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2 pt-0">
+                {announcementHistory.map((a) => (
+                  <div key={a.id} className="flex items-start gap-3 p-3 rounded-xl bg-muted/30 border border-border/40">
+                    <div className="mt-0.5 w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <Send className="w-3.5 h-3.5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <p className="font-semibold text-sm text-foreground truncate">{a.title}</p>
+                        <span className="text-xs text-muted-foreground shrink-0">
+                          {new Date(a.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{a.body}</p>
+                      <span className="inline-flex items-center gap-1 mt-1.5 text-xs font-medium text-green-400">
+                        <CheckCircle className="w-3 h-3" />
+                        Sent to {a.sentCount} member{a.sentCount !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
 
           {/* 48h Event Reminders */}
           <Card className="bg-card border-primary/20 shadow-lg shadow-black/20">

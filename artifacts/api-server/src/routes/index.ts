@@ -14,6 +14,7 @@ import sessionsRouter from "./sessions";
 import ticketsRouter from "./tickets";
 import { settingsRouter } from "./settings";
 import eliteRouter from "./elite";
+import announcementsRouter from "./announcements";
 
 const router: IRouter = Router();
 
@@ -32,5 +33,6 @@ router.use("/sessions", sessionsRouter);
 router.use("/tickets", ticketsRouter);
 router.use("/settings", settingsRouter);
 router.use("/elite", eliteRouter);
+router.use("/announcements", announcementsRouter);
 
 export default router;

@@ -42,6 +42,7 @@ import {
 } from "@/lib/api";
 import { getToken } from "@/lib/api";
 import { EliteBanner } from "@/components/EliteBanner";
+import { useAnnouncements } from "@/hooks/useAnnouncements";
 
 const LEVEL_THRESHOLDS = [0, 300, 800, 1600, 2500, 5000, 10000, 20000, 40000, 80000];
 const LEVEL_NAMES = ["Beginner", "Developing", "Experienced", "Skilled", "Advanced", "Pro", "League", "Expert", "Master", "Icon"];
@@ -327,6 +328,8 @@ export default function MemberScreen() {
   const [uploadingAvatar, setUploadingAvatar] = React.useState(false);
 
   const userId = user?.id ?? 0;
+  const { announcements } = useAnnouncements();
+  const latestAnnouncement = announcements[0] ?? null;
 
   const { data: attendance, refetch: refetchAttendance } = useQuery({
     queryKey: ["attendance", userId],
@@ -651,6 +654,19 @@ export default function MemberScreen() {
         </Pressable>
       )}
 
+      {latestAnnouncement && (
+        <View style={styles.announcementBanner}>
+          <View style={styles.announcementBannerIcon}>
+            <Feather name="bell" size={14} color={Colors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.announcementBannerLabel}>Club Announcement</Text>
+            <Text style={styles.announcementBannerTitle} numberOfLines={1}>{latestAnnouncement.title}</Text>
+            <Text style={styles.announcementBannerBody} numberOfLines={2}>{latestAnnouncement.body}</Text>
+          </View>
+        </View>
+      )}
+
       <View style={styles.body}>
         {/* ── Quick Actions ── */}
         <View style={styles.quickActions}>
@@ -863,6 +879,49 @@ export default function MemberScreen() {
 function makeStyles(Colors: ReturnType<typeof useColors>) {
   return StyleSheet.create({
     screen: { flex: 1, backgroundColor: Colors.background },
+
+    announcementBanner: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 10,
+      backgroundColor: Colors.surface,
+      borderBottomWidth: 1,
+      borderBottomColor: Colors.border,
+      borderLeftWidth: 3,
+      borderLeftColor: Colors.primary,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+    },
+    announcementBannerIcon: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: Colors.primary + "20",
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 2,
+      flexShrink: 0,
+    },
+    announcementBannerLabel: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 10,
+      color: Colors.primary,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+      marginBottom: 2,
+    },
+    announcementBannerTitle: {
+      fontFamily: "Inter_700Bold",
+      fontSize: 14,
+      color: Colors.text,
+      marginBottom: 2,
+    },
+    announcementBannerBody: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 13,
+      color: Colors.textSecondary,
+      lineHeight: 18,
+    },
 
     /* Hero */
     profileHero: { paddingHorizontal: 24, paddingBottom: 28 },

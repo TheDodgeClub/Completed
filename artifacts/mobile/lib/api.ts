@@ -679,3 +679,16 @@ export type ActivityItem = {
 export async function getActivity(): Promise<ActivityItem[]> {
   return apiFetch<ActivityItem[]>("/users/activity");
 }
+
+export type Announcement = {
+  id: number;
+  title: string;
+  body: string;
+  sentCount: number;
+  sentBy: string | null;
+  createdAt: string;
+};
+
+export async function getAnnouncements(): Promise<Announcement[]> {
+  return apiFetch<Announcement[]>("/announcements");
+}
