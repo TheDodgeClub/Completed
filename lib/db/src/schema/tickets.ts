@@ -14,6 +14,7 @@ export const ticketsTable = pgTable("tickets", {
   checkedInAt: timestamp("checked_in_at"),
   amountPaid: integer("amount_paid").notNull().default(0), // in cents
   checkoutData: jsonb("checkout_data").$type<Record<string, string>>(),
+  giftRecipientEmail: text("gift_recipient_email"), // set when gifted to a non-account email
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

@@ -25,7 +25,21 @@ export interface TicketEmailParams {
   ticketCode: string;
 }
 
+export interface GiftEmailParams {
+  toEmail: string;
+  toName: string;
+  gifterName: string;
+  eventName: string;
+  eventDate: string | Date | null | undefined;
+  eventLocation: string | null | undefined;
+  ticketCode: string;
+}
+
 const DEFAULT_SUBJECT = "Your ticket is confirmed! 🎉";
+const DEFAULT_GIFT_SUBJECT = "You've been gifted a ticket! 🎁";
+const DEFAULT_GIFT_BODY = `Hey {{recipientName}},
+
+Great news — {{gifterName}} has gifted you a ticket to {{eventName}}! Show your ticket code at the door and we'll see you on the court! 🎯`;
 const DEFAULT_FROM_NAME = "The Dodge Club";
 const DEFAULT_FROM_EMAIL = "info@thedodgeclub.co.uk";
 
@@ -89,6 +103,66 @@ export function buildStructuredEmailHtml(opts: {
   </div>
 </body>
 </html>`;
+}
+
+export async function sendGiftEmail(params: GiftEmailParams): Promise<void> {
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey) {
+    console.warn("[email] BREVO_API_KEY not set — skipping gift email");
+    return;
+  }
+
+  const [fromName, fromEmail, subjectTpl, headerImageUrl, bodyText, ctaText, ctaUrl] =
+    await Promise.all([
+      getSetting("emailFromName"),
+      getSetting("emailFromAddress"),
+      getSetting("giftEmailSubject"),
+      getSetting("giftEmailHeaderImageUrl"),
+      getSetting("giftEmailBodyText"),
+      getSetting("giftEmailCtaText"),
+      getSetting("giftEmailCtaUrl"),
+    ]);
+
+  const vars: Record<string, string> = {
+    recipientName: params.toName,
+    userName: params.toName,
+    gifterName: params.gifterName,
+    eventName: params.eventName,
+    eventDate: formatDate(params.eventDate),
+    eventLocation: params.eventLocation ?? "TBD",
+    ticketCode: params.ticketCode,
+  };
+
+  const subject = interpolate(subjectTpl ?? DEFAULT_GIFT_SUBJECT, vars);
+  const effectiveBody = bodyText ?? DEFAULT_GIFT_BODY;
+  const html = interpolate(
+    buildStructuredEmailHtml({ headerImageUrl, bodyText: effectiveBody, ctaText, ctaUrl }),
+    vars
+  );
+
+  const payload = {
+    sender: { name: fromName ?? DEFAULT_FROM_NAME, email: fromEmail ?? DEFAULT_FROM_EMAIL },
+    to: [{ email: params.toEmail, name: params.toName }],
+    subject,
+    htmlContent: html,
+  };
+
+  const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "api-key": apiKey,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!resp.ok) {
+    const body = await resp.text();
+    throw new Error(`Brevo API ${resp.status}: ${body}`);
+  }
+
+  console.log(`[email] Gift email sent to ${params.toEmail} for event "${params.eventName}"`);
 }
 
 export async function sendTicketConfirmationEmail(params: TicketEmailParams): Promise<void> {
