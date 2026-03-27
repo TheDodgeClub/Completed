@@ -1,15 +1,14 @@
-import { useEvents } from "@/hooks/use-events";
-import { useMerch } from "@/hooks/use-merch";
-import { useMembers } from "@/hooks/use-members";
+import { useEvents, Event } from "@/hooks/use-events";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  CalendarDays, Users, Wifi, ArrowRight,
-  Plus, FileText, Activity, TrendingUp,
+  CalendarDays, Wifi, Plus, Activity, Users,
+  Smartphone, MapPin,
 } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
+import { useMemo } from "react";
 
 type LiveUser = { id: number; name: string; avatarUrl: string | null; lastSeenAt: string };
 type LiveUsersData = { count: number; users: LiveUser[] };
@@ -18,6 +17,7 @@ type SessionStats = {
   avgDuration: number;
   totalSeconds: number;
   todaySessions: number;
+  todayUniqueUsers: number;
   todayAvgDuration: number;
   weekSessions: number;
   weekAvgDuration: number;
@@ -37,11 +37,76 @@ function resolveAvatarUrl(url: string | null | undefined): string | undefined {
   return url;
 }
 
+const CITY_COORDS: Record<string, [number, number]> = {
+  london: [148, 295], manchester: [90, 183], birmingham: [112, 232],
+  leeds: [112, 172], liverpool: [78, 183], newcastle: [128, 148],
+  sheffield: [112, 192], bristol: [72, 268], cardiff: [62, 255],
+  glasgow: [72, 98], edinburgh: [118, 98], nottingham: [122, 212],
+  southampton: [103, 300], brighton: [125, 308], norwich: [162, 248],
+  coventry: [118, 228], leicester: [128, 215], york: [122, 162],
+  stoke: [98, 202], exeter: [62, 292], portsmouth: [112, 308],
+  oxford: [112, 272], cambridge: [147, 262], reading: [122, 282],
+  derby: [118, 205], swindon: [95, 272], luton: [132, 278],
+  wolverhampton: [105, 228], bolton: [88, 178], middlesbrough: [132, 155],
+  peterborough: [140, 248], ipswich: [158, 268], plymouth: [48, 310],
+};
+
+function UkMap({ events }: { events: Event[] | undefined }) {
+  const pins = useMemo(() => {
+    if (!events) return [];
+    const seen = new Set<string>();
+    const result: Array<{ city: string; coords: [number, number]; count: number }> = [];
+    events.forEach(e => {
+      const loc = (e.location ?? "").toLowerCase();
+      for (const [city, coords] of Object.entries(CITY_COORDS)) {
+        if (loc.includes(city) && !seen.has(city)) {
+          seen.add(city);
+          const count = events.filter(ev => (ev.location ?? "").toLowerCase().includes(city)).length;
+          result.push({ city, coords, count });
+          break;
+        }
+      }
+    });
+    return result;
+  }, [events]);
+
+  const GB_PATH =
+    "M 55,330 L 70,325 L 95,318 L 120,312 L 145,318 L 165,310 " +
+    "L 168,285 L 162,260 L 162,240 L 158,210 L 158,188 L 155,165 " +
+    "L 150,148 L 148,128 L 148,108 L 152,88 L 162,62 L 168,38 " +
+    "L 162,20 L 148,10 L 130,8 L 112,15 L 98,22 L 85,30 " +
+    "L 72,45 L 62,62 L 58,80 L 55,98 L 52,108 L 50,122 " +
+    "L 55,135 L 68,148 L 72,162 L 65,178 L 55,188 L 45,205 " +
+    "L 35,218 L 32,235 L 38,255 L 42,272 L 42,292 L 48,308 L 55,330 Z";
+
+  return (
+    <div className="relative flex-1">
+      <svg viewBox="0 0 210 345" className="w-full h-full" fill="none" style={{ maxHeight: 220 }}>
+        <path d={GB_PATH} fill="rgba(11,94,47,0.18)" stroke="#0B5E2F" strokeWidth="1.5" strokeLinejoin="round" />
+        <ellipse cx="38" cy="115" rx="13" ry="9" fill="rgba(11,94,47,0.18)" stroke="#0B5E2F" strokeWidth="1.2" />
+        {pins.map(({ city, coords, count }) => (
+          <g key={city}>
+            <circle
+              cx={coords[0]} cy={coords[1]}
+              r={Math.min(5 + count * 2, 11)}
+              fill="#FFD700" opacity={0.75}
+            />
+            <circle cx={coords[0]} cy={coords[1]} r={2.5} fill="#0B5E2F" />
+          </g>
+        ))}
+      </svg>
+      {pins.length === 0 && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <p className="text-[10px] text-muted-foreground/40">No locations matched</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { data: user } = useAuth();
   const { data: events, isLoading: eventsLoading } = useEvents();
-  const { data: merch, isLoading: merchLoading } = useMerch();
-  const { data: members, isLoading: membersLoading } = useMembers();
 
   const { data: sessionStats, isLoading: sessionLoading } = useQuery<SessionStats>({
     queryKey: ["admin-session-stats"],
@@ -56,23 +121,10 @@ export default function Dashboard() {
   });
 
   const upcomingEvents = events?.filter(e => e.isUpcoming)?.length || 0;
-  const players = members?.filter(m => !m.accountType || m.accountType === "player").length || 0;
-  const supporters = members?.filter(m => m.accountType === "supporter").length || 0;
-
   const liveCount = liveData?.count ?? 0;
   const liveUsers = liveData?.users ?? [];
 
   const stats = [
-    {
-      title: "Members",
-      value: membersLoading ? "..." : members?.length || 0,
-      subtext: `${players} players · ${supporters} supporters`,
-      icon: Users,
-      color: "text-blue-600",
-      bg: "bg-blue-600/10",
-      badgeColor: "text-blue-600 bg-blue-600/10",
-      href: "/members",
-    },
     {
       title: "Upcoming Events",
       value: eventsLoading ? "..." : upcomingEvents,
@@ -82,6 +134,26 @@ export default function Dashboard() {
       bg: "bg-primary/10",
       badgeColor: "text-primary bg-primary/10",
       href: "/events",
+    },
+    {
+      title: "Today's Users",
+      value: sessionLoading ? "..." : sessionStats?.todayUniqueUsers ?? 0,
+      subtext: `${sessionStats?.todaySessions ?? 0} sessions today`,
+      icon: Smartphone,
+      color: "text-green-600",
+      bg: "bg-green-600/10",
+      badgeColor: "text-green-600 bg-green-600/10",
+      href: "/members",
+    },
+    {
+      title: "This Week",
+      value: sessionLoading ? "..." : sessionStats?.weekSessions ?? 0,
+      subtext: `Avg ${fmtDuration(sessionStats?.weekAvgDuration ?? 0)} session`,
+      icon: Activity,
+      color: "text-purple-600",
+      bg: "bg-purple-600/10",
+      badgeColor: "text-purple-600 bg-purple-600/10",
+      href: "/members",
     },
   ];
 
@@ -96,17 +168,8 @@ export default function Dashboard() {
       href: "/events",
     },
     {
-      label: "New Post",
-      desc: "Publish to the feed",
-      icon: FileText,
-      color: "text-blue-600",
-      bg: "bg-blue-600/10",
-      border: "border-blue-600/20",
-      href: "/posts",
-    },
-    {
       label: "Members",
-      desc: `Manage ${members?.length ?? "..."} members`,
+      desc: "View all members",
       icon: Users,
       color: "text-purple-600",
       bg: "bg-purple-600/10",
@@ -117,7 +180,6 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-display font-bold text-foreground">Dashboard</h1>
         <p className="text-muted-foreground text-sm mt-0.5">Welcome back, {user?.name}.</p>
@@ -168,7 +230,7 @@ export default function Dashboard() {
       </Card>
 
       {/* ── KPI STAT CARDS ── */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         {stats.map((stat) => (
           <Link key={stat.title} href={stat.href} className="block group">
             <Card className="bg-card border-border/60 shadow-sm hover:border-primary/40 hover:shadow-md transition-all duration-200 overflow-hidden relative h-full">
@@ -181,10 +243,7 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent className="px-4 pb-4 pt-0">
                 <div className="text-2xl font-display font-bold text-foreground mb-0.5">{stat.value}</div>
-                <p className="text-[11px] text-muted-foreground mb-2">{stat.subtext}</p>
-                <div className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md ${stat.badgeColor}`}>
-                  View <ArrowRight className="w-2.5 h-2.5" />
-                </div>
+                <p className="text-[11px] text-muted-foreground">{stat.subtext}</p>
               </CardContent>
             </Card>
           </Link>
@@ -192,13 +251,13 @@ export default function Dashboard() {
       </div>
 
       {/* ── MAIN 2-COL GRID ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-5">
 
-        {/* LEFT: Quick actions + upcoming events */}
+        {/* LEFT: Quick actions + app engagement */}
         <div className="space-y-5">
 
           {/* Quick Actions */}
-          <div className="grid grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-2 gap-2.5">
             {quickActions.map((action) => (
               <Link key={action.label} href={action.href} className="block">
                 <div className={`rounded-xl border ${action.border} ${action.bg} p-3.5 cursor-pointer hover:brightness-95 dark:hover:brightness-110 transition-all duration-150 group`}>
@@ -212,11 +271,6 @@ export default function Dashboard() {
             ))}
           </div>
 
-        </div>
-
-        {/* RIGHT: Engagement stats */}
-        <div className="space-y-4">
-
           {/* App Engagement */}
           <Card className="bg-card border-border/60 shadow-sm">
             <CardHeader className="pb-2 px-4 pt-4">
@@ -226,12 +280,12 @@ export default function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4 pt-0">
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {[
                   {
                     label: "Today",
-                    value: sessionLoading ? "…" : sessionStats?.todaySessions ?? 0,
-                    sub: sessionLoading ? "" : `Avg ${fmtDuration(sessionStats?.todayAvgDuration ?? 0)}`,
+                    value: sessionLoading ? "…" : sessionStats?.todayUniqueUsers ?? 0,
+                    sub: `${sessionStats?.todaySessions ?? 0} sessions`,
                     color: "text-green-600",
                     bg: "bg-green-600/8",
                   },
@@ -266,46 +320,33 @@ export default function Dashboard() {
               </div>
             </CardContent>
           </Card>
-
-          {/* Quick Stats */}
-          <Card className="bg-card border-border/60 shadow-sm">
-            <CardHeader className="pb-2 px-4 pt-4">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <TrendingUp className="w-4 h-4 text-primary" />
-                Club at a Glance
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-4 pb-4 pt-0 space-y-2.5">
-              {[
-                {
-                  label: "Players",
-                  value: membersLoading ? "…" : players,
-                  color: "text-blue-600",
-                },
-                {
-                  label: "Supporters",
-                  value: membersLoading ? "…" : supporters,
-                  color: "text-pink-600",
-                },
-                {
-                  label: "Upcoming Events",
-                  value: eventsLoading ? "…" : upcomingEvents,
-                  color: "text-primary",
-                },
-                {
-                  label: "Merch Items",
-                  value: merch ? merch.length : "…",
-                  color: "text-purple-600",
-                },
-              ].map((row) => (
-                <div key={row.label} className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">{row.label}</span>
-                  <span className={`text-xs font-bold ${row.color}`}>{row.value}</span>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
         </div>
+
+        {/* RIGHT: UK Map */}
+        <Card className="bg-card border-border/60 shadow-sm">
+          <CardHeader className="pb-2 px-4 pt-4">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <MapPin className="w-4 h-4 text-primary" />
+              Event Venues
+            </CardTitle>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Mapped by event location</p>
+          </CardHeader>
+          <CardContent className="px-4 pb-4 pt-0 flex flex-col items-center">
+            <UkMap events={events} />
+            {events && events.length > 0 && (
+              <div className="w-full mt-2 space-y-1">
+                {Array.from(new Set(events.map(e => e.location).filter(Boolean)))
+                  .slice(0, 4)
+                  .map(loc => (
+                    <div key={loc} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                      <span className="truncate">{loc}</span>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

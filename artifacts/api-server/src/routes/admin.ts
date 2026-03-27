@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, eventsTable, postsTable, merchTable, usersTable, attendanceTable, awardsTable, videosTable, eventRegistrationsTable, userSessionsTable, ticketsTable, announcementsTable, ticketTypesTable, discountCodesTable } from "@workspace/db";
-import { eq, desc, and, avg, count, sum, gte, sql, lte, or, isNull } from "drizzle-orm";
+import { eq, desc, and, avg, count, countDistinct, sum, gte, sql, lte, or, isNull } from "drizzle-orm";
 import { getUncachableStripeClient } from "../stripeClient";
 import { requireAdmin } from "../middlewares/requireAdmin";
 
@@ -47,6 +47,8 @@ function toAdminEvent(e: typeof eventsTable.$inferSelect, ttSummary?: TicketType
     giftEmailBodyText: e.giftEmailBodyText ?? null,
     giftEmailCtaText: e.giftEmailCtaText ?? null,
     giftEmailCtaUrl: e.giftEmailCtaUrl ?? null,
+    emailVideoUrl: (e as any).emailVideoUrl ?? null,
+    giftEmailVideoUrl: (e as any).giftEmailVideoUrl ?? null,
   };
 }
 
@@ -85,31 +87,35 @@ router.put("/events/:id", async (req, res) => {
   const {
     title, description, date, location, ticketUrl, imageUrl,
     eliteEarlyAccess, eliteDiscountPercent, xpReward, checkInPin,
-    emailSubject, emailHeaderImageUrl, emailBodyText, emailCtaText, emailCtaUrl,
-    giftEmailSubject, giftEmailHeaderImageUrl, giftEmailBodyText, giftEmailCtaText, giftEmailCtaUrl,
+    emailSubject, emailHeaderImageUrl, emailBodyText, emailCtaText, emailCtaUrl, emailVideoUrl,
+    giftEmailSubject, giftEmailHeaderImageUrl, giftEmailBodyText, giftEmailCtaText, giftEmailCtaUrl, giftEmailVideoUrl,
   } = req.body;
+  const setData: Record<string, any> = {};
+  if (title !== undefined) setData.title = title;
+  if (description !== undefined) setData.description = description;
+  if (date !== undefined) setData.date = new Date(date);
+  if (location !== undefined) setData.location = location;
+  if (ticketUrl !== undefined) setData.ticketUrl = ticketUrl || null;
+  if (imageUrl !== undefined) setData.imageUrl = imageUrl || null;
+  if (eliteEarlyAccess !== undefined) setData.eliteEarlyAccess = !!eliteEarlyAccess;
+  if (eliteDiscountPercent != null) setData.eliteDiscountPercent = Number(eliteDiscountPercent);
+  if (xpReward != null) setData.xpReward = Number(xpReward);
+  if (checkInPin !== undefined) setData.checkInPin = checkInPin || null;
+  if (emailSubject !== undefined) setData.emailSubject = emailSubject || null;
+  if (emailHeaderImageUrl !== undefined) setData.emailHeaderImageUrl = emailHeaderImageUrl || null;
+  if (emailBodyText !== undefined) setData.emailBodyText = emailBodyText || null;
+  if (emailCtaText !== undefined) setData.emailCtaText = emailCtaText || null;
+  if (emailCtaUrl !== undefined) setData.emailCtaUrl = emailCtaUrl || null;
+  if (emailVideoUrl !== undefined) setData.email_video_url = emailVideoUrl || null;
+  if (giftEmailSubject !== undefined) setData.giftEmailSubject = giftEmailSubject || null;
+  if (giftEmailHeaderImageUrl !== undefined) setData.giftEmailHeaderImageUrl = giftEmailHeaderImageUrl || null;
+  if (giftEmailBodyText !== undefined) setData.giftEmailBodyText = giftEmailBodyText || null;
+  if (giftEmailCtaText !== undefined) setData.giftEmailCtaText = giftEmailCtaText || null;
+  if (giftEmailCtaUrl !== undefined) setData.giftEmailCtaUrl = giftEmailCtaUrl || null;
+  if (giftEmailVideoUrl !== undefined) setData.gift_email_video_url = giftEmailVideoUrl || null;
+  if (Object.keys(setData).length === 0) { res.status(400).json({ error: "No fields to update" }); return; }
   const [event] = await db.update(eventsTable)
-    .set({
-      title, description,
-      date: date ? new Date(date) : undefined,
-      location,
-      ticketUrl: ticketUrl || null,
-      imageUrl: imageUrl || null,
-      eliteEarlyAccess: eliteEarlyAccess !== undefined ? !!eliteEarlyAccess : undefined,
-      eliteDiscountPercent: eliteDiscountPercent != null ? Number(eliteDiscountPercent) : null,
-      xpReward: xpReward != null ? Number(xpReward) : undefined,
-      checkInPin: checkInPin !== undefined ? (checkInPin || null) : undefined,
-      emailSubject: emailSubject !== undefined ? (emailSubject || null) : undefined,
-      emailHeaderImageUrl: emailHeaderImageUrl !== undefined ? (emailHeaderImageUrl || null) : undefined,
-      emailBodyText: emailBodyText !== undefined ? (emailBodyText || null) : undefined,
-      emailCtaText: emailCtaText !== undefined ? (emailCtaText || null) : undefined,
-      emailCtaUrl: emailCtaUrl !== undefined ? (emailCtaUrl || null) : undefined,
-      giftEmailSubject: giftEmailSubject !== undefined ? (giftEmailSubject || null) : undefined,
-      giftEmailHeaderImageUrl: giftEmailHeaderImageUrl !== undefined ? (giftEmailHeaderImageUrl || null) : undefined,
-      giftEmailBodyText: giftEmailBodyText !== undefined ? (giftEmailBodyText || null) : undefined,
-      giftEmailCtaText: giftEmailCtaText !== undefined ? (giftEmailCtaText || null) : undefined,
-      giftEmailCtaUrl: giftEmailCtaUrl !== undefined ? (giftEmailCtaUrl || null) : undefined,
-    })
+    .set(setData as any)
     .where(eq(eventsTable.id, Number(req.params.id)))
     .returning();
   if (!event) { res.status(404).json({ error: "Not found" }); return; }
@@ -1028,6 +1034,11 @@ router.get("/sessions/stats", async (_req, res) => {
     .from(userSessionsTable)
     .where(gte(userSessionsTable.startedAt, todayStart));
 
+  const [todayUniqueRow] = await db
+    .select({ uniqueUsers: countDistinct(userSessionsTable.userId) })
+    .from(userSessionsTable)
+    .where(gte(userSessionsTable.startedAt, todayStart));
+
   const [weekStats] = await db
     .select({
       sessions: count(),
@@ -1067,6 +1078,7 @@ router.get("/sessions/stats", async (_req, res) => {
     avgDuration: Math.round(Number(allStats?.avgDuration ?? 0)),
     totalSeconds: Number(allStats?.totalSeconds ?? 0),
     todaySessions: Number(todayStats?.sessions ?? 0),
+    todayUniqueUsers: Number(todayUniqueRow?.uniqueUsers ?? 0),
     todayAvgDuration: Math.round(Number(todayStats?.avgDuration ?? 0)),
     weekSessions: Number(weekStats?.sessions ?? 0),
     weekAvgDuration: Math.round(Number(weekStats?.avgDuration ?? 0)),

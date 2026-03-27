@@ -38,11 +38,13 @@ export interface EventEmailConfig {
   emailBodyText?: string | null;
   emailCtaText?: string | null;
   emailCtaUrl?: string | null;
+  emailVideoUrl?: string | null;
   giftEmailSubject?: string | null;
   giftEmailHeaderImageUrl?: string | null;
   giftEmailBodyText?: string | null;
   giftEmailCtaText?: string | null;
   giftEmailCtaUrl?: string | null;
+  giftEmailVideoUrl?: string | null;
 }
 
 export interface TicketEmailParams {
@@ -79,9 +81,10 @@ export function buildStructuredEmailHtml(opts: {
   bodyText?: string | null;
   ctaText?: string | null;
   ctaUrl?: string | null;
+  videoUrl?: string | null;
   ticketCodes?: string[] | null;
 }): string {
-  const { headerImageUrl, bodyText, ctaText, ctaUrl, ticketCodes } = opts;
+  const { headerImageUrl, bodyText, ctaText, ctaUrl, videoUrl, ticketCodes } = opts;
 
   const headerImageBlock = headerImageUrl
     ? `<img src="${headerImageUrl}" alt="Event" style="width:100%;display:block;border-radius:0;" />`
@@ -91,6 +94,14 @@ export function buildStructuredEmailHtml(opts: {
     .split("\n")
     .map((l) => l.trim() === "" ? "<br/>" : `<p style="margin:0 0 12px;color:rgba(255,255,255,0.85);font-size:15px;line-height:1.6;">${l}</p>`)
     .join("\n");
+
+  const videoBlock = videoUrl
+    ? `<div style="text-align:center;margin:20px 0;">
+        <a href="${videoUrl}" style="display:inline-flex;align-items:center;gap:8px;background:#1a1a1a;color:#FFD700;text-decoration:none;font-weight:600;font-size:14px;padding:12px 24px;border-radius:8px;border:1px solid #333;">
+          ▶ Watch Video
+        </a>
+      </div>`
+    : "";
 
   const ctaBlock =
     ctaText && ctaUrl
@@ -138,6 +149,7 @@ export function buildStructuredEmailHtml(opts: {
         <p style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:rgba(255,255,255,0.4);margin:0 0 3px;">Location</p>
         <p style="font-size:15px;color:#fff;font-weight:500;margin:0;">{{eventLocation}}</p>
       </div>
+      ${videoBlock}
       ${ticketBlock}
       ${ctaBlock}
       <p style="font-size:13px;color:rgba(255,255,255,0.4);text-align:center;margin:20px 0 0;">Show this at the door. See you on the court!</p>
@@ -182,6 +194,7 @@ export async function sendGiftEmail(params: GiftEmailParams): Promise<void> {
   const bodyText = ec?.giftEmailBodyText || globalBody;
   const ctaText = ec?.giftEmailCtaText || globalCtaText;
   const ctaUrl = ec?.giftEmailCtaUrl || globalCtaUrl;
+  const videoUrl = ec?.giftEmailVideoUrl || null;
 
   const vars: Record<string, string> = {
     recipientName: params.toName,
@@ -197,7 +210,7 @@ export async function sendGiftEmail(params: GiftEmailParams): Promise<void> {
   const effectiveBody = bodyText ?? DEFAULT_GIFT_BODY;
 
   const html = interpolate(
-    buildStructuredEmailHtml({ headerImageUrl, bodyText: effectiveBody, ctaText, ctaUrl, ticketCodes: [params.ticketCode] }),
+    buildStructuredEmailHtml({ headerImageUrl, bodyText: effectiveBody, ctaText, ctaUrl, videoUrl, ticketCodes: [params.ticketCode] }),
     vars
   );
 
@@ -255,6 +268,7 @@ export async function sendTicketConfirmationEmail(params: TicketEmailParams): Pr
   const bodyText = ec?.emailBodyText || globalBody;
   const ctaText = ec?.emailCtaText || globalCtaText;
   const ctaUrl = ec?.emailCtaUrl || globalCtaUrl;
+  const videoUrl = ec?.emailVideoUrl || null;
 
   const vars: Record<string, string> = {
     userName: params.toName,
@@ -271,7 +285,7 @@ export async function sendTicketConfirmationEmail(params: TicketEmailParams): Pr
   const html = interpolate(
     useRawOverride
       ? rawBodyHtml!
-      : buildStructuredEmailHtml({ headerImageUrl, bodyText, ctaText, ctaUrl, ticketCodes: params.ticketCodes }),
+      : buildStructuredEmailHtml({ headerImageUrl, bodyText, ctaText, ctaUrl, videoUrl, ticketCodes: params.ticketCodes }),
     vars
   );
 

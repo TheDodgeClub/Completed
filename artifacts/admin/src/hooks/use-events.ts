@@ -43,6 +43,8 @@ export interface Event {
   giftEmailBodyText: string | null;
   giftEmailCtaText: string | null;
   giftEmailCtaUrl: string | null;
+  emailVideoUrl: string | null;
+  giftEmailVideoUrl: string | null;
 }
 
 export type EventInput = Omit<Event, "id" | "isUpcoming" | "isPublished" | "attendeeCount">;

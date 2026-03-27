@@ -16,7 +16,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit2, Trash2, MapPin, Users, CalendarDays, ArrowUpDown, ArrowUp, ArrowDown, Globe, EyeOff, CreditCard, CheckCircle, ClipboardList, X, GripVertical, Copy, Star, Tag, Percent, TicketIcon, Search, XCircle, UserCheck, Send, Gift, CheckCircle2, Loader2, ChevronDown, ChevronRight, Filter, Mail } from "lucide-react";
+import { Plus, Edit2, Trash2, MapPin, Users, CalendarDays, ArrowUpDown, ArrowUp, ArrowDown, Globe, EyeOff, CreditCard, CheckCircle, ClipboardList, X, GripVertical, Copy, Star, Tag, Percent, TicketIcon, Search, XCircle, UserCheck, Send, Gift, CheckCircle2, Loader2, ChevronDown, ChevronRight, Filter, Mail, Check } from "lucide-react";
 import { ImageUploader } from "@/components/image-uploader";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
@@ -27,16 +27,15 @@ type SortDir = "asc" | "desc";
 export default function Events() {
   const { data: events, isLoading } = useEvents();
   const [pageTab, setPageTab] = useState<"events" | "tickets">("events");
-  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [ticketEvent, setTicketEvent] = useState<Event | null>(null);
   const [checkoutEvent, setCheckoutEvent] = useState<Event | null>(null);
   const [emailEvent, setEmailEvent] = useState<Event | null>(null);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
-  const { mutate: publish } = usePublishEvent();
   const { mutate: duplicate, isPending: isDuplicating } = useDuplicateEvent();
   const { toast } = useToast();
 
@@ -48,12 +47,8 @@ export default function Events() {
   };
 
   const handleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortDir(d => d === "asc" ? "desc" : "asc");
-    } else {
-      setSortKey(key);
-      setSortDir("asc");
-    }
+    if (sortKey === key) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortKey(key); setSortDir("asc"); }
   };
 
   const sorted = events ? [...events].sort((a, b) => {
@@ -64,21 +59,6 @@ export default function Events() {
     else if (sortKey === "attendeeCount") cmp = a.attendeeCount - b.attendeeCount;
     return sortDir === "asc" ? cmp : -cmp;
   }) : [];
-
-  const SortIcon = ({ col }: { col: SortKey }) => {
-    if (sortKey !== col) return <ArrowUpDown className="w-3.5 h-3.5 ml-1 opacity-40" />;
-    return sortDir === "asc"
-      ? <ArrowUp className="w-3.5 h-3.5 ml-1 text-primary" />
-      : <ArrowDown className="w-3.5 h-3.5 ml-1 text-primary" />;
-  };
-
-  const handlePublish = (event: Event) => {
-    const next = !event.isPublished;
-    publish({ id: event.id, publish: next }, {
-      onSuccess: () => toast({ title: next ? "Event published to mobile" : "Event unpublished" }),
-      onError: () => toast({ title: "Error", variant: "destructive" }),
-    });
-  };
 
   if (isLoading) return <div className="p-8 text-muted-foreground animate-pulse">Loading events...</div>;
 
@@ -113,191 +93,51 @@ export default function Events() {
       </div>
 
       {pageTab === "tickets" ? <TicketsTab /> : (
-      <div className="bg-card border border-border/50 rounded-2xl overflow-hidden shadow-lg shadow-black/10">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader className="bg-secondary/50 border-b border-border/50">
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="text-muted-foreground py-4 px-6">Status</TableHead>
-                <TableHead className="text-muted-foreground py-4 px-4">Published</TableHead>
-                <TableHead
-                  className="text-muted-foreground py-4 cursor-pointer select-none hover:text-foreground transition-colors"
-                  onClick={() => handleSort("title")}
+        <div className="space-y-3">
+          {/* Sort bar */}
+          {sorted.length > 0 && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
+              <span>Sort:</span>
+              {([["date", "Date"], ["title", "Title"], ["attendeeCount", "Attendees"]] as [SortKey, string][]).map(([k, label]) => (
+                <button
+                  key={k}
+                  onClick={() => handleSort(k)}
+                  className={`flex items-center gap-0.5 px-2 py-1 rounded-md transition-colors ${sortKey === k ? "bg-primary/10 text-primary font-semibold" : "hover:bg-secondary"}`}
                 >
-                  <span className="flex items-center">Title <SortIcon col="title" /></span>
-                </TableHead>
-                <TableHead
-                  className="text-muted-foreground py-4 cursor-pointer select-none hover:text-foreground transition-colors"
-                  onClick={() => handleSort("date")}
-                >
-                  <span className="flex items-center">Date <SortIcon col="date" /></span>
-                </TableHead>
-                <TableHead className="text-muted-foreground py-4">Location</TableHead>
-                <TableHead
-                  className="text-muted-foreground py-4 text-center cursor-pointer select-none hover:text-foreground transition-colors"
-                  onClick={() => handleSort("attendeeCount")}
-                >
-                  <span className="flex items-center justify-center">Attendees <SortIcon col="attendeeCount" /></span>
-                </TableHead>
-                <TableHead className="text-muted-foreground py-4 text-center">Tickets</TableHead>
-                <TableHead className="text-muted-foreground py-4 px-6 text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sorted.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="h-40 text-center text-muted-foreground">
-                    <CalendarDays className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
-                    <p className="font-medium">No events yet</p>
-                    <p className="text-sm">Create your first event to get started.</p>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                sorted.map((event) => (
-                  <TableRow key={event.id} className="group border-border/50 hover:bg-white/[0.02] transition-colors">
-                    <TableCell className="px-6 py-4">
-                      <Badge variant="outline" className={event.isUpcoming
-                        ? "border-primary text-primary bg-primary/5"
-                        : "border-muted-foreground/30 text-muted-foreground bg-secondary/30"
-                      }>
-                        {event.isUpcoming ? "Upcoming" : "Past"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="px-4 py-4">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handlePublish(event)}
-                        className={`h-7 px-2.5 rounded-lg text-xs font-semibold gap-1.5 ${event.isPublished
-                          ? "text-emerald-400 bg-emerald-400/10 hover:bg-emerald-400/20"
-                          : "text-muted-foreground bg-secondary hover:bg-secondary/80"
-                        }`}
-                        title={event.isPublished ? "Click to unpublish" : "Click to publish to mobile"}
-                      >
-                        {event.isPublished ? <Globe className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-                        {event.isPublished ? "Live" : "Draft"}
-                      </Button>
-                    </TableCell>
-                    <TableCell className="py-4">
-                      <div>
-                        <div className="font-semibold text-foreground group-hover:text-primary transition-colors">{event.title}</div>
-                        <div className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{event.description}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-4 text-sm text-foreground whitespace-nowrap">
-                      {formatDateTime(event.date)}
-                    </TableCell>
-                    <TableCell className="py-4">
-                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                        <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
-                        <span className="line-clamp-1">{event.location}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-4 text-center">
-                      <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-secondary text-foreground font-semibold text-sm">
-                        <Users className="w-3.5 h-3.5 text-accent" /> {event.attendeeCount}
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-4 text-center">
-                      {event.ticketTypeCount > 0 ? (
-                        <div className="flex flex-col items-center gap-0.5">
-                          <div className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-400">
-                            <TicketIcon className="w-3.5 h-3.5" />
-                            {event.ticketTypeMinPrice === 0 && event.ticketTypeMaxPrice === 0
-                              ? "Free"
-                              : event.ticketTypeMinPrice === event.ticketTypeMaxPrice
-                              ? `£${((event.ticketTypeMinPrice ?? 0) / 100).toFixed(2)}`
-                              : `£${((event.ticketTypeMinPrice ?? 0) / 100).toFixed(2)}–£${((event.ticketTypeMaxPrice ?? 0) / 100).toFixed(2)}`}
-                          </div>
-                          <div className="text-xs text-muted-foreground">{event.ticketTypeCount} type{event.ticketTypeCount !== 1 ? "s" : ""}</div>
-                        </div>
-                      ) : event.stripePriceId ? (
-                        <div className="flex flex-col items-center gap-0.5">
-                          <div className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-400">
-                            <CheckCircle className="w-3.5 h-3.5" />
-                            £{event.ticketPrice?.toFixed(2)}
-                          </div>
-                          {event.ticketCapacity && (
-                            <div className="text-xs text-muted-foreground">Cap: {event.ticketCapacity}</div>
-                          )}
-                        </div>
-                      ) : event.ticketPrice === 0 ? (
-                        <span className="text-xs font-semibold text-blue-400">Free</span>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="py-4 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 rounded-lg border-accent/40 text-accent hover:bg-accent/10 hover:border-accent gap-1.5 px-3"
-                          onClick={() => setTicketEvent(event)}
-                          title="Manage ticket types & discount codes"
-                        >
-                          <TicketIcon className="w-3.5 h-3.5" />
-                          <span className="text-xs font-medium">Tickets</span>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 rounded-lg hover:bg-blue-400/10 hover:text-blue-400"
-                          onClick={() => setCheckoutEvent(event)}
-                          title="Edit checkout form & waiver"
-                        >
-                          <ClipboardList className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 rounded-lg hover:bg-emerald-400/10 hover:text-emerald-400"
-                          onClick={() => setEmailEvent(event)}
-                          title="Configure email templates for this event"
-                        >
-                          <Mail className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 rounded-lg hover:bg-violet-400/10 hover:text-violet-400"
-                          onClick={() => handleDuplicate(event)}
-                          disabled={isDuplicating}
-                          title="Duplicate event"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary"
-                          onClick={() => setEditingEvent(event)}
-                          title="Edit event"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 rounded-lg hover:bg-destructive/10 hover:text-destructive"
-                          onClick={() => setDeleteId(event.id)}
-                          title="Delete event"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                  {label}
+                  {sortKey === k && (sortDir === "asc" ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {sorted.length === 0 ? (
+            <div className="bg-card border border-border/50 rounded-2xl p-16 text-center">
+              <CalendarDays className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
+              <p className="font-medium text-muted-foreground">No events yet</p>
+              <p className="text-sm text-muted-foreground/60 mt-1">Create your first event to get started.</p>
+            </div>
+          ) : (
+            sorted.map((event) => (
+              <EventCard
+                key={event.id}
+                event={event}
+                isExpanded={expandedId === event.id}
+                onToggle={() => setExpandedId(expandedId === event.id ? null : event.id)}
+                onTickets={() => setTicketEvent(event)}
+                onCheckout={() => setCheckoutEvent(event)}
+                onEmail={() => setEmailEvent(event)}
+                onDuplicate={() => handleDuplicate(event)}
+                onDelete={() => setDeleteId(event.id)}
+                isDuplicating={isDuplicating}
+                toast={toast}
+              />
+            ))
+          )}
         </div>
-      </div>
       )}
 
       {isCreateOpen && <EventFormModal onClose={() => setIsCreateOpen(false)} />}
-      {editingEvent && <EventFormModal event={editingEvent} onClose={() => setEditingEvent(null)} />}
       {ticketEvent && <TicketPricingModal event={ticketEvent} onClose={() => setTicketEvent(null)} />}
       {checkoutEvent && <CheckoutFormModal event={checkoutEvent} onClose={() => setCheckoutEvent(null)} />}
       {emailEvent && <EmailConfigModal event={emailEvent} onClose={() => setEmailEvent(null)} />}
@@ -309,6 +149,268 @@ export default function Events() {
         title="Delete Event"
         description="Are you sure? This will permanently delete the event and all associated attendance records."
       />
+    </div>
+  );
+}
+
+function EventCard({
+  event, isExpanded, onToggle, onTickets, onCheckout, onEmail, onDuplicate, onDelete, isDuplicating, toast,
+}: {
+  event: Event;
+  isExpanded: boolean;
+  onToggle: () => void;
+  onTickets: () => void;
+  onCheckout: () => void;
+  onEmail: () => void;
+  onDuplicate: () => void;
+  onDelete: () => void;
+  isDuplicating: boolean;
+  toast: any;
+}) {
+  const { mutate: update, isPending: saving } = useUpdateEvent();
+  const { mutate: publish } = usePublishEvent();
+
+  const [title, setTitle] = useState(event.title);
+  const [description, setDescription] = useState(event.description);
+  const [date, setDate] = useState(toDateTimeInput(event.date));
+  const [location, setLocation] = useState(event.location);
+  const [ticketUrl, setTicketUrl] = useState(event.ticketUrl ?? "");
+  const [imageUrl, setImageUrl] = useState(event.imageUrl ?? "");
+  const [xpReward, setXpReward] = useState(String(event.xpReward ?? 50));
+  const [checkInPin, setCheckInPin] = useState(event.checkInPin ?? "");
+  const [eliteEarlyAccess, setEliteEarlyAccess] = useState(event.eliteEarlyAccess ?? false);
+  const [eliteDiscountPercent, setEliteDiscountPercent] = useState(
+    event.eliteDiscountPercent != null ? String(event.eliteDiscountPercent) : ""
+  );
+
+  const handlePublish = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const next = !event.isPublished;
+    publish({ id: event.id, publish: next }, {
+      onSuccess: () => toast({ title: next ? "Event published to mobile" : "Event unpublished" }),
+      onError: () => toast({ title: "Error", variant: "destructive" }),
+    });
+  };
+
+  const handleSave = () => {
+    update({
+      id: event.id,
+      title,
+      description,
+      date: new Date(date).toISOString(),
+      location,
+      ticketUrl: ticketUrl || null,
+      imageUrl: imageUrl || null,
+      xpReward: Number(xpReward) || 50,
+      checkInPin: checkInPin || null,
+      eliteEarlyAccess,
+      eliteDiscountPercent: eliteDiscountPercent ? Number(eliteDiscountPercent) : null,
+    } as any, {
+      onSuccess: () => toast({ title: "Event saved" }),
+      onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+    });
+  };
+
+  const ticketSummary = () => {
+    if (event.ticketTypeCount > 0) {
+      const min = event.ticketTypeMinPrice ?? 0;
+      const max = event.ticketTypeMaxPrice ?? 0;
+      if (min === 0 && max === 0) return "Free";
+      if (min === max) return `£${(min / 100).toFixed(2)}`;
+      return `£${(min / 100).toFixed(2)}–£${(max / 100).toFixed(2)}`;
+    }
+    if (event.stripePriceId) return `£${event.ticketPrice?.toFixed(2)}`;
+    if (event.ticketPrice === 0) return "Free";
+    return null;
+  };
+
+  const summary = ticketSummary();
+
+  return (
+    <div className={`bg-card border rounded-2xl shadow-sm overflow-hidden transition-all duration-200 ${isExpanded ? "border-primary/40 shadow-md" : "border-border/50 hover:border-border"}`}>
+      {/* ── Card header (always visible, clickable to expand) ── */}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onToggle}
+        onKeyDown={e => (e.key === "Enter" || e.key === " ") && onToggle()}
+        className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-white/[0.02] transition-colors cursor-pointer"
+      >
+        <ChevronDown className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} />
+
+        {/* Title + description */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-semibold text-sm text-foreground">{event.title}</span>
+            <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${event.isUpcoming
+              ? "border-primary/40 text-primary bg-primary/5"
+              : "border-muted-foreground/30 text-muted-foreground"}`}>
+              {event.isUpcoming ? "Upcoming" : "Past"}
+            </Badge>
+          </div>
+          <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+            <span className="text-xs text-muted-foreground">{formatDateTime(event.date)}</span>
+            {event.location && (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <MapPin className="w-3 h-3 text-primary shrink-0" />{event.location}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Right side badges */}
+        <div className="flex items-center gap-2 shrink-0" onClick={e => e.stopPropagation()}>
+          <div className="flex items-center gap-1 text-xs text-muted-foreground bg-secondary px-2 py-1 rounded-md">
+            <Users className="w-3 h-3" />{event.attendeeCount}
+          </div>
+          {summary && (
+            <div className="text-xs font-semibold text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded-md">
+              <TicketIcon className="w-3 h-3 inline mr-1" />{summary}
+            </div>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handlePublish}
+            className={`h-7 px-2.5 rounded-lg text-xs font-semibold gap-1.5 ${event.isPublished
+              ? "text-emerald-400 bg-emerald-400/10 hover:bg-emerald-400/20"
+              : "text-muted-foreground bg-secondary hover:bg-secondary/80"}`}
+          >
+            {event.isPublished ? <Globe className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+            {event.isPublished ? "Live" : "Draft"}
+          </Button>
+        </div>
+      </div>
+
+      {/* ── Expanded panel ── */}
+      {isExpanded && (
+        <div className="border-t border-border/40 px-5 py-5 space-y-5">
+          {/* Basic fields grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Title</Label>
+              <Input value={title} onChange={e => setTitle(e.target.value)} className="bg-background border-border/50 rounded-xl h-9 text-sm" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Location</Label>
+              <Input value={location} onChange={e => setLocation(e.target.value)} className="bg-background border-border/50 rounded-xl h-9 text-sm" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Date & Time</Label>
+              <Input type="datetime-local" value={date} onChange={e => setDate(e.target.value)} className="bg-background border-border/50 rounded-xl h-9 text-sm [color-scheme:dark]" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Ticket URL (Optional)</Label>
+              <Input type="url" value={ticketUrl} onChange={e => setTicketUrl(e.target.value)} placeholder="https://..." className="bg-background border-border/50 rounded-xl h-9 text-sm" />
+            </div>
+            <div className="sm:col-span-2 space-y-1.5">
+              <Label className="text-xs">Description</Label>
+              <Textarea value={description} onChange={e => setDescription(e.target.value)} className="bg-background border-border/50 rounded-xl min-h-[80px] text-sm resize-none" />
+            </div>
+          </div>
+
+          {/* Cover image */}
+          <ImageUploader
+            label="Cover Image"
+            value={imageUrl}
+            onChange={(url) => setImageUrl(url || "")}
+          />
+
+          {/* XP + PIN row */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5 p-3 bg-emerald-500/5 rounded-xl border border-emerald-500/20">
+              <Label className="text-xs text-emerald-400 font-semibold">⚡ XP Reward</Label>
+              <Input type="number" min={0} value={xpReward} onChange={e => setXpReward(e.target.value)} className="bg-background border-border/50 rounded-lg h-8 text-sm" />
+              <p className="text-[10px] text-muted-foreground">XP awarded on check-in</p>
+            </div>
+            <div className="space-y-1.5 p-3 bg-blue-500/5 rounded-xl border border-blue-500/20">
+              <Label className="text-xs text-blue-400 font-semibold">🔑 Check-In PIN</Label>
+              <Input
+                value={checkInPin}
+                onChange={e => setCheckInPin(e.target.value.toUpperCase())}
+                maxLength={8}
+                placeholder="e.g. DODGE7"
+                className="bg-background border-border/50 rounded-lg h-8 text-sm font-mono uppercase tracking-widest"
+              />
+              <p className="text-[10px] text-muted-foreground">Shown to door staff</p>
+            </div>
+          </div>
+
+          {/* Elite perks */}
+          <div className="p-3 bg-yellow-500/5 rounded-xl border border-yellow-500/20 space-y-2">
+            <Label className="text-xs text-yellow-500 font-semibold flex items-center gap-1.5"><Star className="w-3.5 h-3.5" /> Elite Member Perks</Label>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id={`elite-${event.id}`}
+                checked={eliteEarlyAccess}
+                onCheckedChange={(c) => setEliteEarlyAccess(c === true)}
+                className="border-yellow-500/50 data-[state=checked]:bg-yellow-500 data-[state=checked]:border-yellow-500"
+              />
+              <label htmlFor={`elite-${event.id}`} className="text-xs cursor-pointer">Elite Early Ticket Access</label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Label className="text-xs text-muted-foreground shrink-0">Discount %</Label>
+              <Input
+                type="number" min={0} max={100}
+                value={eliteDiscountPercent}
+                onChange={e => setEliteDiscountPercent(e.target.value)}
+                placeholder="e.g. 10"
+                className="bg-background border-border/50 rounded-lg h-7 text-sm w-24"
+              />
+            </div>
+          </div>
+
+          {/* Save button */}
+          <div className="flex justify-end">
+            <Button onClick={handleSave} disabled={saving} className="rounded-xl bg-primary hover:bg-primary/90 text-white px-6">
+              {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving…</> : <><Check className="w-4 h-4 mr-2" />Save Changes</>}
+            </Button>
+          </div>
+
+          {/* Action buttons */}
+          <div className="border-t border-border/30 pt-4 grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <button
+              onClick={onTickets}
+              className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-accent/30 bg-accent/5 hover:bg-accent/10 transition-colors text-accent group"
+            >
+              <TicketIcon className="w-4 h-4" />
+              <span className="text-xs font-semibold">Tickets</span>
+              <span className="text-[10px] text-muted-foreground">Types & pricing</span>
+            </button>
+            <button
+              onClick={onCheckout}
+              className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-blue-400/30 bg-blue-400/5 hover:bg-blue-400/10 transition-colors text-blue-400 group"
+            >
+              <ClipboardList className="w-4 h-4" />
+              <span className="text-xs font-semibold">Checkout Form</span>
+              <span className="text-[10px] text-muted-foreground">Fields & waiver</span>
+            </button>
+            <button
+              onClick={onEmail}
+              className="flex flex-col items-center gap-1.5 p-3 rounded-xl border border-emerald-400/30 bg-emerald-400/5 hover:bg-emerald-400/10 transition-colors text-emerald-400 group"
+            >
+              <Mail className="w-4 h-4" />
+              <span className="text-xs font-semibold">Email Templates</span>
+              <span className="text-[10px] text-muted-foreground">Confirmation & gift</span>
+            </button>
+            <div className="flex flex-col gap-1.5">
+              <button
+                onClick={onDuplicate}
+                disabled={isDuplicating}
+                className="flex items-center justify-center gap-1.5 p-2 rounded-xl border border-violet-400/30 bg-violet-400/5 hover:bg-violet-400/10 transition-colors text-violet-400 text-xs font-semibold"
+              >
+                <Copy className="w-3.5 h-3.5" /> Duplicate
+              </button>
+              <button
+                onClick={onDelete}
+                className="flex items-center justify-center gap-1.5 p-2 rounded-xl border border-destructive/30 bg-destructive/5 hover:bg-destructive/10 transition-colors text-destructive text-xs font-semibold"
+              >
+                <Trash2 className="w-3.5 h-3.5" /> Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1010,11 +1112,13 @@ function EmailConfigModal({ event, onClose }: { event: Event; onClose: () => voi
   const [emailBodyText, setEmailBodyText] = useState(event.emailBodyText ?? "");
   const [emailCtaText, setEmailCtaText] = useState(event.emailCtaText ?? "");
   const [emailCtaUrl, setEmailCtaUrl] = useState(event.emailCtaUrl ?? "");
+  const [emailVideoUrl, setEmailVideoUrl] = useState(event.emailVideoUrl ?? "");
   const [giftEmailSubject, setGiftEmailSubject] = useState(event.giftEmailSubject ?? "");
   const [giftEmailHeaderImageUrl, setGiftEmailHeaderImageUrl] = useState(event.giftEmailHeaderImageUrl ?? "");
   const [giftEmailBodyText, setGiftEmailBodyText] = useState(event.giftEmailBodyText ?? "");
   const [giftEmailCtaText, setGiftEmailCtaText] = useState(event.giftEmailCtaText ?? "");
   const [giftEmailCtaUrl, setGiftEmailCtaUrl] = useState(event.giftEmailCtaUrl ?? "");
+  const [giftEmailVideoUrl, setGiftEmailVideoUrl] = useState(event.giftEmailVideoUrl ?? "");
 
   const handleSave = () => {
     update({
@@ -1024,11 +1128,13 @@ function EmailConfigModal({ event, onClose }: { event: Event; onClose: () => voi
       emailBodyText: emailBodyText || null,
       emailCtaText: emailCtaText || null,
       emailCtaUrl: emailCtaUrl || null,
+      emailVideoUrl: emailVideoUrl || null,
       giftEmailSubject: giftEmailSubject || null,
       giftEmailHeaderImageUrl: giftEmailHeaderImageUrl || null,
       giftEmailBodyText: giftEmailBodyText || null,
       giftEmailCtaText: giftEmailCtaText || null,
       giftEmailCtaUrl: giftEmailCtaUrl || null,
+      giftEmailVideoUrl: giftEmailVideoUrl || null,
     } as any, {
       onSuccess: () => { toast({ title: "Email templates saved" }); onClose(); },
       onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
@@ -1065,11 +1171,17 @@ function EmailConfigModal({ event, onClose }: { event: Event; onClose: () => voi
             <div className="space-y-2">
               <Label className="text-xs">Header Image URL</Label>
               <Input value={emailHeaderImageUrl} onChange={e => setEmailHeaderImageUrl(e.target.value)} className="bg-background border-border rounded-xl" placeholder="https://..." />
+              <p className="text-xs text-muted-foreground">Appears at the top of the email as a banner image.</p>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Video Link URL</Label>
+              <Input value={emailVideoUrl} onChange={e => setEmailVideoUrl(e.target.value)} className="bg-background border-border rounded-xl" placeholder="https://youtube.com/..." />
+              <p className="text-xs text-muted-foreground">Adds a "Watch Video" button in the email body.</p>
             </div>
             <div className="space-y-2">
               <Label className="text-xs">Email Body Text</Label>
               <Textarea value={emailBodyText} onChange={e => setEmailBodyText(e.target.value)} rows={5} className="bg-background border-border rounded-xl resize-none text-sm" placeholder="Thanks for getting your ticket, {name}! We can't wait to see you there…" />
-              <p className="text-xs text-muted-foreground">Available variables: <code className="bg-secondary px-1 rounded">{'{name}'}</code> <code className="bg-secondary px-1 rounded">{'{event}'}</code> <code className="bg-secondary px-1 rounded">{'{date}'}</code></p>
+              <p className="text-xs text-muted-foreground">Variables: <code className="bg-secondary px-1 rounded">{'{userName}'}</code> <code className="bg-secondary px-1 rounded">{'{eventName}'}</code> <code className="bg-secondary px-1 rounded">{'{eventDate}'}</code></p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
@@ -1091,11 +1203,17 @@ function EmailConfigModal({ event, onClose }: { event: Event; onClose: () => voi
             <div className="space-y-2">
               <Label className="text-xs">Header Image URL</Label>
               <Input value={giftEmailHeaderImageUrl} onChange={e => setGiftEmailHeaderImageUrl(e.target.value)} className="bg-background border-border rounded-xl" placeholder="https://..." />
+              <p className="text-xs text-muted-foreground">Appears at the top of the gift email as a banner image.</p>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Video Link URL</Label>
+              <Input value={giftEmailVideoUrl} onChange={e => setGiftEmailVideoUrl(e.target.value)} className="bg-background border-border rounded-xl" placeholder="https://youtube.com/..." />
+              <p className="text-xs text-muted-foreground">Adds a "Watch Video" button in the gift email body.</p>
             </div>
             <div className="space-y-2">
               <Label className="text-xs">Email Body Text</Label>
               <Textarea value={giftEmailBodyText} onChange={e => setGiftEmailBodyText(e.target.value)} rows={5} className="bg-background border-border rounded-xl resize-none text-sm" placeholder="Great news, {recipient}! {gifter} has gifted you a ticket…" />
-              <p className="text-xs text-muted-foreground">Available variables: <code className="bg-secondary px-1 rounded">{'{recipient}'}</code> <code className="bg-secondary px-1 rounded">{'{gifter}'}</code> <code className="bg-secondary px-1 rounded">{'{event}'}</code> <code className="bg-secondary px-1 rounded">{'{date}'}</code></p>
+              <p className="text-xs text-muted-foreground">Variables: <code className="bg-secondary px-1 rounded">{'{recipientName}'}</code> <code className="bg-secondary px-1 rounded">{'{gifterName}'}</code> <code className="bg-secondary px-1 rounded">{'{eventName}'}</code></p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
