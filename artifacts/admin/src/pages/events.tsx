@@ -841,11 +841,12 @@ function EventFormModal({ event, onClose }: { event?: Event; onClose: () => void
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[500px] bg-card border-border/50 text-foreground">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[500px] bg-card border-border/50 text-foreground max-h-[90vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="px-6 pt-6 pb-4 shrink-0">
           <DialogTitle className="font-display text-xl">{event ? "Edit Event" : "Create New Event"}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
+        <div className="space-y-4 px-6 overflow-y-auto flex-1 pb-2">
           <div className="space-y-2">
             <Label>Title</Label>
             <Input {...register("title", { required: true })} className="bg-background border-border rounded-xl" placeholder="Summer Tournament" />
@@ -916,12 +917,13 @@ function EventFormModal({ event, onClose }: { event?: Event; onClose: () => void
               />
             </div>
           </div>
-          <DialogFooter className="pt-4">
+        </div>
+          <div className="px-6 py-4 border-t border-border/30 flex justify-end gap-2 shrink-0">
             <Button type="button" variant="outline" onClick={onClose} disabled={pending} className="rounded-xl border-border/50 hover:bg-secondary">Cancel</Button>
             <Button type="submit" disabled={pending} className="rounded-xl bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20">
               {pending ? "Saving..." : "Save Event"}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

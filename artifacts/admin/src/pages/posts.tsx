@@ -141,7 +141,7 @@ function PostFormModal({ post, onClose }: { post?: Post; onClose: () => void }) 
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[600px] bg-card border-border/50 text-foreground">
+      <DialogContent className="sm:max-w-[600px] bg-card border-border/50 text-foreground max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-display text-xl">{post ? "Edit Post" : "Create New Post"}</DialogTitle>
         </DialogHeader>

@@ -153,7 +153,7 @@ function MerchFormModal({ product, onClose }: { product?: MerchProduct; onClose:
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[500px] bg-card border-border/50 text-foreground">
+      <DialogContent className="sm:max-w-[500px] bg-card border-border/50 text-foreground max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-display text-xl">{product ? "Edit Product" : "Add Product"}</DialogTitle>
         </DialogHeader>
