@@ -159,6 +159,10 @@ export default function HomeScreen() {
     setRefreshing(false);
   };
 
+  /* ── XP progress (declared here so hooks below can reference it safely) ── */
+  const xpProgress = user ? getLevelProgress(user.xp ?? 0, user.level ?? 1) : null;
+  const levelName = user ? (LEVEL_NAMES[(user.level ?? 1) - 1] ?? "Rookie") : null;
+
   /* ── Animated XP bars ── */
   const xpBarAnim = useRef(new Animated.Value(0)).current;
   const supporterBarAnim = useRef(new Animated.Value(0)).current;
@@ -198,10 +202,6 @@ export default function HomeScreen() {
   const publicPosts = posts?.filter(p => !p.isMembersOnly).slice(0, 3) ?? [];
   const nextEvent = events?.[0] ?? null;
   const nextEventCountdown = nextEvent ? getCountdown(nextEvent.date) : null;
-
-  /* ── XP progress for logged-in user ── */
-  const xpProgress = user ? getLevelProgress(user.xp ?? 0, user.level ?? 1) : null;
-  const levelName = user ? (LEVEL_NAMES[(user.level ?? 1) - 1] ?? "Rookie") : null;
 
   return (
     <>
