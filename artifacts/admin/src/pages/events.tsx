@@ -191,16 +191,17 @@ export default function Events() {
                         <span className="text-xs text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="py-4 px-6 text-right">
-                      <div className="flex items-center justify-end gap-1">
+                    <TableCell className="py-4 px-4 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
                         <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 rounded-lg hover:bg-accent/10 hover:text-accent"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 rounded-lg border-accent/40 text-accent hover:bg-accent/10 hover:border-accent gap-1.5 px-3"
                           onClick={() => setTicketEvent(event)}
-                          title="Configure ticket pricing"
+                          title="Manage ticket types & discount codes"
                         >
-                          <CreditCard className="w-4 h-4" />
+                          <TicketIcon className="w-3.5 h-3.5" />
+                          <span className="text-xs font-medium">Tickets</span>
                         </Button>
                         <Button
                           variant="ghost"
@@ -226,6 +227,7 @@ export default function Events() {
                           size="icon"
                           className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary"
                           onClick={() => setEditingEvent(event)}
+                          title="Edit event"
                         >
                           <Edit2 className="w-4 h-4" />
                         </Button>
@@ -234,6 +236,7 @@ export default function Events() {
                           size="icon"
                           className="h-8 w-8 rounded-lg hover:bg-destructive/10 hover:text-destructive"
                           onClick={() => setDeleteId(event.id)}
+                          title="Delete event"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
