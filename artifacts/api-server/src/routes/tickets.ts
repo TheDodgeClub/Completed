@@ -107,12 +107,6 @@ router.post("/checkout", requireAuth, async (req: any, res) => {
   const [event] = await db.select().from(eventsTable).where(eq(eventsTable.id, eventId)).limit(1);
   if (!event) { res.status(404).json({ error: "Event not found" }); return; }
 
-  // Check duplicate
-  const [existing] = await db.select().from(ticketsTable)
-    .where(and(eq(ticketsTable.userId, userId), eq(ticketsTable.eventId, eventId), eq(ticketsTable.status, "paid")))
-    .limit(1);
-  if (existing) { res.status(409).json({ error: "You already have a ticket for this event" }); return; }
-
   // Resolve ticket type
   let resolvedStripePriceId = event.stripePriceId;
   let resolvedStripeProductId = event.stripeProductId;

@@ -151,13 +151,6 @@ export default function TicketsScreen() {
       return;
     }
 
-    const existing = myTickets?.find(t => t.eventId === event.id);
-    if (existing) {
-      setSelectedTicket(existing);
-      setActiveTab("my");
-      return;
-    }
-
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     // If event has active ticket types, show the type selector first
@@ -213,7 +206,10 @@ export default function TicketsScreen() {
   };
 
   const upcomingEvents = events?.filter(e => e.isUpcoming) ?? [];
-  const ticketEventIds = new Set(myTickets?.map(t => t.eventId) ?? []);
+  const ticketCountByEvent = new Map<number, number>();
+  for (const t of myTickets ?? []) {
+    ticketCountByEvent.set(t.eventId, (ticketCountByEvent.get(t.eventId) ?? 0) + 1);
+  }
 
   const nextClubEvent = upcomingEvents[0] ?? null;
   const nextClubCountdown = nextClubEvent ? getCountdown(nextClubEvent.date) : null;
@@ -305,14 +301,11 @@ export default function TicketsScreen() {
                   <EventBuyCard
                     key={event.id}
                     event={event}
-                    hasTicket={ticketEventIds.has(event.id)}
+                    ticketCount={ticketCountByEvent.get(event.id) ?? 0}
                     isBuying={buyingEventId === event.id}
                     isRegisteringFree={registeringFree}
                     onBuy={() => handleBuyTicket(event)}
-                    onViewTicket={() => {
-                      const t = myTickets?.find(ti => ti.eventId === event.id);
-                      if (t) { setSelectedTicket(t); setActiveTab("my"); }
-                    }}
+                    onViewTickets={() => setActiveTab("my")}
                     Colors={Colors}
                   />
                 ))
@@ -466,19 +459,19 @@ function TicketCard({ ticket, Colors, onPress, onGift }: { ticket: Ticket; Color
 
 function EventBuyCard({
   event,
-  hasTicket,
+  ticketCount,
   isBuying,
   isRegisteringFree,
   onBuy,
-  onViewTicket,
+  onViewTickets,
   Colors,
 }: {
   event: Event;
-  hasTicket: boolean;
+  ticketCount: number;
   isBuying: boolean;
   isRegisteringFree: boolean;
   onBuy: () => void;
-  onViewTicket: () => void;
+  onViewTickets: () => void;
   Colors: any;
 }) {
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
@@ -565,12 +558,7 @@ function EventBuyCard({
       )}
 
       {hasTicketing && (
-        hasTicket ? (
-          <Pressable style={[styles.buyBtn, styles.buyBtnOwned]} onPress={onViewTicket}>
-            <Feather name="check-circle" size={15} color={Colors.primary} />
-            <Text style={[styles.buyBtnText, { color: Colors.primary }]}>View My Ticket</Text>
-          </Pressable>
-        ) : (
+        <>
           <Pressable
             style={({ pressed }) => [styles.buyBtn, { opacity: pressed || isBuying || isRegisteringFree ? 0.7 : 1 }]}
             onPress={onBuy}
@@ -581,11 +569,24 @@ function EventBuyCard({
             ) : (
               <>
                 <Feather name="credit-card" size={15} color="#fff" />
-                <Text style={styles.buyBtnText}>{isFree ? "Register Free" : "Buy Ticket"}</Text>
+                <Text style={styles.buyBtnText}>
+                  {isFree ? "Register Free" : ticketCount > 0 ? "Buy Another Ticket" : "Buy Ticket"}
+                </Text>
               </>
             )}
           </Pressable>
-        )
+          {ticketCount > 0 && (
+            <Pressable
+              style={({ pressed }) => [styles.viewTicketsRow, { opacity: pressed ? 0.7 : 1 }]}
+              onPress={onViewTickets}
+            >
+              <Feather name="check-circle" size={13} color={Colors.primary} />
+              <Text style={styles.viewTicketsText}>
+                You have {ticketCount} ticket{ticketCount > 1 ? "s" : ""} → View
+              </Text>
+            </Pressable>
+          )}
+        </>
       )}
     </View>
   );
@@ -1360,6 +1361,19 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       fontFamily: "Inter_700Bold",
       fontSize: 14,
       color: "#fff",
+    },
+    viewTicketsRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      paddingBottom: 12,
+      marginTop: -4,
+    },
+    viewTicketsText: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 13,
+      color: Colors.primary,
     },
     /* Who's Going */
     whoGoingRow: {
