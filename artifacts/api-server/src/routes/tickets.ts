@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, ticketsTable, eventsTable, usersTable, ticketTypesTable, discountCodesTable } from "@workspace/db";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, inArray } from "drizzle-orm";
 import { getUncachableStripeClient, getStripePublishableKey } from "../stripeClient";
 import { sendTicketConfirmationEmail, sendGiftEmail } from "../services/email";
 import crypto from "crypto";
@@ -59,7 +59,7 @@ router.get("/my", requireAuth, async (req: any, res) => {
   const types = typeIds.length > 0
     ? await db.select({ id: ticketTypesTable.id, name: ticketTypesTable.name })
         .from(ticketTypesTable)
-        .where(sql`${ticketTypesTable.id} = ANY(${typeIds})`)
+        .where(inArray(ticketTypesTable.id, typeIds as number[]))
     : [];
   const typeMap = Object.fromEntries(types.map(t => [t.id, t.name]));
 
