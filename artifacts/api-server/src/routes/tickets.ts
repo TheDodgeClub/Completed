@@ -98,11 +98,12 @@ router.get("/validate-code", requireAuth, async (req: any, res) => {
 /* POST /api/tickets/checkout */
 router.post("/checkout", requireAuth, async (req: any, res) => {
   const userId = req.session.userId;
-  const { eventId, checkoutData, ticketTypeId, discountCode } = req.body as {
+  const { eventId, checkoutData, ticketTypeId, discountCode, quantity: rawQuantity } = req.body as {
     eventId?: number; checkoutData?: Record<string, string>;
-    ticketTypeId?: number; discountCode?: string;
+    ticketTypeId?: number; discountCode?: string; quantity?: number;
   };
   if (!eventId) { res.status(400).json({ error: "eventId required" }); return; }
+  const quantity = Math.max(1, Math.min(10, Number(rawQuantity) || 1));
 
   const [event] = await db.select().from(eventsTable).where(eq(eventsTable.id, eventId)).limit(1);
   if (!event) { res.status(404).json({ error: "Event not found" }); return; }
@@ -150,24 +151,25 @@ router.post("/checkout", requireAuth, async (req: any, res) => {
   // If free (after discount or originally free), issue immediately
   if (finalAmountPence === 0) {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
-    const ticketCode = generateTicketCode();
-    const [ticket] = await db.insert(ticketsTable).values({
-      userId, eventId, status: "paid", ticketCode, amountPaid: 0,
+    const ticketValues = Array.from({ length: quantity }, () => ({
+      userId, eventId, status: "paid" as const, ticketCode: generateTicketCode(), amountPaid: 0,
       originalAmountPaid: baseAmountPence > 0 ? 0 : undefined,
       checkoutData: checkoutData ?? null,
       ticketTypeId: resolvedTicketTypeId,
       discountCodeId: discountCodeRecord?.id ?? null,
-    }).returning();
+    }));
+    const tickets = await db.insert(ticketsTable).values(ticketValues).returning();
+    const [ticket] = tickets;
 
     if (discountCodeRecord) {
-      await db.update(discountCodesTable).set({ usesCount: discountCodeRecord.usesCount + 1 }).where(eq(discountCodesTable.id, discountCodeRecord.id));
+      await db.update(discountCodesTable).set({ usesCount: discountCodeRecord.usesCount + quantity }).where(eq(discountCodesTable.id, discountCodeRecord.id));
     }
     if (resolvedTicketTypeId) {
-      await db.update(ticketTypesTable).set({ quantitySold: sql`${ticketTypesTable.quantitySold} + 1` }).where(eq(ticketTypesTable.id, resolvedTicketTypeId));
+      await db.update(ticketTypesTable).set({ quantitySold: sql`${ticketTypesTable.quantitySold} + ${quantity}` }).where(eq(ticketTypesTable.id, resolvedTicketTypeId));
     }
 
     if (user) {
-      sendTicketConfirmationEmail({ toEmail: user.email, toName: user.name ?? user.email, eventName: event.title, eventDate: event.date, eventLocation: event.location, ticketCode }).catch(e => console.error("[email] send error:", e));
+      sendTicketConfirmationEmail({ toEmail: user.email, toName: user.name ?? user.email, eventName: event.title, eventDate: event.date, eventLocation: event.location, ticketCodes: tickets.map(t => t.ticketCode) }).catch(e => console.error("[email] send error:", e));
     }
     res.status(201).json({ ticket, free: true });
     return;
@@ -237,7 +239,7 @@ router.post("/checkout", requireAuth, async (req: any, res) => {
           ? { product: resolvedStripeProductId }
           : { product_data: { name: event.title } }),
       },
-      quantity: 1,
+      quantity,
     }];
   } else {
     // Verify the price ID still exists
@@ -252,7 +254,7 @@ router.post("/checkout", requireAuth, async (req: any, res) => {
       }
       throw err;
     }
-    lineItems = [{ price: resolvedStripePriceId, quantity: 1 }];
+    lineItems = [{ price: resolvedStripePriceId, quantity }];
   }
 
   const session = await stripe.checkout.sessions.create({
@@ -264,6 +266,7 @@ router.post("/checkout", requireAuth, async (req: any, res) => {
     cancel_url: `${baseUrl}/api/tickets/cancel`,
     metadata: {
       userId: String(userId), eventId: String(eventId), ticketId: String(pendingTicket.id),
+      quantity: String(quantity),
       ...(discountCodeRecord ? { discountCodeId: String(discountCodeRecord.id) } : {}),
       ...(resolvedTicketTypeId ? { ticketTypeId: String(resolvedTicketTypeId) } : {}),
     },
@@ -287,55 +290,76 @@ router.get("/success", async (req, res) => {
       const evId = Number(eventId);
       const discountCodeId = session.metadata?.discountCodeId ? Number(session.metadata.discountCodeId) : null;
       const ticketTypeId = session.metadata?.ticketTypeId ? Number(session.metadata.ticketTypeId) : null;
+      const quantity = Math.max(1, Math.min(10, parseInt(session.metadata?.quantity ?? "1") || 1));
+      const perTicketAmount = session.amount_total ? Math.round(session.amount_total / quantity) : 0;
+      const paymentIntentId = typeof session.payment_intent === "string" ? session.payment_intent : null;
 
       const [existingBySession] = await db.select().from(ticketsTable)
         .where(eq(ticketsTable.stripeCheckoutSessionId, session_id)).limit(1);
+
+      // Helper: create quantity-1 additional tickets linked to the same session
+      const createAdditionals = async (count: number) => {
+        if (count <= 0) return [] as { ticketCode: string }[];
+        const vals = Array.from({ length: count }, () => ({
+          userId, eventId: evId, status: "paid" as const,
+          ticketCode: generateTicketCode(), amountPaid: perTicketAmount,
+          stripeCheckoutSessionId: session_id, stripePaymentIntentId: paymentIntentId,
+          ticketTypeId, discountCodeId,
+        }));
+        return db.insert(ticketsTable).values(vals).returning({ ticketCode: ticketsTable.ticketCode });
+      };
 
       if (existingBySession) {
         if (existingBySession.status !== "paid") {
           await db.update(ticketsTable).set({
             status: "paid",
-            stripePaymentIntentId: typeof session.payment_intent === "string" ? session.payment_intent : null,
-            amountPaid: session.amount_total ?? 0,
+            stripePaymentIntentId: paymentIntentId,
+            amountPaid: perTicketAmount,
           }).where(eq(ticketsTable.id, existingBySession.id));
 
-          // Increment discount code uses
+          // Check how many additional tickets already exist for this session
+          const alreadyCreated = await db.select().from(ticketsTable)
+            .where(and(eq(ticketsTable.stripeCheckoutSessionId, session_id), eq(ticketsTable.status, "paid")));
+          const additional = await createAdditionals(quantity - alreadyCreated.length);
+          const allCodes = [existingBySession.ticketCode, ...additional.map(t => t.ticketCode)];
+
           if (discountCodeId) {
             const [dc] = await db.select().from(discountCodesTable).where(eq(discountCodesTable.id, discountCodeId)).limit(1);
-            if (dc) await db.update(discountCodesTable).set({ usesCount: dc.usesCount + 1 }).where(eq(discountCodesTable.id, discountCodeId));
+            if (dc) await db.update(discountCodesTable).set({ usesCount: dc.usesCount + quantity }).where(eq(discountCodesTable.id, discountCodeId));
           }
-          // Increment ticket type sold count
           if (ticketTypeId) {
-            await db.update(ticketTypesTable).set({ quantitySold: sql`${ticketTypesTable.quantitySold} + 1` }).where(eq(ticketTypesTable.id, ticketTypeId));
+            await db.update(ticketTypesTable).set({ quantitySold: sql`${ticketTypesTable.quantitySold} + ${quantity}` }).where(eq(ticketTypesTable.id, ticketTypeId));
           }
 
           const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
           const [event] = await db.select().from(eventsTable).where(eq(eventsTable.id, evId)).limit(1);
           if (user && event) {
-            sendTicketConfirmationEmail({ toEmail: user.email, toName: user.name ?? user.email, eventName: event.title, eventDate: event.date, eventLocation: event.location, ticketCode: existingBySession.ticketCode }).catch(e => console.error("[email] send error:", e));
+            sendTicketConfirmationEmail({ toEmail: user.email, toName: user.name ?? user.email, eventName: event.title, eventDate: event.date, eventLocation: event.location, ticketCodes: allCodes }).catch(e => console.error("[email] send error:", e));
           }
         }
       } else {
-        // Fallback: create fresh ticket
-        const ticketCode = generateTicketCode();
+        // Fallback: create all tickets fresh
+        const firstCode = generateTicketCode();
         await db.insert(ticketsTable).values({
           userId, eventId: evId, stripeCheckoutSessionId: session_id,
-          stripePaymentIntentId: typeof session.payment_intent === "string" ? session.payment_intent : null,
-          status: "paid", ticketCode, amountPaid: session.amount_total ?? 0,
-          ticketTypeId: ticketTypeId,
-          discountCodeId: discountCodeId,
+          stripePaymentIntentId: paymentIntentId,
+          status: "paid", ticketCode: firstCode, amountPaid: perTicketAmount,
+          ticketTypeId, discountCodeId,
         });
+        const additional = await createAdditionals(quantity - 1);
+        const allCodes = [firstCode, ...additional.map(t => t.ticketCode)];
+
         if (discountCodeId) {
           const [dc] = await db.select().from(discountCodesTable).where(eq(discountCodesTable.id, discountCodeId)).limit(1);
-          if (dc) await db.update(discountCodesTable).set({ usesCount: dc.usesCount + 1 }).where(eq(discountCodesTable.id, discountCodeId));
+          if (dc) await db.update(discountCodesTable).set({ usesCount: dc.usesCount + quantity }).where(eq(discountCodesTable.id, discountCodeId));
         }
         if (ticketTypeId) {
-          await db.update(ticketTypesTable).set({ quantitySold: sql`${ticketTypesTable.quantitySold} + 1` }).where(eq(ticketTypesTable.id, ticketTypeId));
+          await db.update(ticketTypesTable).set({ quantitySold: sql`${ticketTypesTable.quantitySold} + ${quantity}` }).where(eq(ticketTypesTable.id, ticketTypeId));
         }
         const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
         const [event] = await db.select().from(eventsTable).where(eq(eventsTable.id, evId)).limit(1);
         if (user && event) {
-          sendTicketConfirmationEmail({ toEmail: user.email, toName: user.name ?? user.email, eventName: event.title, eventDate: event.date, eventLocation: event.location, ticketCode }).catch(e => console.error("[email] send error:", e));
+          sendTicketConfirmationEmail({ toEmail: user.email, toName: user.name ?? user.email, eventName: event.title, eventDate: event.date, eventLocation: event.location, ticketCodes: allCodes }).catch(e => console.error("[email] send error:", e));
         }
       }
     }
@@ -404,8 +428,9 @@ router.get("/cancel", (_req, res) => {
 /* POST /api/tickets/free */
 router.post("/free", requireAuth, async (req: any, res) => {
   const userId = req.session.userId;
-  const { eventId, checkoutData, ticketTypeId } = req.body as { eventId?: number; checkoutData?: Record<string, string>; ticketTypeId?: number };
+  const { eventId, checkoutData, ticketTypeId, quantity: rawQuantity } = req.body as { eventId?: number; checkoutData?: Record<string, string>; ticketTypeId?: number; quantity?: number };
   if (!eventId) { res.status(400).json({ error: "eventId required" }); return; }
+  const quantity = Math.max(1, Math.min(10, Number(rawQuantity) || 1));
   const [event] = await db.select().from(eventsTable).where(eq(eventsTable.id, eventId)).limit(1);
   if (!event) { res.status(404).json({ error: "Event not found" }); return; }
 
@@ -422,24 +447,21 @@ router.post("/free", requireAuth, async (req: any, res) => {
 
   if (!effectivelyfree) { res.status(400).json({ error: "This is not a free event" }); return; }
 
-  const [existing] = await db.select().from(ticketsTable)
-    .where(and(eq(ticketsTable.userId, userId), eq(ticketsTable.eventId, eventId), eq(ticketsTable.status, "paid")))
-    .limit(1);
-  if (existing) { res.json({ ticket: existing }); return; }
-
-  const [ticket] = await db.insert(ticketsTable).values({
-    userId, eventId, status: "paid", ticketCode: generateTicketCode(), amountPaid: 0,
+  const ticketValues = Array.from({ length: quantity }, () => ({
+    userId, eventId, status: "paid" as const, ticketCode: generateTicketCode(), amountPaid: 0,
     checkoutData: checkoutData ?? null,
     ticketTypeId: resolvedTicketTypeId,
-  }).returning();
+  }));
+  const tickets = await db.insert(ticketsTable).values(ticketValues).returning();
+  const [ticket] = tickets;
 
   if (resolvedTicketTypeId) {
-    await db.update(ticketTypesTable).set({ quantitySold: sql`${ticketTypesTable.quantitySold} + 1` }).where(eq(ticketTypesTable.id, resolvedTicketTypeId));
+    await db.update(ticketTypesTable).set({ quantitySold: sql`${ticketTypesTable.quantitySold} + ${quantity}` }).where(eq(ticketTypesTable.id, resolvedTicketTypeId));
   }
 
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
   if (user) {
-    sendTicketConfirmationEmail({ toEmail: user.email, toName: user.name ?? user.email, eventName: event.title, eventDate: event.date, eventLocation: event.location, ticketCode: ticket.ticketCode }).catch(e => console.error("[email] send error:", e));
+    sendTicketConfirmationEmail({ toEmail: user.email, toName: user.name ?? user.email, eventName: event.title, eventDate: event.date, eventLocation: event.location, ticketCodes: tickets.map(t => t.ticketCode) }).catch(e => console.error("[email] send error:", e));
   }
   res.status(201).json({ ticket });
 });

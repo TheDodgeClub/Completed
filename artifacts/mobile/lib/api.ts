@@ -421,10 +421,11 @@ export async function createCheckoutSession(
   checkoutData?: Record<string, string>,
   ticketTypeId?: number,
   discountCode?: string,
+  quantity: number = 1,
 ): Promise<{ url: string; sessionId: string }> {
   return apiFetch<{ url: string; sessionId: string }>("/tickets/checkout", {
     method: "POST",
-    body: JSON.stringify({ eventId, checkoutData, ticketTypeId, discountCode }),
+    body: JSON.stringify({ eventId, checkoutData, ticketTypeId, discountCode, quantity }),
   });
 }
 
@@ -432,10 +433,11 @@ export async function registerFreeTicket(
   eventId: number,
   checkoutData?: Record<string, string>,
   ticketTypeId?: number,
+  quantity: number = 1,
 ): Promise<{ ticket: Ticket }> {
   return apiFetch<{ ticket: Ticket }>("/tickets/free", {
     method: "POST",
-    body: JSON.stringify({ eventId, checkoutData, ticketTypeId }),
+    body: JSON.stringify({ eventId, checkoutData, ticketTypeId, quantity }),
   });
 }
 

@@ -81,8 +81,8 @@ export default function TicketsScreen() {
   });
 
   const { mutate: registerFree, isPending: registeringFree } = useMutation({
-    mutationFn: ({ eventId, checkoutData, ticketTypeId }: { eventId: number; checkoutData?: Record<string, string>; ticketTypeId?: number }) =>
-      registerFreeTicket(eventId, checkoutData, ticketTypeId),
+    mutationFn: ({ eventId, checkoutData, ticketTypeId, quantity }: { eventId: number; checkoutData?: Record<string, string>; ticketTypeId?: number; quantity?: number }) =>
+      registerFreeTicket(eventId, checkoutData, ticketTypeId, quantity),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-tickets"] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -92,6 +92,7 @@ export default function TicketsScreen() {
   });
 
   const [buyingEventId, setBuyingEventId] = useState<number | null>(null);
+  const [pendingQuantity, setPendingQuantity] = useState(1);
   const [checkoutFormEvent, setCheckoutFormEvent] = useState<Event | null>(null);
   const [checkoutContext, setCheckoutContext] = useState<{ ticketTypeId?: number; discountCode?: string } | null>(null);
   const [giftEvent, setGiftEvent] = useState<{ id: number; title: string } | null>(null);
@@ -105,7 +106,7 @@ export default function TicketsScreen() {
   const hasActiveTicketTypes = (event: Event) =>
     (event.ticketTypes?.filter(t => t.isActive && t.saleOpen).length ?? 0) > 0;
 
-  const doBuyTicket = useCallback(async (event: Event, checkoutData?: Record<string, string>, ticketTypeId?: number, discountCode?: string) => {
+  const doBuyTicket = useCallback(async (event: Event, checkoutData?: Record<string, string>, ticketTypeId?: number, discountCode?: string, quantity: number = 1) => {
     // If a specific ticket type is provided and it's free (or discount makes it free), use free flow
     const selectedType = ticketTypeId ? event.ticketTypes?.find(t => t.id === ticketTypeId) : null;
     const typePrice = selectedType?.price ?? null;
@@ -114,7 +115,7 @@ export default function TicketsScreen() {
     // Free event (no type selected, or free type)
     if (isFreeType || (!ticketTypeId && !event.stripePriceId)) {
       if (isFreeType || event.ticketPrice === 0) {
-        registerFree({ eventId: event.id, checkoutData, ticketTypeId });
+        registerFree({ eventId: event.id, checkoutData, ticketTypeId, quantity });
       } else {
         Alert.alert("Tickets not available", "This event does not have tickets configured yet.");
       }
@@ -124,7 +125,7 @@ export default function TicketsScreen() {
     // Paid — launch Stripe Checkout (server handles discount calculation)
     setBuyingEventId(event.id);
     try {
-      const { url } = await createCheckoutSession(event.id, checkoutData, ticketTypeId, discountCode);
+      const { url } = await createCheckoutSession(event.id, checkoutData, ticketTypeId, discountCode, quantity);
       await WebBrowser.openBrowserAsync(url, {
         presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
         dismissButtonStyle: "done",
@@ -146,13 +147,14 @@ export default function TicketsScreen() {
     }
   }, [registerFree, refetchTickets]);
 
-  const handleBuyTicket = useCallback(async (event: Event) => {
+  const handleBuyTicket = useCallback(async (event: Event, quantity: number = 1) => {
     if (!user) {
       Alert.alert("Sign in required", "Please sign in to purchase tickets.");
       return;
     }
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setPendingQuantity(quantity);
 
     // If event has active ticket types, show the type selector first
     if (hasActiveTicketTypes(event)) {
@@ -167,8 +169,8 @@ export default function TicketsScreen() {
       return;
     }
 
-    await doBuyTicket(event, undefined);
-  }, [user, myTickets, doBuyTicket]);
+    await doBuyTicket(event, undefined, undefined, undefined, quantity);
+  }, [user, doBuyTicket]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -305,7 +307,7 @@ export default function TicketsScreen() {
                     ticketCount={ticketCountByEvent.get(event.id) ?? 0}
                     isBuying={buyingEventId === event.id}
                     isRegisteringFree={registeringFree}
-                    onBuy={() => handleBuyTicket(event)}
+                    onBuy={(qty) => handleBuyTicket(event, qty)}
                     onViewTickets={() => setActiveTab("my")}
                     Colors={Colors}
                   />
@@ -381,9 +383,10 @@ export default function TicketsScreen() {
           onSubmit={(formData) => {
             const event = checkoutFormEvent;
             const ctx = checkoutContext;
+            const qty = pendingQuantity;
             setCheckoutFormEvent(null);
             setCheckoutContext(null);
-            doBuyTicket(event, formData, ctx?.ticketTypeId, ctx?.discountCode);
+            doBuyTicket(event, formData, ctx?.ticketTypeId, ctx?.discountCode, qty);
           }}
         />
       )}
@@ -396,12 +399,13 @@ export default function TicketsScreen() {
           onClose={() => setTicketTypeModalEvent(null)}
           onSelect={(ticketTypeId, discountCode) => {
             const event = ticketTypeModalEvent;
+            const qty = pendingQuantity;
             setTicketTypeModalEvent(null);
             if (needsForm(event)) {
               setCheckoutContext({ ticketTypeId, discountCode });
               setCheckoutFormEvent(event);
             } else {
-              doBuyTicket(event, undefined, ticketTypeId, discountCode);
+              doBuyTicket(event, undefined, ticketTypeId, discountCode, qty);
             }
           }}
         />
@@ -471,11 +475,12 @@ function EventBuyCard({
   ticketCount: number;
   isBuying: boolean;
   isRegisteringFree: boolean;
-  onBuy: () => void;
+  onBuy: (quantity: number) => void;
   onViewTickets: () => void;
   Colors: any;
 }) {
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
+  const [quantity, setQuantity] = useState(1);
   const date = new Date(event.date);
   const day = date.toLocaleDateString("en-GB", { day: "2-digit" });
   const month = date.toLocaleDateString("en-GB", { month: "short" }).toUpperCase();
@@ -560,9 +565,29 @@ function EventBuyCard({
 
       {hasTicketing && (
         <>
+          {!isFree && (
+            <View style={styles.quantityRow}>
+              <Pressable
+                style={styles.quantityBtn}
+                onPress={() => setQuantity(q => Math.max(1, q - 1))}
+                disabled={isBuying || isRegisteringFree}
+              >
+                <Feather name="minus" size={14} color={Colors.text} />
+              </Pressable>
+              <Text style={styles.quantityValue}>{quantity}</Text>
+              <Pressable
+                style={styles.quantityBtn}
+                onPress={() => setQuantity(q => Math.min(10, q + 1))}
+                disabled={isBuying || isRegisteringFree}
+              >
+                <Feather name="plus" size={14} color={Colors.text} />
+              </Pressable>
+              <Text style={styles.quantityLabel}>ticket{quantity > 1 ? "s" : ""}</Text>
+            </View>
+          )}
           <Pressable
             style={({ pressed }) => [styles.buyBtn, { opacity: pressed || isBuying || isRegisteringFree ? 0.7 : 1 }]}
-            onPress={onBuy}
+            onPress={() => onBuy(quantity)}
             disabled={isBuying || isRegisteringFree}
           >
             {isBuying || isRegisteringFree ? (
@@ -571,7 +596,11 @@ function EventBuyCard({
               <>
                 <Feather name="credit-card" size={15} color="#fff" />
                 <Text style={styles.buyBtnText}>
-                  {isFree ? "Register Free" : ticketCount > 0 ? "Buy Another Ticket" : "Buy Ticket"}
+                  {isFree
+                    ? "Register Free"
+                    : ticketCount > 0
+                      ? `Buy ${quantity > 1 ? `${quantity} More` : "Another"} Ticket${quantity > 1 ? "s" : ""}`
+                      : `Buy ${quantity > 1 ? `${quantity} Tickets` : "Ticket"}`}
                 </Text>
               </>
             )}
@@ -1375,6 +1404,36 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       fontFamily: "Inter_600SemiBold",
       fontSize: 13,
       color: Colors.primary,
+    },
+    quantityRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 12,
+      paddingHorizontal: 16,
+      paddingBottom: 12,
+    },
+    quantityBtn: {
+      width: 32,
+      height: 32,
+      borderRadius: 8,
+      backgroundColor: Colors.card,
+      borderWidth: 1,
+      borderColor: Colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    quantityValue: {
+      fontFamily: "Inter_700Bold",
+      fontSize: 18,
+      color: Colors.text,
+      minWidth: 28,
+      textAlign: "center",
+    },
+    quantityLabel: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 14,
+      color: Colors.textSecondary,
     },
     /* Who's Going */
     whoGoingRow: {

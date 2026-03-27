@@ -373,7 +373,7 @@ router.post("/tickets/:id/resend", async (req, res) => {
     eventName: row.eventTitle,
     eventDate: row.eventDate,
     eventLocation: row.eventLocation,
-    ticketCode: row.ticketCode,
+    ticketCodes: [row.ticketCode],
   });
   res.json({ ok: true, sentTo: toEmail });
 });

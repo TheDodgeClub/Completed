@@ -76,7 +76,7 @@ router.post("/admin/test-email", requireAdmin, async (req: any, res) => {
       eventName: "Example Dodge Ball Night",
       eventDate: new Date(),
       eventLocation: "Dodge Club Arena, London",
-      ticketCode: "TEST-1234",
+      ticketCodes: ["TEST-1234"],
     });
     res.json({ ok: true, sentTo: targetEmail });
   } catch (err: any) {
