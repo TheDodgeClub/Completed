@@ -498,41 +498,6 @@ export async function getMemberProfile(id: number): Promise<UserProfile> {
   return apiFetch<UserProfile>(`/users/${id}/profile`);
 }
 
-/* ---- messages ---- */
-
-export type Conversation = {
-  partnerId: number;
-  partnerName: string;
-  partnerAvatar: string | null;
-  lastMessage: string;
-  lastMessageAt: string;
-  unreadCount: number;
-};
-
-export type MessageItem = {
-  id: number;
-  senderId: number;
-  senderName: string;
-  senderAvatar: string | null;
-  content: string;
-  createdAt: string;
-  readAt: string | null;
-};
-
-export async function listConversations(): Promise<Conversation[]> {
-  return apiFetch<Conversation[]>("/messages");
-}
-
-export async function getThread(partnerId: number): Promise<MessageItem[]> {
-  return apiFetch<MessageItem[]>(`/messages/${partnerId}`);
-}
-
-export async function sendMessage(partnerId: number, content: string): Promise<MessageItem> {
-  return apiFetch<MessageItem>(`/messages/${partnerId}`, {
-    method: "POST",
-    body: JSON.stringify({ content }),
-  });
-}
 
 /* ---- post comments ---- */
 

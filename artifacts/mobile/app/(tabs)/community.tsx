@@ -19,7 +19,6 @@ import { useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { useColors } from "@/context/ThemeContext";
-import { useAuth } from "@/context/AuthContext";
 import { resolveImageUrl } from "@/constants/api";
 import { MemberProfileModal } from "@/components/MemberProfileModal";
 import {
@@ -260,7 +259,6 @@ export default function CommunityScreen() {
   const insets = useSafeAreaInsets();
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
-  const { user, isAuthenticated } = useAuth();
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<MemberSummary | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -294,17 +292,6 @@ export default function CommunityScreen() {
           <View>
             <Text style={styles.headerTitle}>Community</Text>
           </View>
-          {isAuthenticated && (
-            <Pressable
-              style={({ pressed }) => [styles.messagesBtn, { opacity: pressed ? 0.8 : 1 }]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.push("/messages" as any);
-              }}
-            >
-              <Feather name="message-circle" size={20} color={Colors.primary} />
-            </Pressable>
-          )}
         </View>
         <View style={styles.searchBar}>
           <Feather name="search" size={16} color={Colors.textMuted} />
@@ -374,7 +361,6 @@ export default function CommunityScreen() {
       {selected && (
         <MemberProfileModal
           member={selected}
-          currentUserId={user?.id ?? null}
           onClose={() => setSelected(null)}
         />
       )}
@@ -396,11 +382,6 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     headerRow: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" },
     headerTitle: { fontFamily: "Poppins_800ExtraBold", fontSize: 32, color: Colors.text },
     headerSubtitle: { fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.textSecondary },
-    messagesBtn: {
-      width: 42, height: 42, borderRadius: 21,
-      backgroundColor: `${Colors.primary}18`,
-      alignItems: "center", justifyContent: "center",
-    },
     searchBar: {
       flexDirection: "row", alignItems: "center", gap: 10,
       backgroundColor: Colors.surface2, borderRadius: 14,

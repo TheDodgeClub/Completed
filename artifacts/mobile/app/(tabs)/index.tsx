@@ -649,7 +649,6 @@ export default function HomeScreen() {
     {selectedPulseMember && (
       <MemberProfileModal
         member={selectedPulseMember}
-        currentUserId={user?.id ?? null}
         onClose={() => setSelectedPulseMember(null)}
       />
     )}

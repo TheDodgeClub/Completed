@@ -9,7 +9,6 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
-import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
@@ -72,9 +71,8 @@ function Avatar({ avatarUrl, name, size = 44, Colors }: { avatarUrl: string | nu
   );
 }
 
-export function MemberProfileModal({ member, currentUserId, onClose }: {
+export function MemberProfileModal({ member, onClose }: {
   member: MemberSummary;
-  currentUserId: number | null;
   onClose: () => void;
 }) {
   const Colors = useColors();
@@ -90,11 +88,6 @@ export function MemberProfileModal({ member, currentUserId, onClose }: {
   const levelName = LEVEL_NAMES[(level - 1)] ?? "Rookie";
   const levelProgress = (!isSupporter && profile) ? getLevelProgress(profile.xp, level) : null;
   const supporterProgress = (isSupporter && profile) ? getSupporterProgress(profile.xp) : null;
-
-  const handleDM = () => {
-    onClose();
-    router.push(`/messages/${member.id}` as any);
-  };
 
   return (
     <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
@@ -237,15 +230,6 @@ export function MemberProfileModal({ member, currentUserId, onClose }: {
                 </Text>
               </View>
 
-              {currentUserId !== null && currentUserId !== member.id && (
-                <Pressable
-                  style={({ pressed }) => [styles.dmBtn, { opacity: pressed ? 0.85 : 1 }]}
-                  onPress={handleDM}
-                >
-                  <Feather name="message-circle" size={18} color="#fff" />
-                  <Text style={styles.dmBtnText}>Send Message</Text>
-                </Pressable>
-              )}
             </View>
           ) : null}
         </ScrollView>
@@ -307,12 +291,5 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     bioText: { fontFamily: "Inter_400Regular", fontSize: 15, color: Colors.text, lineHeight: 22 },
     roleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
     memberSinceText: { fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.textMuted },
-    dmBtn: {
-      flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10,
-      backgroundColor: Colors.primary, borderRadius: 16, paddingVertical: 16, marginTop: 8,
-      shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3, shadowRadius: 8, elevation: 5,
-    },
-    dmBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 16, color: "#fff" },
   });
 }
