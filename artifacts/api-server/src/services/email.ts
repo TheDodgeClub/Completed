@@ -1,6 +1,5 @@
 import { db, settingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import QRCode from "qrcode";
 
 async function getSetting(key: string): Promise<string | null> {
   const [row] = await db.select().from(settingsTable).where(eq(settingsTable.key, key)).limit(1);
@@ -11,15 +10,20 @@ function interpolate(template: string, vars: Record<string, string>): string {
   return template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? "");
 }
 
-async function generateQrDataUrl(ticketCode: string): Promise<string> {
-  // Matches the in-app QR: same value (raw ticketCode), light-mode colors (#111111 on #FFFFFF),
-  // similar quiet zone. react-native-qrcode-svg uses size=200, quietZone=12, color=#111111, bg=#FFFFFF.
-  return QRCode.toDataURL(ticketCode, {
-    errorCorrectionLevel: "M",
-    margin: 2,       // ~12px quiet zone equivalent for this width
-    width: 200,
-    color: { dark: "#111111", light: "#ffffff" },
+function generateQrImageUrl(ticketCode: string): string {
+  // Uses an external QR image API — actual HTTPS URLs are supported by all email clients,
+  // whereas base64 data URLs are blocked by Gmail, Outlook and Apple Mail.
+  // Matches in-app QR: same ticketCode value, error correction M, dark #111111 on white.
+  const params = new URLSearchParams({
+    data: ticketCode,
+    size: "200x200",
+    color: "111111",
+    bgcolor: "ffffff",
+    margin: "10",
+    ecc: "M",
+    format: "png",
   });
+  return `https://api.qrserver.com/v1/create-qr-code/?${params.toString()}`;
 }
 
 function formatDate(dateStr: string | Date | null | undefined): string {
@@ -158,8 +162,7 @@ export async function sendGiftEmail(params: GiftEmailParams): Promise<void> {
   const subject = interpolate(subjectTpl ?? DEFAULT_GIFT_SUBJECT, vars);
   const effectiveBody = bodyText ?? DEFAULT_GIFT_BODY;
 
-  // Generate QR code for the gifted ticket
-  const qrCodeDataUrl = await generateQrDataUrl(params.ticketCode).catch(() => null);
+  const qrCodeDataUrl = generateQrImageUrl(params.ticketCode);
 
   const html = interpolate(
     buildStructuredEmailHtml({ headerImageUrl, bodyText: effectiveBody, ctaText, ctaUrl, qrCodeDataUrl, ticketCode: params.ticketCode }),
@@ -220,8 +223,7 @@ export async function sendTicketConfirmationEmail(params: TicketEmailParams): Pr
 
   const subject = interpolate(subjectTpl ?? DEFAULT_SUBJECT, vars);
 
-  // Generate QR code for the ticket
-  const qrCodeDataUrl = await generateQrDataUrl(params.ticketCode).catch(() => null);
+  const qrCodeDataUrl = generateQrImageUrl(params.ticketCode);
 
   // Use raw override only if explicitly set (not the old default HTML)
   const useRawOverride = rawBodyHtml && rawBodyHtml.trim().length > 0 && !headerImageUrl && !bodyText && !ctaText;
