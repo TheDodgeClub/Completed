@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   View,
@@ -10,9 +10,10 @@ import {
   RefreshControl,
   Image,
   useWindowDimensions,
+  Animated,
 } from "react-native";
 import * as WebBrowser from "expo-web-browser";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -154,6 +155,49 @@ export default function HomeScreen() {
     setRefreshing(false);
   };
 
+  /* ── Animated XP bars ── */
+  const xpBarAnim = useRef(new Animated.Value(0)).current;
+  const supporterBarAnim = useRef(new Animated.Value(0)).current;
+  const xpTargetRef = useRef(0);
+  const supporterTargetRef = useRef(0);
+  const [xpToastAmount, setXpToastAmount] = useState(0);
+  const toastAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    xpTargetRef.current = xpProgress?.pct ?? 0;
+  }, [xpProgress?.pct]);
+
+  useEffect(() => {
+    if (user?.accountType === "supporter") {
+      supporterTargetRef.current = getSupporterProgress(user.xp ?? 0).progress;
+    }
+  }, [user?.xp, user?.accountType]);
+
+  useFocusEffect(
+    useCallback(() => {
+      xpBarAnim.setValue(0);
+      supporterBarAnim.setValue(0);
+      Animated.timing(xpBarAnim, { toValue: xpTargetRef.current, duration: 1200, useNativeDriver: false }).start();
+      Animated.timing(supporterBarAnim, { toValue: supporterTargetRef.current, duration: 1200, useNativeDriver: false }).start();
+
+      AsyncStorage.getItem("pending_xp_award").then(val => {
+        if (val) {
+          const amount = parseInt(val, 10);
+          if (amount > 0) {
+            setXpToastAmount(amount);
+            AsyncStorage.removeItem("pending_xp_award");
+            toastAnim.setValue(0);
+            Animated.sequence([
+              Animated.timing(toastAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+              Animated.delay(2200),
+              Animated.timing(toastAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
+            ]).start(() => setXpToastAmount(0));
+          }
+        }
+      });
+    }, [xpBarAnim, supporterBarAnim, toastAnim])
+  );
+
   const publicPosts = posts?.filter(p => !p.isMembersOnly).slice(0, 3) ?? [];
   const nextEvent = events?.[0] ?? null;
 
@@ -213,7 +257,9 @@ export default function HomeScreen() {
               <Text style={styles.xpValue}>{(user.xp ?? 0).toLocaleString()} XP</Text>
             </View>
             <View style={styles.xpBarBg}>
-              <View style={[styles.xpBarFill, { width: `${Math.round(xpProgress.pct * 100)}%` as any }]} />
+              <Animated.View style={[styles.xpBarFill, {
+                width: xpBarAnim.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] }),
+              }]} />
             </View>
             <Text style={styles.xpHint}>
               {xpProgress.isMax
@@ -236,7 +282,9 @@ export default function HomeScreen() {
                 <Text style={styles.xpLevelName}>{sp.current.emoji} {sp.current.name}</Text>
               </View>
               <View style={styles.xpBarBg}>
-                <View style={[styles.xpBarFill, { width: `${Math.round(sp.progress * 100)}%` as any }]} />
+                <Animated.View style={[styles.xpBarFill, {
+                  width: supporterBarAnim.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] }),
+                }]} />
               </View>
               <Text style={styles.xpHint}>
                 {sp.isMax
@@ -560,6 +608,23 @@ export default function HomeScreen() {
     {selectedPost && (
       <PostDetailModal post={selectedPost} onClose={() => setSelectedPost(null)} />
     )}
+
+    {xpToastAmount > 0 && (
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.xpToast,
+          {
+            top: insets.top + 14,
+            opacity: toastAnim,
+            transform: [{ translateY: toastAnim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }],
+          },
+        ]}
+      >
+        <Text style={styles.xpToastIcon}>⚡</Text>
+        <Text style={styles.xpToastText}>+{xpToastAmount} XP Awarded!</Text>
+      </Animated.View>
+    )}
   </>
   );
 }
@@ -659,6 +724,36 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       fontFamily: "Inter_400Regular",
       fontSize: 10,
       color: "rgba(255,255,255,0.5)",
+    },
+    xpToast: {
+      position: "absolute",
+      alignSelf: "center",
+      left: 40,
+      right: 40,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      backgroundColor: "#0B5E2F",
+      borderRadius: 28,
+      paddingVertical: 11,
+      paddingHorizontal: 22,
+      borderWidth: 1.5,
+      borderColor: "#FFD700",
+      shadowColor: "#000",
+      shadowOpacity: 0.35,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 10,
+    },
+    xpToastIcon: {
+      fontSize: 16,
+    },
+    xpToastText: {
+      fontFamily: "Inter_700Bold",
+      fontSize: 15,
+      color: "#FFD700",
+      letterSpacing: 0.3,
     },
     /* ── Hero CTAs ── */
     heroCTARow: {

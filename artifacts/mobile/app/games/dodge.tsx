@@ -7,10 +7,12 @@ import {
   PanResponder,
   Pressable,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/context/ThemeContext";
+import { useAuth } from "@/context/AuthContext";
 import { awardGameXp } from "@/lib/api";
 
 const WIN = Dimensions.get("window");
@@ -151,6 +153,10 @@ export default function DodgeGame() {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors, insets), [Colors, insets]);
 
+  const { refreshUser } = useAuth();
+  const refreshUserRef = useRef(refreshUser);
+  useEffect(() => { refreshUserRef.current = refreshUser; }, [refreshUser]);
+
   const HEADER_H = insets.top + 60;
   const THROW_BTN_H = 64;
   const ARENA_H = WIN.height - HEADER_H;
@@ -238,7 +244,14 @@ export default function DodgeGame() {
           setPhase("dead");
           const earned = Math.min(scoreRef.current * 5, 50);
           setAwardedXp(earned);
-          awardGameXp(earned).catch(() => {});
+          if (earned > 0) {
+            awardGameXp(earned)
+              .then(() => {
+                refreshUserRef.current();
+                return AsyncStorage.setItem("pending_xp_award", String(earned));
+              })
+              .catch(() => {});
+          }
           return;
         }
         setTimeout(() => { cooldownRef.current = false; setCanThrow(true); }, THROW_COOLDOWN);
