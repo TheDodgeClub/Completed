@@ -1,4 +1,3 @@
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const TOKEN_KEY = "dc_admin_token";
 
 export function getToken() { return localStorage.getItem(TOKEN_KEY); }
@@ -12,7 +11,7 @@ export async function fetchApi<T>(path: string, opts: RequestInit = {}): Promise
     headers.set("Content-Type", "application/json");
   }
   if (token) headers.set("x-auth-token", token);
-  const res = await fetch(`${BASE}${path}`, { ...opts, headers });
+  const res = await fetch(path, { ...opts, headers });
   if (!res.ok) {
     let msg = `Error ${res.status}`;
     try { const d = await res.json(); if (d.error) msg = d.error; } catch {}
