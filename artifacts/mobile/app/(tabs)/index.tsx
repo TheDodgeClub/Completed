@@ -162,6 +162,31 @@ export default function HomeScreen() {
   const supporterTargetRef = useRef(0);
   const [xpToastAmount, setXpToastAmount] = useState(0);
   const toastAnim = useRef(new Animated.Value(0)).current;
+  const prevXpRef = useRef<number | null>(null);
+
+  const showXpToast = useCallback((amount: number) => {
+    if (amount <= 0) return;
+    setXpToastAmount(amount);
+    toastAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(toastAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+      Animated.delay(2200),
+      Animated.timing(toastAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
+    ]).start(() => setXpToastAmount(0));
+  }, [toastAnim]);
+
+  // Show toast whenever XP increases (admin grants, attendance, any server-side award)
+  useEffect(() => {
+    const currentXp = user?.xp;
+    if (currentXp === undefined) return;
+    if (prevXpRef.current === null) {
+      prevXpRef.current = currentXp; // initialise on first load, no toast
+      return;
+    }
+    const diff = currentXp - prevXpRef.current;
+    prevXpRef.current = currentXp;
+    if (diff > 0) showXpToast(diff);
+  }, [user?.xp, showXpToast]);
 
   useEffect(() => {
     const pct = xpProgress?.pct ?? 0;
@@ -195,18 +220,14 @@ export default function HomeScreen() {
         if (val) {
           const amount = parseInt(val, 10);
           if (amount > 0) {
-            setXpToastAmount(amount);
             AsyncStorage.removeItem("pending_xp_award");
-            toastAnim.setValue(0);
-            Animated.sequence([
-              Animated.timing(toastAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-              Animated.delay(2200),
-              Animated.timing(toastAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
-            ]).start(() => setXpToastAmount(0));
+            // Advance prevXpRef so the user?.xp watcher doesn't fire a duplicate toast
+            if (prevXpRef.current !== null) prevXpRef.current += amount;
+            showXpToast(amount);
           }
         }
       });
-    }, [xpBarAnim, supporterBarAnim, toastAnim, refreshUser])
+    }, [xpBarAnim, supporterBarAnim, showXpToast, refreshUser])
   );
 
   const publicPosts = posts?.filter(p => !p.isMembersOnly).slice(0, 3) ?? [];
