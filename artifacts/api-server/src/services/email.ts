@@ -1,5 +1,6 @@
 import { db, settingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import QRCode from "qrcode";
 
 async function getSetting(key: string): Promise<string | null> {
   const [row] = await db.select().from(settingsTable).where(eq(settingsTable.key, key)).limit(1);
@@ -8,6 +9,15 @@ async function getSetting(key: string): Promise<string | null> {
 
 function interpolate(template: string, vars: Record<string, string>): string {
   return template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? "");
+}
+
+async function generateQrDataUrl(ticketCode: string): Promise<string> {
+  return QRCode.toDataURL(ticketCode, {
+    errorCorrectionLevel: "M",
+    margin: 2,
+    width: 220,
+    color: { dark: "#000000", light: "#ffffff" },
+  });
 }
 
 function formatDate(dateStr: string | Date | null | undefined): string {
@@ -48,8 +58,10 @@ export function buildStructuredEmailHtml(opts: {
   bodyText?: string | null;
   ctaText?: string | null;
   ctaUrl?: string | null;
+  qrCodeDataUrl?: string | null;
+  ticketCode?: string | null;
 }): string {
-  const { headerImageUrl, bodyText, ctaText, ctaUrl } = opts;
+  const { headerImageUrl, bodyText, ctaText, ctaUrl, qrCodeDataUrl, ticketCode } = opts;
 
   const headerImageBlock = headerImageUrl
     ? `<img src="${headerImageUrl}" alt="Event" style="width:100%;display:block;border-radius:0;" />`
@@ -66,6 +78,17 @@ export function buildStructuredEmailHtml(opts: {
           <a href="${ctaUrl}" style="display:inline-block;background:#0B5E2F;color:#FFD700;text-decoration:none;font-weight:700;font-size:15px;padding:14px 32px;border-radius:8px;letter-spacing:0.3px;">${ctaText}</a>
         </div>`
       : "";
+
+  const ticketBlock = qrCodeDataUrl
+    ? `<div style="background:#ffffff;border-radius:12px;padding:20px;text-align:center;margin:24px 0;">
+        <p style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:#555;margin:0 0 12px;">Your Ticket — Scan at the door</p>
+        <img src="${qrCodeDataUrl}" alt="Ticket QR Code" width="200" height="200" style="display:block;margin:0 auto;border-radius:8px;" />
+        <p style="font-family:'Courier New',monospace;font-size:14px;font-weight:bold;color:#111;letter-spacing:2px;margin:12px 0 0;">${ticketCode ?? "{{ticketCode}}"}</p>
+      </div>`
+    : `<div style="background:#0D0D0D;border:1px dashed #FFD700;border-radius:8px;padding:16px;text-align:center;margin:24px 0;">
+        <p style="font-size:12px;color:rgba(255,255,255,0.5);letter-spacing:0.8px;text-transform:uppercase;margin:0 0 6px;">Your Ticket Code</p>
+        <p style="font-family:'Courier New',monospace;font-size:22px;font-weight:bold;color:#FFD700;letter-spacing:3px;margin:0;">${ticketCode ?? "{{ticketCode}}"}</p>
+      </div>`;
 
   return `<!DOCTYPE html>
 <html>
@@ -90,12 +113,9 @@ export function buildStructuredEmailHtml(opts: {
         <p style="font-size:11px;text-transform:uppercase;letter-spacing:0.8px;color:rgba(255,255,255,0.4);margin:0 0 3px;">Location</p>
         <p style="font-size:15px;color:#fff;font-weight:500;margin:0;">{{eventLocation}}</p>
       </div>
-      <div style="background:#0D0D0D;border:1px dashed #FFD700;border-radius:8px;padding:16px;text-align:center;margin:24px 0;">
-        <p style="font-size:12px;color:rgba(255,255,255,0.5);letter-spacing:0.8px;text-transform:uppercase;margin:0 0 6px;">Your Ticket Code</p>
-        <p style="font-family:'Courier New',monospace;font-size:22px;font-weight:bold;color:#FFD700;letter-spacing:3px;margin:0;">{{ticketCode}}</p>
-      </div>
+      ${ticketBlock}
       ${ctaBlock}
-      <p style="font-size:13px;color:rgba(255,255,255,0.4);text-align:center;margin:20px 0 0;">Show this code at the door. See you on the court!</p>
+      <p style="font-size:13px;color:rgba(255,255,255,0.4);text-align:center;margin:20px 0 0;">Show this at the door. See you on the court!</p>
     </div>
     <div style="padding:20px 32px;text-align:center;font-size:12px;color:rgba(255,255,255,0.25);border-top:1px solid #222;">
       The Dodge Club &bull; This is an automated confirmation email
@@ -135,8 +155,12 @@ export async function sendGiftEmail(params: GiftEmailParams): Promise<void> {
 
   const subject = interpolate(subjectTpl ?? DEFAULT_GIFT_SUBJECT, vars);
   const effectiveBody = bodyText ?? DEFAULT_GIFT_BODY;
+
+  // Generate QR code for the gifted ticket
+  const qrCodeDataUrl = await generateQrDataUrl(params.ticketCode).catch(() => null);
+
   const html = interpolate(
-    buildStructuredEmailHtml({ headerImageUrl, bodyText: effectiveBody, ctaText, ctaUrl }),
+    buildStructuredEmailHtml({ headerImageUrl, bodyText: effectiveBody, ctaText, ctaUrl, qrCodeDataUrl, ticketCode: params.ticketCode }),
     vars
   );
 
@@ -194,12 +218,15 @@ export async function sendTicketConfirmationEmail(params: TicketEmailParams): Pr
 
   const subject = interpolate(subjectTpl ?? DEFAULT_SUBJECT, vars);
 
+  // Generate QR code for the ticket
+  const qrCodeDataUrl = await generateQrDataUrl(params.ticketCode).catch(() => null);
+
   // Use raw override only if explicitly set (not the old default HTML)
   const useRawOverride = rawBodyHtml && rawBodyHtml.trim().length > 0 && !headerImageUrl && !bodyText && !ctaText;
   const html = interpolate(
     useRawOverride
       ? rawBodyHtml!
-      : buildStructuredEmailHtml({ headerImageUrl, bodyText, ctaText, ctaUrl }),
+      : buildStructuredEmailHtml({ headerImageUrl, bodyText, ctaText, ctaUrl, qrCodeDataUrl, ticketCode: params.ticketCode }),
     vars
   );
 

@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
+import QRCode from "qrcode";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,8 +46,9 @@ function buildPreviewHtml(opts: {
   bodyText: string;
   ctaText: string;
   ctaUrl: string;
+  qrCodeDataUrl?: string;
 }) {
-  const { headerImageUrl, bodyText, ctaText, ctaUrl } = opts;
+  const { headerImageUrl, bodyText, ctaText, ctaUrl, qrCodeDataUrl } = opts;
 
   const headerImageBlock = headerImageUrl
     ? `<img src="${headerImageUrl}" alt="Event" style="width:100%;display:block;" />`
@@ -68,6 +70,17 @@ function buildPreviewHtml(opts: {
         </div>`
       : "";
 
+  const ticketBlock = qrCodeDataUrl
+    ? `<div style="background:#ffffff;border-radius:12px;padding:18px;text-align:center;margin:20px 0;">
+        <p style="font-size:10px;text-transform:uppercase;letter-spacing:0.8px;color:#555;margin:0 0 10px;">Your Ticket — Scan at the door</p>
+        <img src="${qrCodeDataUrl}" alt="Ticket QR Code" width="180" height="180" style="display:block;margin:0 auto;border-radius:8px;" />
+        <p style="font-family:'Courier New',monospace;font-size:13px;font-weight:bold;color:#111;letter-spacing:2px;margin:10px 0 0;">DEMO-0001</p>
+      </div>`
+    : `<div style="background:#0D0D0D;border:1px dashed #FFD700;border-radius:8px;padding:14px;text-align:center;margin:20px 0;">
+        <p style="font-size:11px;color:rgba(255,255,255,0.5);letter-spacing:0.8px;text-transform:uppercase;margin:0 0 5px;">Your Ticket Code</p>
+        <p style="font-family:'Courier New',monospace;font-size:20px;font-weight:bold;color:#FFD700;letter-spacing:3px;margin:0;">DEMO-0001</p>
+      </div>`;
+
   return `<!DOCTYPE html><html><head><meta charset="utf-8"/></head>
 <body style="margin:0;padding:16px;background:#0D0D0D;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
   <div style="max-width:480px;margin:0 auto;background:#151515;border-radius:12px;overflow:hidden;">
@@ -86,12 +99,9 @@ function buildPreviewHtml(opts: {
         <p style="font-size:10px;text-transform:uppercase;letter-spacing:0.8px;color:rgba(255,255,255,0.4);margin:0 0 3px;">Location</p>
         <p style="font-size:14px;color:#fff;font-weight:500;margin:0;">Dodge Club Arena, London</p>
       </div>
-      <div style="background:#0D0D0D;border:1px dashed #FFD700;border-radius:8px;padding:14px;text-align:center;margin:20px 0;">
-        <p style="font-size:11px;color:rgba(255,255,255,0.5);letter-spacing:0.8px;text-transform:uppercase;margin:0 0 5px;">Your Ticket Code</p>
-        <p style="font-family:'Courier New',monospace;font-size:20px;font-weight:bold;color:#FFD700;letter-spacing:3px;margin:0;">DEMO-0001</p>
-      </div>
+      ${ticketBlock}
       ${ctaBlock}
-      <p style="font-size:12px;color:rgba(255,255,255,0.35);text-align:center;margin:18px 0 0;">Show this code at the door. See you on the court!</p>
+      <p style="font-size:12px;color:rgba(255,255,255,0.35);text-align:center;margin:18px 0 0;">Show this at the door. See you on the court!</p>
     </div>
     <div style="padding:16px 28px;text-align:center;font-size:11px;color:rgba(255,255,255,0.2);border-top:1px solid #222;">
       The Dodge Club &bull; Automated confirmation email
@@ -123,6 +133,14 @@ export default function SettingsPage() {
   const [ctaUrl, setCtaUrl] = useState("");
   const [testEmailAddress, setTestEmailAddress] = useState("");
 
+  // Preview QR code (shared — same demo code for both previews)
+  const [previewQrDataUrl, setPreviewQrDataUrl] = useState<string>("");
+  useEffect(() => {
+    QRCode.toDataURL("DEMO-0001", { errorCorrectionLevel: "M", margin: 2, width: 180, color: { dark: "#000000", light: "#ffffff" } })
+      .then(setPreviewQrDataUrl)
+      .catch(() => {});
+  }, []);
+
   // Gift email
   const [giftSaving, setGiftSaving] = useState(false);
   const [giftActiveTab, setGiftActiveTab] = useState<"edit" | "preview">("edit");
@@ -133,13 +151,13 @@ export default function SettingsPage() {
   const [giftCtaUrl, setGiftCtaUrl] = useState("");
 
   const previewHtml = useMemo(
-    () => buildPreviewHtml({ headerImageUrl: resolveImageUrl(headerImageUrl), bodyText, ctaText, ctaUrl }),
-    [headerImageUrl, bodyText, ctaText, ctaUrl]
+    () => buildPreviewHtml({ headerImageUrl: resolveImageUrl(headerImageUrl), bodyText, ctaText, ctaUrl, qrCodeDataUrl: previewQrDataUrl }),
+    [headerImageUrl, bodyText, ctaText, ctaUrl, previewQrDataUrl]
   );
 
   const giftPreviewHtml = useMemo(
-    () => buildPreviewHtml({ headerImageUrl: resolveImageUrl(giftHeaderImageUrl), bodyText: giftBodyText, ctaText: giftCtaText, ctaUrl: giftCtaUrl }),
-    [giftHeaderImageUrl, giftBodyText, giftCtaText, giftCtaUrl]
+    () => buildPreviewHtml({ headerImageUrl: resolveImageUrl(giftHeaderImageUrl), bodyText: giftBodyText, ctaText: giftCtaText, ctaUrl: giftCtaUrl, qrCodeDataUrl: previewQrDataUrl }),
+    [giftHeaderImageUrl, giftBodyText, giftCtaText, giftCtaUrl, previewQrDataUrl]
   );
 
   const load = useCallback(async () => {
