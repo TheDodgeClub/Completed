@@ -236,4 +236,33 @@ router.post("/:id/checkin-scan", requireAdmin, async (req, res) => {
   res.json({ success: true, member: user, xpGained });
 });
 
+/* GET /api/events/:id/checkin-stats — live check-in dashboard data (admin only) */
+router.get("/:id/checkin-stats", requireAdmin, async (req, res) => {
+  const eventId = Number(req.params.id);
+
+  const [attendance, tickets] = await Promise.all([
+    db.query.attendanceTable.findMany({
+      where: eq(attendanceTable.eventId, eventId),
+      with: { user: { columns: { id: true, name: true, avatarUrl: true } } },
+      orderBy: [desc(attendanceTable.attendedAt)],
+    }),
+    db.select({ cnt: count() }).from(ticketsTable).where(
+      and(
+        eq(ticketsTable.eventId, eventId),
+        inArray(ticketsTable.status, ["paid", "free"]),
+      )
+    ),
+  ]);
+
+  res.json({
+    checkedIn: attendance.map(a => ({
+      id: a.user.id,
+      name: a.user.name,
+      avatarUrl: a.user.avatarUrl ?? null,
+      checkedInAt: a.attendedAt?.toISOString() ?? null,
+    })),
+    expectedCount: Number(tickets[0]?.cnt ?? 0),
+  });
+});
+
 export default router;

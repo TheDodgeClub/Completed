@@ -24,6 +24,7 @@ export async function fetchApi<T>(path: string, opts: RequestInit = {}): Promise
 export type AdminUser = { id: number; name: string; email: string; isAdmin: boolean };
 export type ActiveEvent = { id: number; title: string; date: string; location: string; checkInPin: string | null };
 export type CheckInResult = { success?: boolean; alreadyCheckedIn?: boolean; xpGained?: number; member: { id: number; name: string; avatarUrl: string | null; accountType?: string } };
+export type CheckInStats = { checkedIn: { id: number; name: string; avatarUrl: string | null; checkedInAt: string | null }[]; expectedCount: number };
 
 export async function loginAdmin(email: string, password: string): Promise<AdminUser> {
   const res = await fetchApi<{ user: AdminUser; token: string }>("/api/auth/login", {
@@ -47,4 +48,8 @@ export async function scanCheckIn(eventId: number, userId: number): Promise<Chec
   return fetchApi<CheckInResult>(`/api/events/${eventId}/checkin-scan`, {
     method: "POST", body: JSON.stringify({ userId }),
   });
+}
+
+export async function getCheckinStats(eventId: number): Promise<CheckInStats> {
+  return fetchApi<CheckInStats>(`/api/events/${eventId}/checkin-stats`);
 }
