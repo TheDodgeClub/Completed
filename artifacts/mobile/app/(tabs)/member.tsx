@@ -32,6 +32,7 @@ import {
   getUserUpcomingEvents,
   getUserAchievements,
   listUpcomingEvents,
+  getMyTickets,
   checkEventIn,
   updateProfile,
   updateAvatar,
@@ -39,6 +40,7 @@ import {
   AttendanceRecord,
   UpcomingEvent,
   Achievement,
+  Ticket,
 } from "@/lib/api";
 import { getToken } from "@/lib/api";
 import { useAnnouncements } from "@/hooks/useAnnouncements";
@@ -335,6 +337,45 @@ function MemberQRCard({ userId, Colors, styles }: { userId: number; Colors: any;
   );
 }
 
+function MemberTicketRow({ ticket, Colors, styles }: { ticket: Ticket; Colors: any; styles: any }) {
+  const date = new Date(ticket.eventDate);
+  const isCheckedIn = ticket.checkedIn;
+  const isToday = date.toDateString() === new Date().toDateString();
+  return (
+    <View style={styles.ticketRow}>
+      <View style={[styles.ticketDateBlock, isToday && styles.ticketDateBlockToday]}>
+        <Text style={[styles.ticketDateDay, isToday && { color: "#fff" }]}>{date.getDate()}</Text>
+        <Text style={[styles.ticketDateMonth, isToday && { color: "rgba(255,255,255,0.8)" }]}>
+          {date.toLocaleDateString("en-GB", { month: "short" }).toUpperCase()}
+        </Text>
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.ticketRowTitle} numberOfLines={1}>{ticket.eventTitle}</Text>
+        <Text style={styles.ticketRowLocation} numberOfLines={1}>{ticket.eventLocation}</Text>
+        <Text style={styles.ticketRowTime}>
+          {date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+          {isToday ? "  •  Today" : ""}
+        </Text>
+      </View>
+      <View style={{ alignItems: "flex-end", gap: 6 }}>
+        {isCheckedIn ? (
+          <View style={styles.ticketCheckedInBadge}>
+            <Feather name="check-circle" size={12} color="#30D158" />
+            <Text style={styles.ticketCheckedInText}>In</Text>
+          </View>
+        ) : (
+          <View style={[styles.ticketStatusBadge, ticket.status === "paid" ? styles.ticketStatusPaid : styles.ticketStatusFree]}>
+            <Text style={styles.ticketStatusText}>{ticket.status === "paid" ? "Paid" : "Free"}</Text>
+          </View>
+        )}
+        {ticket.amountPaid > 0 && (
+          <Text style={styles.ticketAmountText}>£{(ticket.amountPaid / 100).toFixed(2)}</Text>
+        )}
+      </View>
+    </View>
+  );
+}
+
 /* ======= Main Screen ======= */
 export default function MemberScreen() {
   const insets = useSafeAreaInsets();
@@ -374,6 +415,12 @@ export default function MemberScreen() {
     queryKey: ["upcoming-registered", userId],
     queryFn: () => getUserUpcomingEvents(userId),
     enabled: !!userId,
+  });
+
+  const { data: myTickets, refetch: refetchTickets } = useQuery({
+    queryKey: ["my-tickets"],
+    queryFn: getMyTickets,
+    enabled: isAuthenticated,
   });
 
   const { data: clubEvents } = useQuery({
@@ -425,9 +472,15 @@ export default function MemberScreen() {
     }
   }
 
+  // Upcoming tickets (paid or free, event not yet in the past)
+  const upcomingTickets = (myTickets ?? []).filter(t =>
+    (t.status === "paid" || t.status === "free") &&
+    new Date(t.eventDate).getTime() > Date.now() - 2 * 60 * 60 * 1000 // keep for 2h after start
+  );
+
   const handleRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([refreshUser(), refetchAttendance(), refetchUpcoming(), refetchAchievements()]);
+    await Promise.all([refreshUser(), refetchAttendance(), refetchUpcoming(), refetchAchievements(), refetchTickets()]);
     setRefreshing(false);
   };
 
@@ -716,15 +769,30 @@ export default function MemberScreen() {
       )}
 
       <View style={styles.body}>
-        {/* ── Quick Actions ── */}
-        <View style={styles.quickActions}>
-          <Pressable
-            style={({ pressed }) => [styles.quickBtn, { opacity: pressed ? 0.8 : 1 }]}
-            onPress={() => router.push("/(tabs)/tickets?tab=my")}
-          >
-            <Feather name="tag" size={20} color={Colors.primary} />
-            <Text style={styles.quickBtnText}>My Tickets</Text>
-          </Pressable>
+        {/* ── My Tickets ── */}
+        <View style={styles.section}>
+          <View style={[styles.sectionHeader, { justifyContent: "space-between" }]}>
+            <Text style={styles.sectionTitle}>My Tickets</Text>
+            <Pressable
+              onPress={() => router.push("/(tabs)/tickets?tab=my")}
+              style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+            >
+              <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.primary }}>All tickets</Text>
+              <Feather name="chevron-right" size={14} color={Colors.primary} />
+            </Pressable>
+          </View>
+          {upcomingTickets.length > 0 ? (
+            upcomingTickets.map(ticket => <MemberTicketRow key={ticket.id} ticket={ticket} Colors={Colors} styles={styles} />)
+          ) : (
+            <Pressable
+              style={({ pressed }) => [styles.ticketEmptyCard, { opacity: pressed ? 0.85 : 1 }]}
+              onPress={() => router.push("/(tabs)/tickets")}
+            >
+              <Feather name="tag" size={22} color={Colors.textMuted} />
+              <Text style={styles.ticketEmptyText}>No upcoming tickets</Text>
+              <Text style={styles.ticketEmptyHint}>Browse events and get your ticket</Text>
+            </Pressable>
+          )}
         </View>
 
         {/* ── Achievement Progress — players only, collapsible ── */}
@@ -1135,6 +1203,43 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     section: { marginBottom: 28 },
     sectionHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 14 },
     sectionTitle: { fontFamily: "Poppins_800ExtraBold", fontSize: 20, color: Colors.text },
+
+    /* My Tickets inline */
+    ticketRow: {
+      flexDirection: "row", alignItems: "center", gap: 12,
+      backgroundColor: Colors.surface, borderRadius: 16, padding: 14,
+      marginBottom: 8, borderWidth: 1, borderColor: Colors.border,
+    },
+    ticketDateBlock: {
+      width: 44, height: 50, backgroundColor: Colors.surface2,
+      borderRadius: 10, alignItems: "center", justifyContent: "center",
+    },
+    ticketDateBlockToday: { backgroundColor: Colors.primary },
+    ticketDateDay: { fontFamily: "Poppins_800ExtraBold", fontSize: 16, color: Colors.primary, lineHeight: 20 },
+    ticketDateMonth: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: Colors.textMuted, letterSpacing: 0.3 },
+    ticketRowTitle: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.text, marginBottom: 2 },
+    ticketRowLocation: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textMuted, marginBottom: 2 },
+    ticketRowTime: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.textSecondary },
+    ticketStatusBadge: {
+      paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
+    },
+    ticketStatusPaid: { backgroundColor: `${Colors.primary}20`, borderWidth: 1, borderColor: `${Colors.primary}40` },
+    ticketStatusFree: { backgroundColor: `${Colors.success}20`, borderWidth: 1, borderColor: `${Colors.success}40` },
+    ticketStatusText: { fontFamily: "Inter_700Bold", fontSize: 11, color: Colors.primary },
+    ticketCheckedInBadge: {
+      flexDirection: "row", alignItems: "center", gap: 4,
+      paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
+      backgroundColor: "rgba(48,209,88,0.1)", borderWidth: 1, borderColor: "rgba(48,209,88,0.3)",
+    },
+    ticketCheckedInText: { fontFamily: "Inter_700Bold", fontSize: 11, color: "#30D158" },
+    ticketAmountText: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.textMuted },
+    ticketEmptyCard: {
+      alignItems: "center", gap: 6, padding: 24,
+      backgroundColor: Colors.surface, borderRadius: 16, borderWidth: 1,
+      borderColor: Colors.border,
+    },
+    ticketEmptyText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.textSecondary },
+    ticketEmptyHint: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textMuted },
 
     /* Upcoming events */
     upcomingRow: {
