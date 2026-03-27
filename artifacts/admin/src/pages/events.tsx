@@ -1109,8 +1109,8 @@ function TicketsTab() {
         if (!answer.includes(filterVal.toLowerCase())) return false;
       }
       if (!q) return true;
-      // Search in core fields + all checkout answers
-      const checkoutValues = Object.values(t.checkoutData ?? {}).join(" ").toLowerCase();
+      // Search in core fields + all checkout answers (skip internal __ keys)
+      const checkoutValues = Object.entries(t.checkoutData ?? {}).filter(([k]) => !k.startsWith("__")).map(([, v]) => v).join(" ").toLowerCase();
       return (
         (t.userName ?? "").toLowerCase().includes(q) ||
         t.userEmail.toLowerCase().includes(q) ||
@@ -1393,8 +1393,14 @@ function TicketsTab() {
                               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
                                 <ClipboardList className="w-3.5 h-3.5" /> Checkout Form Answers
                               </p>
+                              {ticket.checkoutData!.__waiver_signed === "true" && (
+                                <div className="flex items-center gap-1.5 mb-2">
+                                  <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                                  <span className="text-xs font-semibold text-green-600">Waiver digitally signed</span>
+                                </div>
+                              )}
                               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-2">
-                                {Object.entries(ticket.checkoutData!).map(([fieldId, answer]) => {
+                                {Object.entries(ticket.checkoutData!).filter(([k]) => !k.startsWith("__")).map(([fieldId, answer]) => {
                                   const fieldDef = fields.find(f => f.id === fieldId);
                                   const label = fieldDef?.label ?? fieldId;
                                   return (

@@ -14,9 +14,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableOpacity,
+  PanResponder,
   Dimensions,
   type ScrollView as RNScrollView,
 } from "react-native";
+import Svg, { Path as SvgPath } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -746,13 +748,42 @@ function CheckoutFormModal({
 }) {
   const insets = useSafeAreaInsets();
   const [formData, setFormData] = useState<Record<string, string>>({});
-  const [waiverAgreed, setWaiverAgreed] = useState(false);
   const [waiverExpanded, setWaiverExpanded] = useState(false);
+  // Signature pad state
+  const [signaturePaths, setSignaturePaths] = useState<string[]>([]);
+  const [, setRenderTick] = useState(0);
+  const currentStroke = useRef<string>("");
   const scrollRef = useRef<RNScrollView>(null);
   const fieldYPositions = useRef<Record<string, number>>({});
 
   const fields: CheckoutField[] = event.checkoutFields ?? [];
   const hasWaiver = !!event.waiverText;
+  const isSigned = signaturePaths.length > 0;
+
+  const signaturePanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: (e) => {
+        const { locationX, locationY } = e.nativeEvent;
+        currentStroke.current = `M${locationX.toFixed(1)},${locationY.toFixed(1)}`;
+        setRenderTick(t => t + 1);
+      },
+      onPanResponderMove: (e) => {
+        const { locationX, locationY } = e.nativeEvent;
+        currentStroke.current += ` L${locationX.toFixed(1)},${locationY.toFixed(1)}`;
+        setRenderTick(t => t + 1);
+      },
+      onPanResponderRelease: () => {
+        if (currentStroke.current) {
+          const completed = currentStroke.current;
+          currentStroke.current = "";
+          setSignaturePaths(prev => [...prev, completed]);
+        }
+        setRenderTick(t => t + 1);
+      },
+    })
+  ).current;
 
   const SCREEN_HEIGHT = Dimensions.get("window").height;
 
@@ -797,10 +828,13 @@ function CheckoutFormModal({
     waiverAgreedBadge: { flexDirection: "row" as const, alignItems: "center" as const, gap: 5, marginTop: 8 },
     waiverAgreedText: { fontSize: 12, color: Colors.primary, fontWeight: "600" as const },
     waiverText: { fontSize: 13, color: Colors.textMuted, lineHeight: 19 },
-    waiverCheck: { flexDirection: "row" as const, alignItems: "flex-start" as const, marginTop: 14 },
-    waiverCheckBox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: Colors.primary, alignItems: "center" as const, justifyContent: "center" as const, backgroundColor: "transparent", marginRight: 12, marginTop: 1 },
-    waiverCheckBoxChecked: { backgroundColor: Colors.primary },
-    waiverCheckLabel: { flex: 1, fontSize: 13, color: Colors.text, fontWeight: "500" as const, lineHeight: 18 },
+    sigPadLabel: { fontSize: 12, fontWeight: "600" as const, color: Colors.textMuted, textTransform: "uppercase" as const, letterSpacing: 0.5, marginTop: 14, marginBottom: 6 },
+    sigPadContainer: { borderWidth: 1.5, borderColor: Colors.border, borderRadius: 10, overflow: "hidden" as const, backgroundColor: "#fff", height: 140, position: "relative" as const },
+    sigPadPlaceholder: { position: "absolute" as const, top: 0, left: 0, right: 0, bottom: 0, alignItems: "center" as const, justifyContent: "center" as const },
+    sigPadPlaceholderLine: { width: "60%", height: 1, backgroundColor: Colors.border, marginTop: 60 },
+    sigPadPlaceholderText: { fontSize: 12, color: Colors.border, marginTop: 6, fontStyle: "italic" as const },
+    sigPadClearBtn: { position: "absolute" as const, top: 6, right: 6, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: Colors.background, borderRadius: 8, borderWidth: 1, borderColor: Colors.border },
+    sigPadClearText: { fontSize: 11, color: Colors.textMuted, fontWeight: "600" as const },
     footer: { paddingBottom: insets.bottom + 8 },
     proceedBtn: { marginHorizontal: 20, marginTop: 12, backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 15, alignItems: "center" as const },
     proceedBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" as const },
@@ -816,11 +850,12 @@ function CheckoutFormModal({
         return;
       }
     }
-    if (hasWaiver && !waiverAgreed) {
-      Alert.alert("Waiver required", "Please agree to the waiver before proceeding.");
+    if (hasWaiver && !isSigned) {
+      Alert.alert("Signature required", "Please sign the waiver before proceeding.");
       return;
     }
-    onSubmit(formData);
+    const finalData = hasWaiver ? { ...formData, __waiver_signed: "true" } : formData;
+    onSubmit(finalData);
   };
 
   const renderField = (field: CheckoutField) => {
@@ -926,7 +961,9 @@ function CheckoutFormModal({
                     <View style={{ flex: 1 }}>
                       <Text style={cfStyles.waiverTitle}>Waiver & Agreement</Text>
                       {!waiverExpanded && (
-                        <Text style={cfStyles.waiverCollapsedHint}>Tap to read before agreeing</Text>
+                        <Text style={cfStyles.waiverCollapsedHint}>
+                          {isSigned ? "Tap to view — signed" : "Tap to read and sign"}
+                        </Text>
                       )}
                     </View>
                     <Feather
@@ -940,24 +977,69 @@ function CheckoutFormModal({
                   {waiverExpanded && (
                     <>
                       <Text style={[cfStyles.waiverText, { marginTop: 10 }]}>{event.waiverText}</Text>
-                      <TouchableOpacity
-                        style={cfStyles.waiverCheck}
-                        onPress={() => setWaiverAgreed((v) => !v)}
-                        activeOpacity={0.7}
-                      >
-                        <View style={[cfStyles.waiverCheckBox, waiverAgreed && cfStyles.waiverCheckBoxChecked]}>
-                          {waiverAgreed && <Feather name="check" size={14} color="#fff" />}
-                        </View>
-                        <Text style={cfStyles.waiverCheckLabel}>I have read and agree to the waiver above</Text>
-                      </TouchableOpacity>
+
+                      {/* Signature pad */}
+                      <Text style={cfStyles.sigPadLabel}>Your Signature *</Text>
+                      <View style={cfStyles.sigPadContainer}>
+                        {/* Empty state hint */}
+                        {signaturePaths.length === 0 && !currentStroke.current && (
+                          <View style={cfStyles.sigPadPlaceholder} pointerEvents="none">
+                            <View style={cfStyles.sigPadPlaceholderLine} />
+                            <Text style={cfStyles.sigPadPlaceholderText}>Sign here with your finger</Text>
+                          </View>
+                        )}
+
+                        {/* Drawing canvas */}
+                        <Svg
+                          style={{ flex: 1 }}
+                          {...signaturePanResponder.panHandlers}
+                        >
+                          {signaturePaths.map((d, i) => (
+                            <SvgPath
+                              key={i}
+                              d={d}
+                              stroke="#1a1a1a"
+                              strokeWidth={2.5}
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              fill="none"
+                            />
+                          ))}
+                          {currentStroke.current ? (
+                            <SvgPath
+                              d={currentStroke.current}
+                              stroke="#1a1a1a"
+                              strokeWidth={2.5}
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              fill="none"
+                            />
+                          ) : null}
+                        </Svg>
+
+                        {/* Clear button */}
+                        {(signaturePaths.length > 0 || currentStroke.current) && (
+                          <TouchableOpacity
+                            style={cfStyles.sigPadClearBtn}
+                            onPress={() => {
+                              setSignaturePaths([]);
+                              currentStroke.current = "";
+                              setRenderTick(t => t + 1);
+                            }}
+                            activeOpacity={0.7}
+                          >
+                            <Text style={cfStyles.sigPadClearText}>Clear</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
                     </>
                   )}
 
-                  {/* Agreed indicator when collapsed */}
-                  {!waiverExpanded && waiverAgreed && (
+                  {/* Signed indicator when collapsed */}
+                  {!waiverExpanded && isSigned && (
                     <View style={cfStyles.waiverAgreedBadge}>
-                      <Feather name="check-circle" size={13} color={Colors.primary} />
-                      <Text style={cfStyles.waiverAgreedText}>Agreed</Text>
+                      <Feather name="edit-3" size={13} color={Colors.primary} />
+                      <Text style={cfStyles.waiverAgreedText}>Signed</Text>
                     </View>
                   )}
                 </View>
