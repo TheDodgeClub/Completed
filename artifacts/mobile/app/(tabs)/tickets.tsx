@@ -487,13 +487,19 @@ function EventBuyCard({
   const month = date.toLocaleDateString("en-GB", { month: "short" }).toUpperCase();
   const time = date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 
-  const isFree = event.ticketPrice === 0 || (!event.stripePriceId && event.ticketPrice == null);
-  const hasTicketing = event.stripePriceId || event.ticketPrice === 0;
+  const activeTypes = event.ticketTypes?.filter(t => t.isActive && t.saleOpen) ?? [];
+  const hasActiveTypes = activeTypes.length > 0;
+  const minTypePrice = hasActiveTypes ? Math.min(...activeTypes.map(t => t.price)) : null;
+
+  const isFree = !hasActiveTypes && (event.ticketPrice === 0 || (!event.stripePriceId && event.ticketPrice == null));
+  const hasTicketing = !!event.stripePriceId || event.ticketPrice === 0 || hasActiveTypes;
   const priceLabel = !hasTicketing
     ? null
-    : isFree
-      ? "FREE"
-      : `£${event.ticketPrice?.toFixed(2)}`;
+    : hasActiveTypes
+      ? (minTypePrice === 0 ? "FREE" : `From £${((minTypePrice ?? 0) / 100).toFixed(2)}`)
+      : isFree
+        ? "FREE"
+        : `£${event.ticketPrice?.toFixed(2)}`;
 
   const { data: attendees } = useQuery<EventAttendee[]>({
     queryKey: ["event-attendees", event.id],
