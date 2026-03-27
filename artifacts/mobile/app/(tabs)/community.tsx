@@ -253,6 +253,19 @@ function MemberRow({ member, onPress }: { member: MemberSummary; onPress: () => 
   );
 }
 
+const LEVEL_THRESHOLDS = [0, 300, 800, 1600, 2500, 5000, 10000, 20000, 40000, 80000];
+function getLevelProgress(xp: number, level: number) {
+  const threshCurrent = LEVEL_THRESHOLDS[level - 1] ?? 0;
+  const threshNext = LEVEL_THRESHOLDS[level];
+  if (!threshNext) return { pct: 1, isMax: true, nextLevelName: "Max" };
+  return {
+    pct: Math.min((xp - threshCurrent) / (threshNext - threshCurrent), 1),
+    isMax: false,
+    nextLevelName: LEVEL_NAMES[level] ?? "Max",
+    xpToNext: threshNext - xp,
+  };
+}
+
 function ProfileModal({ member, onClose, currentUserId }: {
   member: MemberSummary;
   onClose: () => void;
@@ -268,6 +281,7 @@ function ProfileModal({ member, onClose, currentUserId }: {
 
   const level = profile ? getLevel(profile.xp) : 1;
   const levelName = LEVEL_NAMES[(level - 1)] ?? "Rookie";
+  const levelProgress = profile ? getLevelProgress(profile.xp, level) : null;
 
   const handleDM = () => {
     onClose();
@@ -282,14 +296,21 @@ function ProfileModal({ member, onClose, currentUserId }: {
           <Feather name="x" size={22} color={Colors.textMuted} />
         </Pressable>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 56 }}>
           {/* Hero */}
           <LinearGradient colors={[Colors.primary + "CC", Colors.background]} style={styles.profileHero}>
             <Avatar avatarUrl={member.avatarUrl} name={member.name} size={88} Colors={Colors} />
             <Text style={styles.profileName}>{member.name}</Text>
             {member.username && <Text style={styles.profileUsername}>@{member.username}</Text>}
-            <View style={styles.levelBadge}>
-              <Text style={styles.levelText}>{levelName}</Text>
+            <View style={{ flexDirection: "row", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
+              <View style={styles.levelBadge}>
+                <Text style={styles.levelText}>{levelName}</Text>
+              </View>
+              {member.isElite && (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#FFC10720", borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: "#FFC10750" }}>
+                  <Text style={{ fontFamily: "Poppins_800ExtraBold", fontSize: 10, color: "#FFC107" }}>⚡ ELITE</Text>
+                </View>
+              )}
             </View>
           </LinearGradient>
 
@@ -297,28 +318,61 @@ function ProfileModal({ member, onClose, currentUserId }: {
             <ActivityIndicator color={Colors.primary} style={{ marginTop: 32 }} />
           ) : profile ? (
             <View style={styles.profileBody}>
-              {member.isElite && (
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#FFC10715", borderRadius: 12, padding: 10, borderWidth: 1, borderColor: "#FFC10740" }}>
-                  <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: "#FFC107", alignItems: "center", justifyContent: "center" }}>
-                    <Text style={{ fontFamily: "Poppins_800ExtraBold", fontSize: 14, color: "#0D0D0D", lineHeight: 18 }}>E</Text>
+
+              {/* ── XP progress bar ── */}
+              {levelProgress && (
+                <View style={styles.xpSection}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <Text style={styles.xpSectionLabel}>XP Progress</Text>
+                    <Text style={styles.xpValue}>{profile.xp.toLocaleString()} XP</Text>
                   </View>
-                  <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#FFC107" }}>Elite Member</Text>
+                  <View style={styles.xpBarBg}>
+                    <View style={[styles.xpBarFill, { width: `${Math.round(levelProgress.pct * 100)}%` as any }]} />
+                  </View>
+                  <Text style={styles.xpHint}>
+                    {levelProgress.isMax
+                      ? "Maximum level reached 🏆"
+                      : `${levelProgress.xpToNext?.toLocaleString()} XP to ${levelProgress.nextLevelName}`}
+                  </Text>
                 </View>
               )}
-              {/* Stats row */}
-              <View style={styles.statsRow}>
+
+              {/* ── 4-stat grid: XP · Events · Medals · Rings ── */}
+              <View style={styles.statsGrid}>
                 {[
-                  { label: "XP", value: profile.xp.toLocaleString() },
-                  { label: "Events", value: profile.eventsAttended },
+                  { emoji: "⚡", label: "XP", value: profile.xp.toLocaleString() },
+                  { emoji: "📅", label: "Events", value: String(profile.eventsAttended) },
+                  { emoji: "🏅", label: "Medals", value: String(profile.medalsEarned) },
+                  { emoji: "💍", label: "Rings", value: String(profile.ringsEarned) },
                 ].map((s) => (
                   <View key={s.label} style={styles.statBox}>
+                    <Text style={{ fontSize: 18, marginBottom: 2 }}>{s.emoji}</Text>
                     <Text style={styles.statValue}>{s.value}</Text>
                     <Text style={styles.statLabel}>{s.label}</Text>
                   </View>
                 ))}
               </View>
 
-              {/* Bio */}
+              {/* ── Streaks ── */}
+              <View style={styles.streakCard}>
+                <View style={styles.streakItem}>
+                  <Text style={styles.streakEmoji}>🔥</Text>
+                  <View>
+                    <Text style={styles.streakValue}>{profile.currentStreak}</Text>
+                    <Text style={styles.streakLabel}>Current Streak</Text>
+                  </View>
+                </View>
+                <View style={styles.streakDivider} />
+                <View style={styles.streakItem}>
+                  <Text style={styles.streakEmoji}>🏆</Text>
+                  <View>
+                    <Text style={styles.streakValue}>{profile.bestStreak}</Text>
+                    <Text style={styles.streakLabel}>Best Streak</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* ── Bio ── */}
               {profile.bio ? (
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>About</Text>
@@ -326,7 +380,15 @@ function ProfileModal({ member, onClose, currentUserId }: {
                 </View>
               ) : null}
 
-              {/* Member since */}
+              {/* ── Preferred role ── */}
+              {profile.preferredRole ? (
+                <View style={styles.roleRow}>
+                  <Feather name="user" size={14} color={Colors.textMuted} />
+                  <Text style={styles.memberSinceText}>Plays as {profile.preferredRole}</Text>
+                </View>
+              ) : null}
+
+              {/* ── Member since ── */}
               <View style={styles.roleRow}>
                 <Feather name="calendar" size={14} color={Colors.textMuted} />
                 <Text style={styles.memberSinceText}>
@@ -334,7 +396,7 @@ function ProfileModal({ member, onClose, currentUserId }: {
                 </Text>
               </View>
 
-              {/* DM button (not yourself) */}
+              {/* ── DM button (not yourself) ── */}
               {currentUserId !== null && currentUserId !== member.id && (
                 <Pressable
                   style={({ pressed }) => [styles.dmBtn, { opacity: pressed ? 0.85 : 1 }]}
@@ -540,14 +602,38 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     },
     levelText: { fontFamily: "Inter_700Bold", fontSize: 13, color: Colors.accent },
     profileBody: { padding: 24, gap: 16 },
-    statsRow: { flexDirection: "row", gap: 8 },
+    statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
     statBox: {
-      flex: 1, backgroundColor: Colors.surface, borderRadius: 14,
+      flex: 1, minWidth: "45%", backgroundColor: Colors.surface, borderRadius: 14,
       borderWidth: 1, borderColor: Colors.border,
-      alignItems: "center", paddingVertical: 12,
+      alignItems: "center", paddingVertical: 14,
     },
     statValue: { fontFamily: "Poppins_800ExtraBold", fontSize: 18, color: Colors.text },
     statLabel: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.textMuted, marginTop: 2 },
+    /* XP progress bar */
+    xpSection: {
+      backgroundColor: Colors.surface, borderRadius: 14,
+      borderWidth: 1, borderColor: Colors.border, padding: 14,
+    },
+    xpSectionLabel: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.textMuted },
+    xpValue: { fontFamily: "Poppins_800ExtraBold", fontSize: 13, color: Colors.accent },
+    xpBarBg: { height: 6, borderRadius: 3, backgroundColor: `${Colors.primary}30`, marginBottom: 6 },
+    xpBarFill: { height: 6, borderRadius: 3, backgroundColor: Colors.primary },
+    xpHint: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.textMuted },
+    /* Streaks */
+    streakCard: {
+      flexDirection: "row", backgroundColor: Colors.surface, borderRadius: 14,
+      borderWidth: 1, borderColor: Colors.border, overflow: "hidden",
+    },
+    streakItem: {
+      flex: 1, flexDirection: "row", alignItems: "center", gap: 12,
+      padding: 16,
+    },
+    streakEmoji: { fontSize: 26 },
+    streakValue: { fontFamily: "Poppins_800ExtraBold", fontSize: 22, color: Colors.text },
+    streakLabel: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.textMuted, marginTop: 1 },
+    streakDivider: { width: 1, backgroundColor: Colors.border, marginVertical: 12 },
+    /* Other */
     section: { gap: 6 },
     sectionTitle: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.textMuted, textTransform: "uppercase", letterSpacing: 0.5 },
     bioText: { fontFamily: "Inter_400Regular", fontSize: 15, color: Colors.text, lineHeight: 22 },
