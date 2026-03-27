@@ -78,17 +78,6 @@ function getCountdown(dateStr: string): string | null {
   return "Starting soon!";
 }
 
-function pulseTypeColor(type: string): string {
-  switch (type) {
-    case "ticket":    return "#3B82F6"; // blue
-    case "elite":     return "#F59E0B"; // amber
-    case "comment":   return "#06B6D4"; // cyan
-    case "ring":      return "#A855F7"; // purple
-    case "medal":     return "#F97316"; // orange
-    case "newMember": return "#22C55E"; // green
-    default:          return "#6B7280"; // grey
-  }
-}
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -562,7 +551,6 @@ export default function HomeScreen() {
                           <Text style={styles.pulseAvatarInitial}>{item.userName.charAt(0).toUpperCase()}</Text>
                         </View>
                       )}
-                      <View style={[styles.pulseTypeDot, { backgroundColor: pulseTypeColor(item.type) }]} />
                     </View>
                     <Text style={styles.pulseText} numberOfLines={2}>{item.text}</Text>
                     <Text style={styles.pulseTime}>{timeAgo(item.timestamp)}</Text>
@@ -1153,16 +1141,6 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       width: 32,
       height: 32,
       position: "relative",
-    },
-    pulseTypeDot: {
-      position: "absolute",
-      bottom: -1,
-      right: -2,
-      width: 10,
-      height: 10,
-      borderRadius: 5,
-      borderWidth: 1.5,
-      borderColor: Colors.card,
     },
     pulseAvatar: {
       width: 32,
