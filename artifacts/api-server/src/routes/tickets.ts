@@ -113,6 +113,7 @@ router.post("/checkout", requireAuth, async (req: any, res) => {
   let resolvedStripeProductId = event.stripeProductId;
   let baseAmountPence = event.ticketPrice ? Math.round(Number(event.ticketPrice) * 100) : 0;
   let resolvedTicketTypeId: number | null = null;
+  let resolvedTicketTypeName: string | null = null;
 
   if (ticketTypeId) {
     const [tt] = await db.select().from(ticketTypesTable).where(eq(ticketTypesTable.id, Number(ticketTypeId))).limit(1);
@@ -131,6 +132,7 @@ router.post("/checkout", requireAuth, async (req: any, res) => {
     resolvedStripeProductId = tt.stripeProductId;
     baseAmountPence = tt.price;
     resolvedTicketTypeId = tt.id;
+    resolvedTicketTypeName = tt.name;
   }
 
   // Validate discount code
@@ -180,8 +182,8 @@ router.post("/checkout", requireAuth, async (req: any, res) => {
     return;
   }
 
-  // Paid — ensure we have a stripe product/price
-  if (!resolvedStripePriceId && !resolvedStripeProductId) {
+  // Paid — ensure we have a stripe product/price OR at least a ticket type with a price we can use
+  if (!resolvedStripePriceId && !resolvedStripeProductId && !resolvedTicketTypeId && !baseAmountPence) {
     res.status(400).json({ error: "This event does not have tickets configured yet" });
     return;
   }
@@ -242,7 +244,7 @@ router.post("/checkout", requireAuth, async (req: any, res) => {
         unit_amount: finalAmountPence,
         ...(resolvedStripeProductId
           ? { product: resolvedStripeProductId }
-          : { product_data: { name: event.title } }),
+          : { product_data: { name: resolvedTicketTypeName ? `${event.title} — ${resolvedTicketTypeName}` : event.title } }),
       },
       quantity,
     }];
