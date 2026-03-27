@@ -190,6 +190,7 @@ router.post("/register", async (req, res) => {
     if (referrer) referredById = referrer.id;
   }
 
+  const SIGNUP_BONUS_XP = 25;
   const passwordHash = await bcrypt.hash(password, 10);
   const resolvedAccountType = accountType === "supporter" ? "supporter" : "player";
   const [user] = await db.insert(usersTable).values({
@@ -198,6 +199,7 @@ router.post("/register", async (req, res) => {
     name,
     accountType: resolvedAccountType,
     referredBy: referredById,
+    bonusXp: SIGNUP_BONUS_XP,
   }).returning();
 
   const code = generateReferralCode(name, user.id);
@@ -210,8 +212,8 @@ router.post("/register", async (req, res) => {
   }
 
   req.session = { userId: updatedUser.id };
-  const emptyStats = { eventsAttended: 0, medalsEarned: 0, ringsEarned: 0, xp: 0, level: 1, currentStreak: 0, bestStreak: 0 };
-  res.json({ user: toProfile(updatedUser, emptyStats), token: String(updatedUser.id) });
+  const signupStats = { eventsAttended: 0, medalsEarned: 0, ringsEarned: 0, xp: SIGNUP_BONUS_XP, level: 1, currentStreak: 0, bestStreak: 0 };
+  res.json({ user: toProfile(updatedUser, signupStats), token: String(updatedUser.id) });
 });
 
 /* ---------- POST /api/auth/login ---------- */

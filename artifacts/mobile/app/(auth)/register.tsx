@@ -11,6 +11,7 @@ import {
   Platform,
   Image,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -86,6 +87,7 @@ export default function RegisterScreen() {
         accountType,
         referralCode.trim().toUpperCase() || undefined,
       );
+      await AsyncStorage.setItem("pending_xp_award", "25");
     } catch (err: any) {
       setErrorMsg(err.message || "Something went wrong. Please try again.");
       setStep(1);
