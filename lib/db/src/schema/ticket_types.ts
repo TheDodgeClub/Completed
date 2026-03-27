@@ -9,6 +9,7 @@ export const ticketTypesTable = pgTable("ticket_types", {
   price: integer("price").notNull().default(0),
   quantity: integer("quantity"),
   quantitySold: integer("quantity_sold").notNull().default(0),
+  maxPerOrder: integer("max_per_order"),
   saleStartsAt: timestamp("sale_starts_at"),
   saleEndsAt: timestamp("sale_ends_at"),
   isActive: boolean("is_active").notNull().default(true),

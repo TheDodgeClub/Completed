@@ -489,6 +489,15 @@ function EventBuyCard({
   const activeTypes = event.ticketTypes?.filter(t => t.isActive && t.saleOpen) ?? [];
   const hasActiveTypes = activeTypes.length > 0;
   const minTypePrice = hasActiveTypes ? Math.min(...activeTypes.map(t => t.price)) : null;
+  const allTypesSoldOut = hasActiveTypes && activeTypes.every(t => t.isSoldOut);
+  const nonSoldOutTypes = activeTypes.filter(t => !t.isSoldOut);
+  const maxPerOrderCap = nonSoldOutTypes.length > 0
+    ? nonSoldOutTypes.reduce<number>((min, t) => {
+        const cap = t.maxPerOrder !== null ? t.maxPerOrder : (t.available !== null ? t.available : 10);
+        return Math.min(min, cap);
+      }, 10)
+    : 10;
+  const stepperMax = !hasActiveTypes ? 10 : maxPerOrderCap;
 
   const isFree = !hasActiveTypes && (event.ticketPrice === 0 || (!event.stripePriceId && event.ticketPrice == null));
   const hasTicketing = !!event.stripePriceId || event.ticketPrice === 0 || hasActiveTypes;
@@ -565,7 +574,7 @@ function EventBuyCard({
 
       {hasTicketing && (
         <>
-          {!isFree && (
+          {!isFree && !allTypesSoldOut && (
             <View style={styles.quantityRow}>
               <Pressable
                 style={styles.quantityBtn}
@@ -577,14 +586,25 @@ function EventBuyCard({
               <Text style={styles.quantityValue}>{quantity}</Text>
               <Pressable
                 style={styles.quantityBtn}
-                onPress={() => setQuantity(q => Math.min(10, q + 1))}
-                disabled={isBuying || isRegisteringFree}
+                onPress={() => setQuantity(q => Math.min(stepperMax, q + 1))}
+                disabled={isBuying || isRegisteringFree || quantity >= stepperMax}
               >
                 <Feather name="plus" size={14} color={Colors.text} />
               </Pressable>
               <Text style={styles.quantityLabel}>ticket{quantity > 1 ? "s" : ""}</Text>
+              {stepperMax < 10 && (
+                <Text style={[styles.quantityLabel, { color: Colors.textMuted, marginLeft: 4 }]}>
+                  (max {stepperMax})
+                </Text>
+              )}
             </View>
           )}
+          {allTypesSoldOut ? (
+            <View style={[styles.buyBtn, { backgroundColor: Colors.border ?? "#333", opacity: 0.6 }]}>
+              <Feather name="x-circle" size={15} color={Colors.textMuted} />
+              <Text style={[styles.buyBtnText, { color: Colors.textMuted }]}>Sold Out</Text>
+            </View>
+          ) : (
           <Pressable
             style={({ pressed }) => [styles.buyBtn, { opacity: pressed || isBuying || isRegisteringFree ? 0.7 : 1 }]}
             onPress={() => onBuy(quantity)}
@@ -605,6 +625,7 @@ function EventBuyCard({
               </>
             )}
           </Pressable>
+          )}
           {ticketCount > 0 && (
             <Pressable
               style={({ pressed }) => [styles.viewTicketsRow, { opacity: pressed ? 0.7 : 1 }]}
@@ -1046,6 +1067,9 @@ function TicketTypeModal({
                       {type.description && <Text style={{ color: Colors.textSecondary, fontSize: 12, marginTop: 2 }}>{type.description}</Text>}
                       {type.available !== null && type.available <= 10 && !isSoldOut && (
                         <Text style={{ color: "#F59E0B", fontSize: 11, marginTop: 4, fontWeight: "600" }}>Only {type.available} left!</Text>
+                      )}
+                      {type.maxPerOrder !== null && !isSoldOut && (
+                        <Text style={{ color: Colors.textMuted, fontSize: 11, marginTop: 2 }}>Max {type.maxPerOrder} per order</Text>
                       )}
                       {isSoldOut && <Text style={{ color: "#EF4444", fontSize: 11, marginTop: 4, fontWeight: "600" }}>Sold Out</Text>}
                     </View>

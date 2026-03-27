@@ -522,14 +522,15 @@ function TicketTypesTab({ event, toast }: { event: Event; toast: any }) {
   const { mutate: deleteType } = useDeleteTicketType(event.id);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: "", description: "", price: "", quantity: "", saleStartsAt: "", saleEndsAt: "", isActive: true });
+  const [form, setForm] = useState({ name: "", description: "", price: "", quantity: "", maxPerOrder: "", saleStartsAt: "", saleEndsAt: "", isActive: true });
 
-  const resetForm = () => setForm({ name: "", description: "", price: "", quantity: "", saleStartsAt: "", saleEndsAt: "", isActive: true });
+  const resetForm = () => setForm({ name: "", description: "", price: "", quantity: "", maxPerOrder: "", saleStartsAt: "", saleEndsAt: "", isActive: true });
 
   const openEdit = (t: TicketType) => {
     setForm({
       name: t.name, description: t.description ?? "", price: (t.price / 100).toFixed(2),
       quantity: t.quantity != null ? String(t.quantity) : "",
+      maxPerOrder: t.maxPerOrder != null ? String(t.maxPerOrder) : "",
       saleStartsAt: t.saleStartsAt ? t.saleStartsAt.slice(0, 16) : "",
       saleEndsAt: t.saleEndsAt ? t.saleEndsAt.slice(0, 16) : "",
       isActive: t.isActive,
@@ -544,6 +545,7 @@ function TicketTypesTab({ event, toast }: { event: Event; toast: any }) {
       name: form.name, description: form.description || null,
       price: parseFloat(form.price) || 0,
       quantity: form.quantity ? parseInt(form.quantity) : null,
+      maxPerOrder: form.maxPerOrder ? parseInt(form.maxPerOrder) : null,
       saleStartsAt: form.saleStartsAt || null,
       saleEndsAt: form.saleEndsAt || null,
       isActive: form.isActive,
@@ -586,10 +588,14 @@ function TicketTypesTab({ event, toast }: { event: Event; toast: any }) {
             <Label className="text-xs">Description</Label>
             <Input placeholder="Optional description" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="bg-background border-border/50 rounded-lg h-8 text-sm" />
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-4 gap-3">
             <div className="space-y-1">
               <Label className="text-xs">Quantity (blank = unlimited)</Label>
               <Input type="number" min="1" placeholder="Unlimited" value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))} className="bg-background border-border/50 rounded-lg h-8 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Max Per Order (blank = unlimited)</Label>
+              <Input type="number" min="1" placeholder="Unlimited" value={form.maxPerOrder} onChange={e => setForm(f => ({ ...f, maxPerOrder: e.target.value }))} className="bg-background border-border/50 rounded-lg h-8 text-sm" />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Sale Opens</Label>

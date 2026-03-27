@@ -45,6 +45,7 @@ async function getTicketTypesForEvents(eventIds: number[]) {
       quantitySold: t.quantitySold,
       available,
       isSoldOut: t.quantity !== null && t.quantitySold >= t.quantity,
+      maxPerOrder: t.maxPerOrder ?? null,
       saleStartsAt: t.saleStartsAt?.toISOString() ?? null,
       saleEndsAt: t.saleEndsAt?.toISOString() ?? null,
       isActive: t.isActive,

@@ -9,6 +9,7 @@ export interface TicketType {
   price: number;
   quantity: number | null;
   quantitySold: number;
+  maxPerOrder: number | null;
   saleStartsAt: string | null;
   saleEndsAt: string | null;
   isActive: boolean;

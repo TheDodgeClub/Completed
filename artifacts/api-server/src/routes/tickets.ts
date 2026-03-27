@@ -122,6 +122,11 @@ router.post("/checkout", requireAuth, async (req: any, res) => {
     const now = new Date();
     if (tt.saleStartsAt && now < tt.saleStartsAt) { res.status(400).json({ error: "Sales for this ticket type have not started yet" }); return; }
     if (tt.saleEndsAt && now > tt.saleEndsAt) { res.status(400).json({ error: "Sales for this ticket type have ended" }); return; }
+    if (tt.maxPerOrder !== null && quantity > tt.maxPerOrder) { res.status(400).json({ error: `You can only buy up to ${tt.maxPerOrder} ticket${tt.maxPerOrder !== 1 ? "s" : ""} per order for this ticket type.` }); return; }
+    if (tt.quantity !== null) {
+      const remaining = tt.quantity - tt.quantitySold;
+      if (quantity > remaining) { res.status(409).json({ error: remaining <= 0 ? "Sorry, this ticket type is sold out." : `Only ${remaining} ticket${remaining !== 1 ? "s" : ""} remaining for this type.` }); return; }
+    }
     resolvedStripePriceId = tt.stripePriceId;
     resolvedStripeProductId = tt.stripeProductId;
     baseAmountPence = tt.price;
@@ -440,6 +445,11 @@ router.post("/free", requireAuth, async (req: any, res) => {
   if (ticketTypeId) {
     const [tt] = await db.select().from(ticketTypesTable).where(eq(ticketTypesTable.id, Number(ticketTypeId))).limit(1);
     if (tt && tt.eventId === eventId && tt.price === 0) {
+      if (tt.maxPerOrder !== null && quantity > tt.maxPerOrder) { res.status(400).json({ error: `You can only register up to ${tt.maxPerOrder} ticket${tt.maxPerOrder !== 1 ? "s" : ""} per order for this type.` }); return; }
+      if (tt.quantity !== null) {
+        const remaining = tt.quantity - tt.quantitySold;
+        if (quantity > remaining) { res.status(409).json({ error: remaining <= 0 ? "Sorry, this ticket type is sold out." : `Only ${remaining} spot${remaining !== 1 ? "s" : ""} remaining for this type.` }); return; }
+      }
       resolvedTicketTypeId = tt.id;
       effectivelyfree = true;
     }

@@ -62,6 +62,7 @@ export type TicketType = {
   quantitySold: number;
   available: number | null;
   isSoldOut: boolean;
+  maxPerOrder: number | null;
   saleStartsAt: string | null;
   saleEndsAt: string | null;
   isActive: boolean;

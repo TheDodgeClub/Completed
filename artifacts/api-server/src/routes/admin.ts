@@ -1102,6 +1102,7 @@ function toTicketType(t: typeof ticketTypesTable.$inferSelect) {
     price: t.price,
     quantity: t.quantity ?? null,
     quantitySold: t.quantitySold,
+    maxPerOrder: t.maxPerOrder ?? null,
     saleStartsAt: t.saleStartsAt?.toISOString() ?? null,
     saleEndsAt: t.saleEndsAt?.toISOString() ?? null,
     isActive: t.isActive,
@@ -1122,7 +1123,7 @@ router.get("/events/:id/ticket-types", async (req, res) => {
 
 router.post("/events/:id/ticket-types", async (req, res) => {
   const eventId = Number(req.params.id);
-  const { name, description, price, quantity, saleStartsAt, saleEndsAt, isActive } = req.body;
+  const { name, description, price, quantity, maxPerOrder, saleStartsAt, saleEndsAt, isActive } = req.body;
   if (!name) { res.status(400).json({ error: "name required" }); return; }
 
   const priceInPence = Math.round((Number(price) || 0) * 100);
@@ -1152,6 +1153,7 @@ router.post("/events/:id/ticket-types", async (req, res) => {
     description: description || null,
     price: priceInPence,
     quantity: quantity ? Number(quantity) : null,
+    maxPerOrder: maxPerOrder ? Number(maxPerOrder) : null,
     saleStartsAt: saleStartsAt ? new Date(saleStartsAt) : null,
     saleEndsAt: saleEndsAt ? new Date(saleEndsAt) : null,
     isActive: isActive !== false,
@@ -1164,7 +1166,7 @@ router.post("/events/:id/ticket-types", async (req, res) => {
 
 router.put("/ticket-types/:id", async (req, res) => {
   const id = Number(req.params.id);
-  const { name, description, price, quantity, saleStartsAt, saleEndsAt, isActive, sortOrder } = req.body;
+  const { name, description, price, quantity, maxPerOrder, saleStartsAt, saleEndsAt, isActive, sortOrder } = req.body;
   const [existing] = await db.select().from(ticketTypesTable).where(eq(ticketTypesTable.id, id)).limit(1);
   if (!existing) { res.status(404).json({ error: "Not found" }); return; }
 
@@ -1197,6 +1199,7 @@ router.put("/ticket-types/:id", async (req, res) => {
     ...(description !== undefined && { description: description || null }),
     price: priceInPence,
     ...(quantity !== undefined && { quantity: quantity ? Number(quantity) : null }),
+    ...(maxPerOrder !== undefined && { maxPerOrder: maxPerOrder ? Number(maxPerOrder) : null }),
     ...(saleStartsAt !== undefined && { saleStartsAt: saleStartsAt ? new Date(saleStartsAt) : null }),
     ...(saleEndsAt !== undefined && { saleEndsAt: saleEndsAt ? new Date(saleEndsAt) : null }),
     ...(isActive !== undefined && { isActive }),
