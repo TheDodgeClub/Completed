@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, eventsTable, attendanceTable, ticketsTable, usersTable, ticketTypesTable } from "@workspace/db";
-import { eq, gte, desc, count, and, inArray, lte } from "drizzle-orm";
+import { eq, gte, desc, count, and, inArray, lte, sql } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/requireAdmin";
 
 // Check-in window: 30 min before start → 2 hrs after start
@@ -175,10 +175,24 @@ router.post("/:id/checkin", async (req, res) => {
   const existing = await db.query.attendanceTable.findFirst({
     where: and(eq(attendanceTable.userId, userId), eq(attendanceTable.eventId, eventId)),
   });
-  if (existing) { res.json({ alreadyCheckedIn: true }); return; }
+  if (existing) { res.json({ alreadyCheckedIn: true, xpGained: 0 }); return; }
 
-  await db.insert(attendanceTable).values({ userId, eventId, earnedMedal: false });
-  res.json({ success: true });
+  const xpGained = event.xpReward ?? 50;
+
+  await Promise.all([
+    db.insert(attendanceTable).values({ userId, eventId, earnedMedal: false }),
+    db.update(ticketsTable)
+      .set({ checkedIn: true, checkedInAt: new Date() })
+      .where(and(
+        eq(ticketsTable.userId, userId),
+        eq(ticketsTable.eventId, eventId),
+        eq(ticketsTable.checkedIn, false),
+      )),
+    db.update(eventsTable)
+      .set({ attendeeCount: sql`${eventsTable.attendeeCount} + 1` })
+      .where(eq(eventsTable.id, eventId)),
+  ]);
+  res.json({ success: true, xpGained });
 });
 
 /* POST /api/events/:id/checkin-scan — scanner QR check-in (admin only) */
@@ -189,7 +203,7 @@ router.post("/:id/checkin-scan", requireAdmin, async (req, res) => {
 
   const [event, user] = await Promise.all([
     db.query.eventsTable.findFirst({ where: eq(eventsTable.id, eventId) }),
-    db.query.usersTable.findFirst({ where: eq(usersTable.id, Number(userId)), columns: { id: true, name: true, avatarUrl: true } }),
+    db.query.usersTable.findFirst({ where: eq(usersTable.id, Number(userId)), columns: { id: true, name: true, avatarUrl: true, accountType: true } }),
   ]);
   if (!event) { res.status(404).json({ error: "Event not found" }); return; }
   if (!user) { res.status(404).json({ error: "Member not found" }); return; }
@@ -197,10 +211,29 @@ router.post("/:id/checkin-scan", requireAdmin, async (req, res) => {
   const existing = await db.query.attendanceTable.findFirst({
     where: and(eq(attendanceTable.userId, Number(userId)), eq(attendanceTable.eventId, eventId)),
   });
-  if (existing) { res.json({ alreadyCheckedIn: true, member: user }); return; }
+  if (existing) {
+    res.json({ alreadyCheckedIn: true, member: user, xpGained: 0 });
+    return;
+  }
 
-  await db.insert(attendanceTable).values({ userId: Number(userId), eventId, earnedMedal: false });
-  res.json({ success: true, member: user });
+  const xpGained = event.xpReward ?? 50;
+
+  // Insert attendance, tick ticket checkedIn, increment event attendeeCount — all in parallel
+  await Promise.all([
+    db.insert(attendanceTable).values({ userId: Number(userId), eventId, earnedMedal: false }),
+    db.update(ticketsTable)
+      .set({ checkedIn: true, checkedInAt: new Date() })
+      .where(and(
+        eq(ticketsTable.userId, Number(userId)),
+        eq(ticketsTable.eventId, eventId),
+        eq(ticketsTable.checkedIn, false),
+      )),
+    db.update(eventsTable)
+      .set({ attendeeCount: sql`${eventsTable.attendeeCount} + 1` })
+      .where(eq(eventsTable.id, eventId)),
+  ]);
+
+  res.json({ success: true, member: user, xpGained });
 });
 
 export default router;

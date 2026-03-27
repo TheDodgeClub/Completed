@@ -202,7 +202,7 @@ function EventsScreen({ events, user, onSelect, onRefresh, onLogout }: {
 }
 
 /* ─── Scanner ────────────────────────────────────────────────── */
-type ResultState = { type: "success" | "duplicate" | "error"; member?: CheckInResult["member"]; message?: string } | null;
+type ResultState = { type: "success" | "duplicate" | "error"; member?: CheckInResult["member"]; message?: string; xpGained?: number } | null;
 
 function ScannerScreen({ event, onBack, onLogout }: { event: ActiveEvent; onBack: () => void; onLogout: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -220,8 +220,8 @@ function ScannerScreen({ event, onBack, onLogout }: { event: ActiveEvent; onBack
     try {
       const res = await scanCheckIn(event.id, userId);
       setResult(res.alreadyCheckedIn
-        ? { type: "duplicate", member: res.member }
-        : { type: "success", member: res.member });
+        ? { type: "duplicate", member: res.member, xpGained: 0 }
+        : { type: "success", member: res.member, xpGained: res.xpGained ?? 0 });
     } catch (err: any) {
       setResult({ type: "error", message: err.message ?? "Check-in failed" });
     } finally {
@@ -318,15 +318,31 @@ function ScannerScreen({ event, onBack, onLogout }: { event: ActiveEvent; onBack
 
         {/* Result overlay */}
         {result && (
-          <div className={`absolute inset-0 flex flex-col items-center justify-center ${resultBg} backdrop-blur-sm`}>
+          <div className={`absolute inset-0 flex flex-col items-center justify-center ${resultBg} backdrop-blur-sm px-6`}>
             <div className="text-7xl mb-4">{resultIcon}</div>
             {result.member && (
               <>
-                <p className="text-3xl font-bold text-white text-center px-6">{result.member.name}</p>
-                <p className="text-sm text-white/60 mt-1">Member #{result.member.id}</p>
+                <p className="text-3xl font-bold text-white text-center leading-tight">{result.member.name}</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-sm text-white/50">Member #{result.member.id}</span>
+                  {result.member.accountType && (
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${result.member.accountType === "player" ? "bg-[hsl(355,78%,56%)]/30 text-[hsl(355,78%,80%)]" : "bg-blue-500/30 text-blue-300"}`}>
+                      {result.member.accountType === "player" ? "Player" : "Supporter"}
+                    </span>
+                  )}
+                </div>
               </>
             )}
             <p className={`mt-3 text-xl font-bold ${resultColor}`}>{resultMsg}</p>
+            {result.type === "success" && result.xpGained !== undefined && result.xpGained > 0 && (
+              <div className="mt-4 bg-white/10 border border-white/20 rounded-2xl px-6 py-3 flex items-center gap-2">
+                <span className="text-2xl">⚡</span>
+                <span className="text-xl font-bold text-white">+{result.xpGained} XP</span>
+              </div>
+            )}
+            {result.type === "duplicate" && (
+              <p className="mt-3 text-sm text-white/50 text-center">Already recorded at this event</p>
+            )}
           </div>
         )}
 

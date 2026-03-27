@@ -23,7 +23,7 @@ export async function fetchApi<T>(path: string, opts: RequestInit = {}): Promise
 
 export type AdminUser = { id: number; name: string; email: string; isAdmin: boolean };
 export type ActiveEvent = { id: number; title: string; date: string; location: string; checkInPin: string | null };
-export type CheckInResult = { success?: boolean; alreadyCheckedIn?: boolean; member: { id: number; name: string; avatarUrl: string | null } };
+export type CheckInResult = { success?: boolean; alreadyCheckedIn?: boolean; xpGained?: number; member: { id: number; name: string; avatarUrl: string | null; accountType?: string } };
 
 export async function loginAdmin(email: string, password: string): Promise<AdminUser> {
   const res = await fetchApi<{ user: AdminUser; token: string }>("/api/auth/login", {

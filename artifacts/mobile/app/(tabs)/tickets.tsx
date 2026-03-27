@@ -499,6 +499,7 @@ function EventBuyCard({
   const [pinValue, setPinValue] = useState("");
   const [checkInLoading, setCheckInLoading] = useState(false);
   const [checkInError, setCheckInError] = useState<string | null>(null);
+  const [checkInXp, setCheckInXp] = useState<number | null>(null);
   const windowOpen = isCheckInWindowOpen(event.date);
 
   async function handleCheckIn() {
@@ -512,6 +513,10 @@ function EventBuyCard({
         setPinModalVisible(false);
         setPinValue("");
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        if (result.success && result.xpGained) {
+          setCheckInXp(result.xpGained);
+          setTimeout(() => setCheckInXp(null), 4000);
+        }
       }
     } catch (e: any) {
       setCheckInError(e?.message ?? "Incorrect PIN. Try again.");
@@ -680,16 +685,23 @@ function EventBuyCard({
 
       {/* Check-in button — visible when window is open and user is logged in */}
       {user && windowOpen && (
-        <Pressable
-          style={({ pressed }) => [styles.checkInBtn, checkedIn && styles.checkInBtnDone, { opacity: pressed ? 0.8 : 1 }]}
-          onPress={() => { if (!checkedIn) { setCheckInError(null); setPinValue(""); setPinModalVisible(true); } }}
-          disabled={checkedIn}
-        >
-          <Feather name={checkedIn ? "check-circle" : "log-in"} size={15} color={checkedIn ? "#30D158" : Colors.primary} />
-          <Text style={[styles.checkInBtnText, checkedIn && { color: "#30D158" }]}>
-            {checkedIn ? "Checked In ✓" : "Check In"}
-          </Text>
-        </Pressable>
+        <>
+          <Pressable
+            style={({ pressed }) => [styles.checkInBtn, checkedIn && styles.checkInBtnDone, { opacity: pressed ? 0.8 : 1 }]}
+            onPress={() => { if (!checkedIn) { setCheckInError(null); setPinValue(""); setPinModalVisible(true); } }}
+            disabled={checkedIn}
+          >
+            <Feather name={checkedIn ? "check-circle" : "log-in"} size={15} color={checkedIn ? "#30D158" : Colors.primary} />
+            <Text style={[styles.checkInBtnText, checkedIn && { color: "#30D158" }]}>
+              {checkedIn ? "Checked In ✓" : "Check In"}
+            </Text>
+          </Pressable>
+          {checkInXp !== null && (
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, marginTop: 6 }}>
+              <Text style={{ fontSize: 14, color: "#FFD60A", fontWeight: "700" }}>⚡ +{checkInXp} XP earned!</Text>
+            </View>
+          )}
+        </>
       )}
 
       {/* PIN Modal */}
