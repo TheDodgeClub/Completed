@@ -10,6 +10,13 @@ function interpolate(template: string, vars: Record<string, string>): string {
   return template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? "");
 }
 
+function toAbsoluteUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  const base = (process.env.APP_URL ?? "https://thedodgeclub.co.uk").replace(/\/$/, "");
+  return `${base}${url.startsWith("/") ? "" : "/"}${url}`;
+}
+
 function generateQrImageUrl(ticketCode: string): string {
   // Uses an external QR image API — actual HTTPS URLs are supported by all email clients,
   // whereas base64 data URLs are blocked by Gmail, Outlook and Apple Mail.
@@ -83,8 +90,9 @@ export function buildStructuredEmailHtml(opts: {
   ctaUrl?: string | null;
   videoUrl?: string | null;
   ticketCodes?: string[] | null;
+  logoUrl?: string | null;
 }): string {
-  const { headerImageUrl, bodyText, ctaText, ctaUrl, videoUrl, ticketCodes } = opts;
+  const { headerImageUrl, bodyText, ctaText, ctaUrl, videoUrl, ticketCodes, logoUrl } = opts;
 
   const headerImageBlock = headerImageUrl
     ? `<img src="${headerImageUrl}" alt="Event" style="width:100%;display:block;border-radius:0;" />`
@@ -136,7 +144,9 @@ export function buildStructuredEmailHtml(opts: {
   <div style="max-width:540px;margin:40px auto;background:#151515;border-radius:12px;overflow:hidden;">
     ${headerImageBlock}
     <div style="background:#0B5E2F;padding:28px 32px 22px;text-align:center;">
-      <h1 style="margin:0;font-size:26px;color:#FFD700;letter-spacing:-0.5px;">The Dodge Club</h1>
+      ${logoUrl
+        ? `<img src="${logoUrl}" alt="The Dodge Club" style="height:48px;width:auto;display:inline-block;margin:0 auto 10px;" />`
+        : `<h1 style="margin:0;font-size:26px;color:#FFD700;letter-spacing:-0.5px;">The Dodge Club</h1>`}
       <p style="margin:6px 0 0;color:rgba(255,255,255,0.7);font-size:14px;">Your ticket is confirmed</p>
     </div>
     <div style="padding:32px;">
@@ -177,7 +187,7 @@ export async function sendGiftEmail(params: GiftEmailParams): Promise<void> {
     return;
   }
 
-  const [fromName, fromEmail, globalSubject, globalHeader, globalBody, globalCtaText, globalCtaUrl] =
+  const [fromName, fromEmail, globalSubject, globalHeader, globalBody, globalCtaText, globalCtaUrl, rawLogoUrl] =
     await Promise.all([
       getSetting("emailFromName"),
       getSetting("emailFromAddress"),
@@ -186,15 +196,17 @@ export async function sendGiftEmail(params: GiftEmailParams): Promise<void> {
       getSetting("giftEmailBodyText"),
       getSetting("giftEmailCtaText"),
       getSetting("giftEmailCtaUrl"),
+      getSetting("emailLogoUrl"),
     ]);
 
   const ec = params.eventConfig;
   const subjectTpl = ec?.giftEmailSubject || globalSubject;
-  const headerImageUrl = ec?.giftEmailHeaderImageUrl || globalHeader;
+  const headerImageUrl = toAbsoluteUrl(ec?.giftEmailHeaderImageUrl || globalHeader);
   const bodyText = ec?.giftEmailBodyText || globalBody;
   const ctaText = ec?.giftEmailCtaText || globalCtaText;
   const ctaUrl = ec?.giftEmailCtaUrl || globalCtaUrl;
   const videoUrl = ec?.giftEmailVideoUrl || null;
+  const logoUrl = toAbsoluteUrl(rawLogoUrl);
 
   const vars: Record<string, string> = {
     recipientName: params.toName,
@@ -210,7 +222,7 @@ export async function sendGiftEmail(params: GiftEmailParams): Promise<void> {
   const effectiveBody = bodyText ?? DEFAULT_GIFT_BODY;
 
   const html = interpolate(
-    buildStructuredEmailHtml({ headerImageUrl, bodyText: effectiveBody, ctaText, ctaUrl, videoUrl, ticketCodes: [params.ticketCode] }),
+    buildStructuredEmailHtml({ headerImageUrl, bodyText: effectiveBody, ctaText, ctaUrl, videoUrl, ticketCodes: [params.ticketCode], logoUrl }),
     vars
   );
 
@@ -250,7 +262,7 @@ export async function sendTicketConfirmationEmail(params: TicketEmailParams): Pr
     return;
   }
 
-  const [fromName, fromEmail, globalSubject, rawBodyHtml, globalHeader, globalBody, globalCtaText, globalCtaUrl] =
+  const [fromName, fromEmail, globalSubject, rawBodyHtml, globalHeader, globalBody, globalCtaText, globalCtaUrl, rawLogoUrl] =
     await Promise.all([
       getSetting("emailFromName"),
       getSetting("emailFromAddress"),
@@ -260,15 +272,17 @@ export async function sendTicketConfirmationEmail(params: TicketEmailParams): Pr
       getSetting("emailBodyText"),
       getSetting("emailCtaText"),
       getSetting("emailCtaUrl"),
+      getSetting("emailLogoUrl"),
     ]);
 
   const ec = params.eventConfig;
   const subjectTpl = ec?.emailSubject || globalSubject;
-  const headerImageUrl = ec?.emailHeaderImageUrl || globalHeader;
+  const headerImageUrl = toAbsoluteUrl(ec?.emailHeaderImageUrl || globalHeader);
   const bodyText = ec?.emailBodyText || globalBody;
   const ctaText = ec?.emailCtaText || globalCtaText;
   const ctaUrl = ec?.emailCtaUrl || globalCtaUrl;
   const videoUrl = ec?.emailVideoUrl || null;
+  const logoUrl = toAbsoluteUrl(rawLogoUrl);
 
   const vars: Record<string, string> = {
     userName: params.toName,
@@ -285,7 +299,7 @@ export async function sendTicketConfirmationEmail(params: TicketEmailParams): Pr
   const html = interpolate(
     useRawOverride
       ? rawBodyHtml!
-      : buildStructuredEmailHtml({ headerImageUrl, bodyText, ctaText, ctaUrl, videoUrl, ticketCodes: params.ticketCodes }),
+      : buildStructuredEmailHtml({ headerImageUrl, bodyText, ctaText, ctaUrl, videoUrl, ticketCodes: params.ticketCodes, logoUrl }),
     vars
   );
 
