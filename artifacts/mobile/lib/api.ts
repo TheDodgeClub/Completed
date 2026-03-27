@@ -22,8 +22,6 @@ export type UserProfile = {
   username: string | null;
   preferredRole: string | null;
   bio: string | null;
-  isElite?: boolean;
-  eliteSince?: string | null;
   accountType?: "player" | "supporter";
   referralCode?: string | null;
 };
@@ -135,7 +133,6 @@ export type Post = {
   createdAt: string;
   authorName: string;
   isMembersOnly: boolean;
-  isEliteOnly: boolean;
 };
 
 export type MerchProduct = {
@@ -331,7 +328,6 @@ export type MemberSummary = {
   bio: string | null;
   preferredRole: string | null;
   memberSince: string;
-  isElite?: boolean;
   accountType?: "player" | "supporter";
 };
 
@@ -344,7 +340,6 @@ export type LeaderboardEntry = {
   name: string;
   avatarUrl: string | null;
   username: string | null;
-  isElite: boolean;
   xp: number;
   medals: number;
   rings: number;
@@ -459,19 +454,6 @@ export async function recordSession(duration: number, startedAt: string): Promis
   });
 }
 
-/* ─── Elite membership ─── */
-export type EliteStatus = {
-  isElite: boolean;
-  eliteSince: string | null;
-  stripeSubscriptionId: string | null;
-};
-
-export async function getEliteStatus(): Promise<EliteStatus> {
-  return apiFetch<EliteStatus>("/elite/status");
-}
-
-
-
 export async function forgotPassword(email: string): Promise<void> {
   await apiFetch<{ message: string }>("/auth/forgot-password", {
     method: "POST",
@@ -501,7 +483,6 @@ export type ActivityItem = {
   text: string;
   timestamp: string;
   accountType: "player" | "supporter";
-  isElite: boolean;
 };
 
 export async function getActivity(): Promise<ActivityItem[]> {

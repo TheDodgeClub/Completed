@@ -630,12 +630,6 @@ export default function MemberScreen() {
               <Text style={styles.levelNameText}>{levelName}</Text>
             </>
           )}
-          {user.isElite && (
-            <View style={styles.eliteBadge}>
-              <Text style={{ fontFamily: "Poppins_800ExtraBold", fontSize: 10, color: "#0D0D0D", lineHeight: 14 }}>E</Text>
-              <Text style={styles.eliteBadgeText}>ELITE</Text>
-            </View>
-          )}
         </View>
 
         {user.bio && <Text style={styles.memberBio}>{user.bio}</Text>}
@@ -1135,15 +1129,6 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       borderRadius: 8, borderWidth: 1, borderColor: `${Colors.accent}40`,
     },
     roleBadgeText: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: Colors.accent },
-    eliteBadge: {
-      flexDirection: "row", alignItems: "center", gap: 3,
-      backgroundColor: Colors.accent,
-      paddingHorizontal: 8, paddingVertical: 3,
-      borderRadius: 8,
-    },
-    eliteBadgeText: { fontFamily: "Inter_700Bold", fontSize: 10, color: "#0D0D0D", letterSpacing: 0.5 },
-    quickBtnElite: { borderColor: Colors.accent, borderWidth: 1.5 },
-
     memberBio: {
       fontFamily: "Inter_400Regular", fontSize: 13,
       color: "rgba(255,255,255,0.75)", lineHeight: 19, marginBottom: 8,

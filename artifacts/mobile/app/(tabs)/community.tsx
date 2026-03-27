@@ -107,11 +107,6 @@ function LeaderboardCard({
             <Text style={{ fontFamily: "Inter_700Bold", fontSize: 15, color: Colors.primary }}>{initials}</Text>
           </View>
         )}
-        {entry.isElite && (
-          <View style={{ position: "absolute", bottom: -2, right: -2, width: 14, height: 14, borderRadius: 7, backgroundColor: "#FFC107", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#0D0D0D" }}>
-            <Text style={{ fontFamily: "Poppins_800ExtraBold", fontSize: 7, color: "#0D0D0D", lineHeight: 10 }}>E</Text>
-          </View>
-        )}
       </View>
 
       <View style={{ flex: 1 }}>
@@ -211,20 +206,6 @@ function Leaderboard({ Colors, onMemberPress }: { Colors: any; onMemberPress: (e
   );
 }
 
-function EliteEBadge() {
-  return (
-    <View style={{
-      position: "absolute", bottom: -2, right: -2,
-      width: 18, height: 18, borderRadius: 9,
-      backgroundColor: "#FFC107",
-      alignItems: "center", justifyContent: "center",
-      borderWidth: 1.5, borderColor: "#0D0D0D",
-    }}>
-      <Text style={{ fontFamily: "Poppins_800ExtraBold", fontSize: 9, color: "#0D0D0D", lineHeight: 12 }}>E</Text>
-    </View>
-  );
-}
-
 function MemberRow({ member, onPress }: { member: MemberSummary; onPress: () => void }) {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
@@ -233,16 +214,10 @@ function MemberRow({ member, onPress }: { member: MemberSummary; onPress: () => 
     <Pressable style={({ pressed }) => [styles.memberRow, { opacity: pressed ? 0.85 : 1 }]} onPress={onPress}>
       <View style={{ position: "relative" }}>
         <Avatar avatarUrl={member.avatarUrl} name={member.name} size={46} Colors={Colors} />
-        {member.isElite && <EliteEBadge />}
       </View>
       <View style={styles.memberInfo}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
           <Text style={styles.memberName}>{member.name}</Text>
-          {member.isElite && (
-            <View style={{ backgroundColor: "#FFC10720", borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1, borderWidth: 1, borderColor: "#FFC10760" }}>
-              <Text style={{ fontFamily: "Inter_700Bold", fontSize: 9, color: "#FFC107", letterSpacing: 0.5 }}>ELITE</Text>
-            </View>
-          )}
         </View>
         <Text style={styles.memberMeta}>
           {member.username
@@ -330,7 +305,6 @@ export default function CommunityScreen() {
                   bio: null,
                   preferredRole: null,
                   memberSince: new Date().toISOString(),
-                  isElite: entry.isElite,
                 });
               }}
             />

@@ -112,11 +112,6 @@ export function MemberProfileModal({ member, onClose }: {
                   <Text style={styles.levelText}>{levelName}</Text>
                 </View>
               )}
-              {(profile?.isElite ?? member.isElite ?? false) && (
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#FFC10720", borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: "#FFC10750" }}>
-                  <Text style={{ fontFamily: "Poppins_800ExtraBold", fontSize: 10, color: "#FFC107" }}>⚡ ELITE</Text>
-                </View>
-              )}
             </View>
           </LinearGradient>
 

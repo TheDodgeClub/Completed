@@ -80,8 +80,8 @@ function computeAttendanceXP(attendedEventIds: Set<number>, pastEvents: { id: nu
   return { eventXP, currentStreak: streak, bestStreak, eventsAttended: attendedCount };
 }
 
-function computeXP(eventXP: number, medalsEarned: number, ringsEarned: number, bonusXp: number = 0, isElite: boolean = false): number {
-  return eventXP + medalsEarned * 300 + ringsEarned * 1000 + bonusXp + (isElite ? 500 : 0);
+function computeXP(eventXP: number, medalsEarned: number, ringsEarned: number, bonusXp: number = 0): number {
+  return eventXP + medalsEarned * 300 + ringsEarned * 1000 + bonusXp;
 }
 
 function computeLevel(xp: number): number {
@@ -120,14 +120,12 @@ function toProfile(
     username: user.username ?? null,
     preferredRole: user.preferredRole ?? null,
     bio: user.bio ?? null,
-    isElite: user.isElite,
-    eliteSince: user.eliteSince?.toISOString() ?? null,
     accountType: user.accountType ?? "player",
     referralCode: user.referralCode ?? null,
   };
 }
 
-async function getUserStats(userId: number, bonusXp: number = 0, isElite: boolean = false) {
+async function getUserStats(userId: number, bonusXp: number = 0) {
   const [records, awards, pastEvents] = await Promise.all([
     db.select().from(attendanceTable).where(eq(attendanceTable.userId, userId)),
     db.select().from(awardsTable).where(eq(awardsTable.userId, userId)),
@@ -137,7 +135,7 @@ async function getUserStats(userId: number, bonusXp: number = 0, isElite: boolea
   const { eventXP, currentStreak, bestStreak, eventsAttended } = computeAttendanceXP(attendedIds, pastEvents);
   const medalsEarned = records.filter(r => r.earnedMedal).length + awards.filter(a => a.type === "medal").length;
   const ringsEarned = awards.filter(a => a.type === "ring").length;
-  const xp = computeXP(eventXP, medalsEarned, ringsEarned, bonusXp, isElite);
+  const xp = computeXP(eventXP, medalsEarned, ringsEarned, bonusXp);
   const level = computeLevel(xp);
   return { eventsAttended, medalsEarned, ringsEarned, xp, level, currentStreak, bestStreak };
 }
@@ -156,7 +154,7 @@ router.get("/me", async (req, res) => {
     return;
   }
 
-  const stats = await getUserStats(user.id, user.bonusXp ?? 0, user.isElite ?? false);
+  const stats = await getUserStats(user.id, user.bonusXp ?? 0);
   res.json(toProfile(user, stats));
 });
 

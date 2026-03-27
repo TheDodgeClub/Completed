@@ -45,11 +45,6 @@ export default function Posts() {
                     {post.isMembersOnly ? <LockKeyhole className="w-3 h-3 mr-1" /> : <Globe className="w-3 h-3 mr-1" />}
                     {post.isMembersOnly ? "Members Only" : "Public"}
                   </Badge>
-                  {post.isEliteOnly && (
-                    <Badge variant="outline" className="border-yellow-500 text-yellow-500 bg-yellow-500/5">
-                      <Star className="w-3 h-3 mr-1" />Elite Only
-                    </Badge>
-                  )}
                   <span className="text-xs text-muted-foreground">{formatDateTime(post.createdAt)}</span>
                   <span className="text-xs text-muted-foreground font-medium">• By {post.authorName}</span>
                 </div>
@@ -109,14 +104,12 @@ function PostFormModal({ post, onClose }: { post?: Post; onClose: () => void }) 
       content: post.content,
       imageUrl: post.imageUrl || "",
       isMembersOnly: post.isMembersOnly,
-      isEliteOnly: post.isEliteOnly,
     } : {
-      title: "", content: "", imageUrl: "", isMembersOnly: false, isEliteOnly: false
+      title: "", content: "", imageUrl: "", isMembersOnly: false
     }
   });
 
   const isMembersOnly = watch("isMembersOnly");
-  const isEliteOnly = watch("isEliteOnly");
 
   const onSubmit = (data: PostInput) => {
     const payload = {
@@ -169,20 +162,6 @@ function PostFormModal({ post, onClose }: { post?: Post; onClose: () => void }) 
             <div className="space-y-1 leading-none">
               <Label htmlFor="isMembersOnly" className="font-medium cursor-pointer">Restrict to Members Only</Label>
               <p className="text-xs text-muted-foreground">Guests and non-members will not be able to see this post.</p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-3 p-4 bg-background rounded-xl border border-yellow-500/20">
-            <Checkbox 
-              id="isEliteOnly" 
-              checked={isEliteOnly} 
-              onCheckedChange={(c) => setValue("isEliteOnly", c === true)}
-              className="border-yellow-500/50 data-[state=checked]:bg-yellow-500 data-[state=checked]:border-yellow-500"
-            />
-            <div className="space-y-1 leading-none">
-              <Label htmlFor="isEliteOnly" className="font-medium cursor-pointer flex items-center gap-1">
-                <Star className="w-3.5 h-3.5 text-yellow-500" /> Elite Members Only
-              </Label>
-              <p className="text-xs text-muted-foreground">Only Elite subscribers will be able to see and read this post.</p>
             </div>
           </div>
           <DialogFooter className="pt-4">

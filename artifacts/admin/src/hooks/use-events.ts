@@ -26,8 +26,8 @@ export interface Event {
   stripePriceId: string | null;
   checkoutFields: CheckoutField[];
   waiverText: string | null;
-  eliteEarlyAccess: boolean;
-  eliteDiscountPercent: number | null;
+  eliteEarlyAccess?: boolean;
+  eliteDiscountPercent?: number | null;
   xpReward: number;
   checkInPin: string | null;
   ticketTypeCount: number;

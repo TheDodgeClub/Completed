@@ -203,17 +203,14 @@ export default function UpdatesScreen() {
     setRefreshing(false);
   };
 
-  const isElite = user?.isElite ?? false;
-
   const isLoading = postsLoading || videosLoading;
   const allPosts = posts ?? [];
 
   const visiblePosts = isAuthenticated
-    ? allPosts.filter(p => isElite || !p.isEliteOnly)
-    : allPosts.filter(p => !p.isMembersOnly && !p.isEliteOnly);
+    ? allPosts
+    : allPosts.filter(p => !p.isMembersOnly);
 
-  const memberLockedPosts = !isAuthenticated ? allPosts.filter(p => p.isMembersOnly && !p.isEliteOnly) : [];
-  const eliteLockedPosts = isAuthenticated && !isElite ? allPosts.filter(p => p.isEliteOnly) : [];
+  const memberLockedPosts = !isAuthenticated ? allPosts.filter(p => p.isMembersOnly) : [];
 
   const visibleAnnouncements = showAllAnnouncements ? announcements : announcements.slice(0, 3);
 
@@ -312,25 +309,6 @@ export default function UpdatesScreen() {
                 </>
               )}
 
-              {eliteLockedPosts.length > 0 && (
-                <>
-                  <View style={[styles.lockBanner, { backgroundColor: Colors.accent + "18", borderColor: Colors.accent + "50" }]}>
-                    <Feather name="star" size={18} color={Colors.accent} />
-                    <Text style={styles.lockBannerText}>
-                      {eliteLockedPosts.length} Elite-only update{eliteLockedPosts.length > 1 ? "s" : ""} locked
-                    </Text>
-                  </View>
-                  {eliteLockedPosts.map(post => <PostCard key={post.id} post={post} isLocked />)}
-                  <Pressable
-                    style={({ pressed }) => [styles.eliteBtn, { opacity: pressed ? 0.85 : 1 }]}
-                    onPress={() => router.push("/elite")}
-                  >
-                    <Feather name="star" size={16} color={Colors.accent} />
-                    <Text style={styles.eliteBtnText}>Upgrade to Elite — £8.99/month</Text>
-                    <Feather name="arrow-right" size={16} color={Colors.accent} />
-                  </Pressable>
-                </>
-              )}
             </View>
           </>
         )}
@@ -469,12 +447,5 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
     },
     joinBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#fff" },
-    eliteBtn: {
-      borderWidth: 1.5, borderColor: Colors.accent,
-      borderRadius: 14, paddingVertical: 14,
-      flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 8,
-      backgroundColor: Colors.accent + "12",
-    },
-    eliteBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.accent },
   });
 }

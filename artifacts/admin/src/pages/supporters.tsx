@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Search, Loader2, Pencil, Check, Star, Trash2, Heart, Copy } from "lucide-react";
+import { Search, Loader2, Pencil, Check, Trash2, Heart, Copy } from "lucide-react";
 
 function resolveAvatarUrl(url: string | null | undefined): string | undefined {
   if (!url) return undefined;
@@ -87,11 +87,6 @@ export default function Supporters() {
                               <span className="font-bold text-sm">{supporter.name.charAt(0)}</span>
                             )}
                           </div>
-                          {supporter.isElite && (
-                            <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-yellow-400 border-2 border-card flex items-center justify-center shadow-sm">
-                              <Check className="w-2.5 h-2.5 text-yellow-900 stroke-[3]" />
-                            </span>
-                          )}
                         </div>
                         <div>
                           <div className="font-semibold text-foreground group-hover:text-pink-400 transition-colors">{supporter.name}</div>
@@ -104,11 +99,6 @@ export default function Supporters() {
                         <Badge variant="outline" className="bg-pink-500/10 text-pink-400 border-pink-500/20">
                           <Heart className="w-3 h-3 mr-1" /> Supporter
                         </Badge>
-                        {supporter.isElite && (
-                          <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
-                            <Star className="w-3 h-3 mr-1" /> Elite
-                          </Badge>
-                        )}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -197,11 +187,6 @@ function SupporterDetailSheet({ supporter, onClose }: { supporter: AdminMember |
                         <span className="font-display font-bold text-2xl text-muted-foreground">{supporter.name.charAt(0)}</span>
                       )}
                     </div>
-                    {supporter.isElite && (
-                      <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-yellow-400 border-2 border-card flex items-center justify-center shadow-md">
-                        <Check className="w-3 h-3 text-yellow-900 stroke-[3]" />
-                      </span>
-                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">

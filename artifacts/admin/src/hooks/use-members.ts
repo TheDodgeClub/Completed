@@ -16,9 +16,6 @@ export interface AdminMember {
   username: string | null;
   preferredRole: string | null;
   bio: string | null;
-  isElite: boolean;
-  eliteSince: string | null;
-  stripeSubscriptionId: string | null;
   accountType: string;
   referralCode: string | null;
   referredByName: string | null;

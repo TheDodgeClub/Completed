@@ -26,7 +26,6 @@ export interface Post {
   createdAt: string;
   authorName?: string;
   isMembersOnly?: boolean;
-  isEliteOnly?: boolean;
 }
 
 export interface Stats {

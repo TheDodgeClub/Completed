@@ -16,7 +16,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit2, Trash2, MapPin, Users, CalendarDays, ArrowUpDown, ArrowUp, ArrowDown, Globe, EyeOff, CreditCard, CheckCircle, ClipboardList, X, GripVertical, Copy, Star, Tag, Percent, TicketIcon, Search, XCircle, UserCheck, Send, Gift, CheckCircle2, Loader2, ChevronDown, ChevronRight, Filter, Mail, Check } from "lucide-react";
+import { Plus, Edit2, Trash2, MapPin, Users, CalendarDays, ArrowUpDown, ArrowUp, ArrowDown, Globe, EyeOff, CreditCard, CheckCircle, ClipboardList, X, GripVertical, Copy, Tag, Percent, TicketIcon, Search, XCircle, UserCheck, Send, Gift, CheckCircle2, Loader2, ChevronDown, ChevronRight, Filter, Mail, Check } from "lucide-react";
 import { ImageUploader } from "@/components/image-uploader";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useForm } from "react-hook-form";
@@ -169,10 +169,6 @@ function EventCard({
   const [imageUrl, setImageUrl] = useState(event.imageUrl ?? "");
   const [xpReward, setXpReward] = useState(String(event.xpReward ?? 50));
   const [checkInPin, setCheckInPin] = useState(event.checkInPin ?? "");
-  const [eliteEarlyAccess, setEliteEarlyAccess] = useState(event.eliteEarlyAccess ?? false);
-  const [eliteDiscountPercent, setEliteDiscountPercent] = useState(
-    event.eliteDiscountPercent != null ? String(event.eliteDiscountPercent) : ""
-  );
 
   const handlePublish = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -194,8 +190,6 @@ function EventCard({
       imageUrl: imageUrl || null,
       xpReward: Number(xpReward) || 50,
       checkInPin: checkInPin || null,
-      eliteEarlyAccess,
-      eliteDiscountPercent: eliteDiscountPercent ? Number(eliteDiscountPercent) : null,
     } as any, {
       onSuccess: () => toast({ title: "Event saved" }),
       onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
@@ -894,19 +888,14 @@ function EventFormModal({ event, onClose }: { event?: Event; onClose: () => void
       ticketCapacity: event.ticketCapacity,
       stripeProductId: event.stripeProductId,
       stripePriceId: event.stripePriceId,
-      eliteEarlyAccess: event.eliteEarlyAccess ?? false,
-      eliteDiscountPercent: event.eliteDiscountPercent ?? null,
       xpReward: event.xpReward ?? 50,
       checkInPin: event.checkInPin ?? "",
     } : {
       title: "", description: "", date: "", location: "", ticketUrl: "", imageUrl: "",
       ticketPrice: null, ticketCapacity: null, stripeProductId: null, stripePriceId: null,
-      eliteEarlyAccess: false, eliteDiscountPercent: null,
       xpReward: 50, checkInPin: "",
     }
   });
-
-  const eliteEarlyAccess = watch("eliteEarlyAccess");
 
   const onSubmit = (data: EventInput) => {
     const payload = {
@@ -995,34 +984,6 @@ function EventFormModal({ event, onClose }: { event?: Event; onClose: () => void
             <p className="text-xs text-muted-foreground">Members enter this PIN in the app to mark themselves as attending. Leave blank to disable PIN check-in. Shown to door staff in the scanner app.</p>
           </div>
 
-          <div className="space-y-3 p-4 bg-yellow-500/5 rounded-xl border border-yellow-500/20">
-            <Label className="text-yellow-500 font-semibold flex items-center gap-1.5 text-sm">
-              <Star className="w-3.5 h-3.5" /> Elite Member Perks
-            </Label>
-            <div className="flex items-center space-x-3">
-              <Checkbox
-                id="eliteEarlyAccess"
-                checked={eliteEarlyAccess}
-                onCheckedChange={(c) => setValue("eliteEarlyAccess", c === true)}
-                className="border-yellow-500/50 data-[state=checked]:bg-yellow-500 data-[state=checked]:border-yellow-500"
-              />
-              <div className="space-y-0.5 leading-none">
-                <Label htmlFor="eliteEarlyAccess" className="font-medium cursor-pointer text-sm">Elite Early Ticket Access</Label>
-                <p className="text-xs text-muted-foreground">Elite members can purchase tickets before general sale.</p>
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Elite Discount % (leave blank for none)</Label>
-              <Input
-                type="number"
-                min={0}
-                max={100}
-                {...register("eliteDiscountPercent", { valueAsNumber: true })}
-                className="bg-background border-border rounded-xl h-9"
-                placeholder="e.g. 10 for 10% off"
-              />
-            </div>
-          </div>
         </div>
           <div className="px-6 py-4 border-t border-border/30 flex justify-end gap-2 shrink-0">
             <Button type="button" variant="outline" onClick={onClose} disabled={pending} className="rounded-xl border-border/50 hover:bg-secondary">Cancel</Button>

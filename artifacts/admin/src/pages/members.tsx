@@ -1,12 +1,10 @@
 import { useState, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   useMembers, useMemberAttendance, useMemberAwards,
   useMarkAttendance, useDeleteAttendance, useGrantAward, useRevokeAward,
   useUpdateMember, useDeleteMember, AdminMember,
 } from "@/hooks/use-members";
 import { useEvents } from "@/hooks/use-events";
-import { fetchApi } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,14 +21,11 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import {
   Search, Trophy, CalendarCheck, Trash2, ShieldCheck, Loader2, CircleDot,
-  Pencil, Check, Star, Heart, Copy, Crown, Users, TrendingUp,
-  ExternalLink, UserPlus, ShieldOff,
+  Pencil, Check, Heart, Copy, Users,
 } from "lucide-react";
 import LeaderboardPage from "@/pages/leaderboard";
 
 const LEVEL_NAMES = ["Beginner", "Developing", "Experienced", "Skilled", "Advanced", "Pro", "League", "Expert", "Master", "Icon"];
-const ELITE_PRICE_GBP = 8.99;
-const STRIPE_DASHBOARD_BASE = "https://dashboard.stripe.com/subscriptions";
 
 function resolveAvatarUrl(url: string | null | undefined): string | undefined {
   if (!url) return undefined;
@@ -38,7 +33,7 @@ function resolveAvatarUrl(url: string | null | undefined): string | undefined {
   return url;
 }
 
-function Avatar({ member }: { member: { name: string; avatarUrl?: string | null; isElite?: boolean } }) {
+function Avatar({ member }: { member: { name: string; avatarUrl?: string | null } }) {
   return (
     <div className="relative shrink-0">
       <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center overflow-hidden border border-border/50">
@@ -48,11 +43,6 @@ function Avatar({ member }: { member: { name: string; avatarUrl?: string | null;
           <span className="font-bold text-sm">{member.name.charAt(0)}</span>
         )}
       </div>
-      {member.isElite && (
-        <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-yellow-400 border-2 border-card flex items-center justify-center shadow-sm">
-          <Check className="w-2.5 h-2.5 text-yellow-900 stroke-[3]" />
-        </span>
-      )}
     </div>
   );
 }
@@ -79,14 +69,13 @@ export default function Members() {
 
   const players = members?.filter(m => m.accountType === "player" || !m.accountType) ?? [];
   const supporters = members?.filter(m => m.accountType === "supporter") ?? [];
-  const eliteMembers = members?.filter(m => m.isElite) ?? [];
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
         <h1 className="text-3xl font-display font-bold text-foreground">Members</h1>
         <p className="text-muted-foreground mt-1">
-          Manage all {isLoading ? "…" : (members?.length ?? 0)} members — players, supporters and elite.
+          Manage all {isLoading ? "…" : (members?.length ?? 0)} members — players and supporters.
         </p>
       </div>
 
@@ -102,11 +91,6 @@ export default function Members() {
             Supporters
             {!isLoading && <span className="ml-1 text-xs opacity-60">{supporters.length}</span>}
           </TabsTrigger>
-          <TabsTrigger value="elite" className="gap-2">
-            <Crown className="w-4 h-4" />
-            Elite
-            {!isLoading && <span className="ml-1 text-xs opacity-60">{eliteMembers.length}</span>}
-          </TabsTrigger>
           <TabsTrigger value="leaderboard" className="gap-2">
             <Trophy className="w-4 h-4" />
             Leaderboard
@@ -118,9 +102,6 @@ export default function Members() {
         </TabsContent>
         <TabsContent value="supporters" className="mt-6">
           <SupportersTab members={members} isLoading={isLoading} toast={toast} />
-        </TabsContent>
-        <TabsContent value="elite" className="mt-6">
-          <EliteTab members={members} isLoading={isLoading} toast={toast} />
         </TabsContent>
         <TabsContent value="leaderboard" className="mt-6">
           <LeaderboardPage />
@@ -177,7 +158,6 @@ function PlayersTab({ members, isLoading, toast }: { members: AdminMember[] | un
                       {m.isAdmin
                         ? <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20"><ShieldCheck className="w-3 h-3 mr-1" />Admin</Badge>
                         : <Badge variant="outline" className="bg-secondary/50 text-muted-foreground border-border/50">Member</Badge>}
-                      {m.isElite && <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20"><Star className="w-3 h-3 mr-1" />Elite</Badge>}
                     </div>
                   </TableCell>
                   <TableCell className="text-center">
@@ -244,7 +224,6 @@ function SupportersTab({ members, isLoading, toast }: { members: AdminMember[] |
                   <TableCell>
                     <div className="flex flex-wrap gap-1.5">
                       <Badge variant="outline" className="bg-pink-500/10 text-pink-400 border-pink-500/20"><Heart className="w-3 h-3 mr-1" />Supporter</Badge>
-                      {s.isElite && <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20"><Star className="w-3 h-3 mr-1" />Elite</Badge>}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -260,210 +239,6 @@ function SupportersTab({ members, isLoading, toast }: { members: AdminMember[] |
         </div>
       </div>
       <SupporterDetailSheet supporter={selected} onClose={() => setSelected(null)} toast={toast} />
-    </div>
-  );
-}
-
-/* ─── Elite Tab ─── */
-function EliteTab({ members, isLoading, toast }: { members: AdminMember[] | undefined; isLoading: boolean; toast: any }) {
-  const queryClient = useQueryClient();
-  const [search, setSearch] = useState("");
-  const [grantOpen, setGrantOpen] = useState(false);
-  const [grantSearch, setGrantSearch] = useState("");
-  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
-  const [revokeTarget, setRevokeTarget] = useState<{ id: number; name: string } | null>(null);
-
-  const eliteMembers = members?.filter(m => m.isElite) ?? [];
-  const nonEliteMembers = members?.filter(m => !m.isElite) ?? [];
-  const filteredElite = eliteMembers.filter(m =>
-    m.name.toLowerCase().includes(search.toLowerCase()) || m.email.toLowerCase().includes(search.toLowerCase())
-  );
-  const filteredNonElite = nonEliteMembers.filter(m =>
-    m.name.toLowerCase().includes(grantSearch.toLowerCase()) || m.email.toLowerCase().includes(grantSearch.toLowerCase())
-  );
-
-  const monthlyRevenue = (eliteMembers.length * ELITE_PRICE_GBP).toFixed(2);
-
-  const grantMutation = useMutation({
-    mutationFn: (userId: number) => fetchApi("/api/admin/elite/grant", { method: "POST", body: JSON.stringify({ userId }) }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["members"] });
-      setGrantOpen(false); setGrantSearch(""); setSelectedUserId(null);
-      toast({ title: "Elite granted", description: "The member now has Elite status." });
-    },
-    onError: (err: any) => toast({ title: "Error", description: err.message ?? "Could not grant Elite.", variant: "destructive" }),
-  });
-
-  const revokeMutation = useMutation({
-    mutationFn: (userId: number) => fetchApi("/api/admin/elite/revoke", { method: "POST", body: JSON.stringify({ userId }) }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["members"] });
-      setRevokeTarget(null);
-      toast({ title: "Elite revoked" });
-    },
-    onError: (err: any) => toast({ title: "Error", description: err.message ?? "Could not revoke Elite.", variant: "destructive" }),
-  });
-
-  return (
-    <div className="space-y-5">
-      {/* Stats row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {[
-          { icon: Users, color: "text-yellow-500", bg: "bg-yellow-500/15", label: "Active Elite Members", value: eliteMembers.length },
-          { icon: TrendingUp, color: "text-green-500", bg: "bg-green-500/15", label: "Monthly Revenue", value: `£${monthlyRevenue}` },
-          { icon: Star, color: "text-blue-400", bg: "bg-blue-400/15", label: "Annual Projected", value: `£${(eliteMembers.length * ELITE_PRICE_GBP * 12).toFixed(2)}` },
-        ].map(s => (
-          <Card key={s.label} className="bg-card border-border/50 p-4 shadow-lg shadow-black/10">
-            <div className="flex items-center gap-3">
-              <div className={`w-9 h-9 rounded-xl ${s.bg} flex items-center justify-center`}>
-                <s.icon className={`w-5 h-5 ${s.color}`} />
-              </div>
-              <div>
-                <p className="text-xl font-bold text-foreground">{isLoading ? "…" : s.value}</p>
-                <p className="text-xs text-muted-foreground">{s.label}</p>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      {/* Header row */}
-      <div className="flex flex-wrap items-center gap-3">
-        <SearchBar value={search} onChange={setSearch} />
-        <Button
-          className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold gap-2 ml-auto"
-          onClick={() => { setGrantOpen(true); setGrantSearch(""); setSelectedUserId(null); }}
-        >
-          <UserPlus className="w-4 h-4" /> Grant Elite
-        </Button>
-        <Button variant="outline" className="border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10 gap-2" onClick={() => window.open(STRIPE_DASHBOARD_BASE, "_blank")}>
-          <ExternalLink className="w-4 h-4" /> Stripe
-        </Button>
-      </div>
-
-      {eliteMembers.length === 0 && !isLoading ? (
-        <div className="p-16 text-center border-2 border-dashed border-border/50 rounded-2xl">
-          <Crown className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-foreground">No Elite Members Yet</h3>
-          <p className="text-muted-foreground mt-1 mb-4">Members will appear here after subscribing or being granted Elite status.</p>
-          <Button className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold gap-2" onClick={() => setGrantOpen(true)}>
-            <UserPlus className="w-4 h-4" /> Grant Elite to a Member
-          </Button>
-        </div>
-      ) : (
-        <div className="bg-card border border-border/50 rounded-2xl overflow-hidden shadow-lg shadow-black/10">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader className="bg-secondary/50 border-b border-border/50">
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="text-muted-foreground py-4 px-6">Member</TableHead>
-                  <TableHead className="text-muted-foreground py-4">Elite Since</TableHead>
-                  <TableHead className="text-muted-foreground py-4">Subscription</TableHead>
-                  <TableHead className="text-muted-foreground py-4 text-right px-6">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow><TableCell colSpan={4} className="h-32 text-center text-muted-foreground"><Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />Loading…</TableCell></TableRow>
-                ) : filteredElite.length === 0 ? (
-                  <TableRow><TableCell colSpan={4} className="h-24 text-center text-muted-foreground">No elite members match "{search}"</TableCell></TableRow>
-                ) : filteredElite.map((m) => (
-                  <TableRow key={m.id} className="border-border/50 hover:bg-white/[0.02]">
-                    <TableCell className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="relative shrink-0">
-                          <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center overflow-hidden border border-yellow-500/30">
-                            {m.avatarUrl ? <img src={resolveAvatarUrl(m.avatarUrl)} alt={m.name} className="w-full h-full object-cover" /> : <span className="font-bold text-sm">{m.name.charAt(0)}</span>}
-                          </div>
-                          <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-yellow-400 border-2 border-card flex items-center justify-center shadow-sm">
-                            <Check className="w-2.5 h-2.5 text-yellow-900 stroke-[3]" />
-                          </span>
-                        </div>
-                        <div>
-                          <div className="font-semibold text-foreground flex items-center gap-1.5">{m.name}<Star className="w-3 h-3 text-yellow-500 fill-yellow-500" /></div>
-                          <div className="text-xs text-muted-foreground">{m.email}</div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {m.eliteSince ? formatDateTime(m.eliteSince) : <span className="text-muted-foreground/50 italic">—</span>}
-                    </TableCell>
-                    <TableCell>
-                      {m.stripeSubscriptionId
-                        ? <code className="text-xs bg-secondary px-2 py-1 rounded text-muted-foreground font-mono">{m.stripeSubscriptionId}</code>
-                        : <span className="text-muted-foreground/50 italic text-sm">Manual grant</span>}
-                    </TableCell>
-                    <TableCell className="text-right px-6">
-                      <div className="flex items-center justify-end gap-2">
-                        {m.stripeSubscriptionId && (
-                          <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-yellow-500 hover:bg-yellow-500/10" onClick={() => window.open(`${STRIPE_DASHBOARD_BASE}/${m.stripeSubscriptionId}`, "_blank")}>
-                            <ExternalLink className="w-4 h-4 mr-1" />Stripe
-                          </Button>
-                        )}
-                        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-red-500 hover:bg-red-500/10" onClick={() => setRevokeTarget({ id: m.id, name: m.name })}>
-                          <ShieldOff className="w-4 h-4 mr-1" />Revoke
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </div>
-      )}
-
-      {/* Grant dialog */}
-      <Dialog open={grantOpen} onOpenChange={setGrantOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Crown className="w-5 h-5 text-yellow-500" />Grant Elite Membership</DialogTitle>
-            <DialogDescription>Select a member to manually grant Elite status.</DialogDescription>
-          </DialogHeader>
-          <div className="flex items-center gap-2 bg-secondary/50 border border-border/50 rounded-lg px-3 py-2">
-            <Search className="w-4 h-4 text-muted-foreground shrink-0" />
-            <input className="bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none flex-1" placeholder="Search members…" value={grantSearch} onChange={(e) => setGrantSearch(e.target.value)} autoFocus />
-          </div>
-          <div className="max-h-64 overflow-y-auto rounded-lg border border-border/50 divide-y divide-border/30">
-            {filteredNonElite.length === 0 ? (
-              <div className="py-8 text-center text-sm text-muted-foreground">{nonEliteMembers.length === 0 ? "All members are already Elite!" : "No members match."}</div>
-            ) : filteredNonElite.map((m) => (
-              <button key={m.id} className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-yellow-500/5 ${selectedUserId === m.id ? "bg-yellow-500/10 border-l-2 border-yellow-500" : ""}`} onClick={() => setSelectedUserId(m.id === selectedUserId ? null : m.id)}>
-                <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center overflow-hidden shrink-0">
-                  {m.avatarUrl ? <img src={resolveAvatarUrl(m.avatarUrl)} alt={m.name} className="w-full h-full object-cover" /> : <span className="font-bold text-xs">{m.name.charAt(0)}</span>}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{m.name}</p>
-                  <p className="text-xs text-muted-foreground truncate">{m.email}</p>
-                </div>
-                {selectedUserId === m.id && <Check className="w-4 h-4 text-yellow-500 shrink-0" />}
-              </button>
-            ))}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setGrantOpen(false)}>Cancel</Button>
-            <Button className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold gap-2" disabled={!selectedUserId || grantMutation.isPending} onClick={() => selectedUserId && grantMutation.mutate(selectedUserId)}>
-              {grantMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Crown className="w-4 h-4" />}Grant Elite
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Revoke dialog */}
-      <Dialog open={!!revokeTarget} onOpenChange={(open) => !open && setRevokeTarget(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><ShieldOff className="w-5 h-5 text-red-500" />Revoke Elite Status</DialogTitle>
-            <DialogDescription>Remove Elite status from <span className="font-semibold text-foreground">{revokeTarget?.name}</span>? Their perks are removed immediately. Cancel any Stripe subscription separately.</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRevokeTarget(null)}>Cancel</Button>
-            <Button variant="destructive" disabled={revokeMutation.isPending} onClick={() => revokeTarget && revokeMutation.mutate(revokeTarget.id)}>
-              {revokeMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <ShieldOff className="w-4 h-4 mr-2" />}Revoke
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
@@ -539,7 +314,6 @@ function PlayerDetailSheet({ member, onClose, toast }: { member: AdminMember | n
                     <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center overflow-hidden border-2 border-border">
                       {member.avatarUrl ? <img src={resolveAvatarUrl(member.avatarUrl)} alt={member.name} className="w-full h-full object-cover" /> : <span className="font-display font-bold text-2xl text-muted-foreground">{member.name.charAt(0)}</span>}
                     </div>
-                    {member.isElite && <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-yellow-400 border-2 border-card flex items-center justify-center shadow-md"><Check className="w-3 h-3 text-yellow-900 stroke-[3]" /></span>}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -757,7 +531,6 @@ function SupporterDetailSheet({ supporter, onClose, toast }: { supporter: AdminM
                     <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center overflow-hidden border-2 border-border">
                       {supporter.avatarUrl ? <img src={resolveAvatarUrl(supporter.avatarUrl)} alt={supporter.name} className="w-full h-full object-cover" /> : <span className="font-display font-bold text-2xl text-muted-foreground">{supporter.name.charAt(0)}</span>}
                     </div>
-                    {supporter.isElite && <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-yellow-400 border-2 border-card flex items-center justify-center shadow-md"><Check className="w-3 h-3 text-yellow-900 stroke-[3]" /></span>}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
