@@ -68,13 +68,15 @@ function getLevelProgress(xp: number, level: number) {
 
 function getCountdown(dateStr: string): string | null {
   const diff = new Date(dateStr).getTime() - Date.now();
-  if (diff <= 0 || diff > 30 * 86400000) return null;
+  if (diff <= 0 || diff > 60 * 86400000) return null;
   const d = Math.floor(diff / 86400000);
   const h = Math.floor((diff % 86400000) / 3600000);
   const m = Math.floor((diff % 3600000) / 60000);
-  if (d > 0) return `${d}d ${h}h`;
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
+  if (d >= 2) return `${d} days till next event`;
+  if (d === 1) return "Tomorrow";
+  if (h >= 1) return `${h}h till next event`;
+  if (m >= 1) return `${m} mins away`;
+  return "Starting soon!";
 }
 
 function timeAgo(dateStr: string): string {
@@ -200,6 +202,7 @@ export default function HomeScreen() {
 
   const publicPosts = posts?.filter(p => !p.isMembersOnly).slice(0, 3) ?? [];
   const nextEvent = events?.[0] ?? null;
+  const nextEventCountdown = nextEvent ? getCountdown(nextEvent.date) : null;
 
   /* ── XP progress for logged-in user ── */
   const xpProgress = user ? getLevelProgress(user.xp ?? 0, user.level ?? 1) : null;
@@ -391,6 +394,7 @@ export default function HomeScreen() {
                 <Text style={styles.eventBannerTitle} numberOfLines={2}>{nextEvent.title}</Text>
                 <Text style={styles.eventBannerDate}>
                   {new Date(nextEvent.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                  {nextEventCountdown ? `  ·  ${nextEventCountdown}` : ""}
                 </Text>
               </LinearGradient>
             </Pressable>
@@ -406,6 +410,9 @@ export default function HomeScreen() {
                 <Text style={styles.eventTextCardDate}>
                   {new Date(nextEvent.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
                 </Text>
+                {nextEventCountdown ? (
+                  <Text style={styles.eventTextCardCountdown}>{nextEventCountdown}</Text>
+                ) : null}
               </View>
               <Feather name="chevron-right" size={16} color={Colors.textMuted} />
             </Pressable>
@@ -888,6 +895,12 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       fontSize: 12,
       color: Colors.textMuted,
       marginTop: 2,
+    },
+    eventTextCardCountdown: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 11,
+      color: "#FFC107",
+      marginTop: 3,
     },
     /* ── Supporter Onboarding Card ── */
     onboardCard: {

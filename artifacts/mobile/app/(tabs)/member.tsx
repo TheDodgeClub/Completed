@@ -80,13 +80,15 @@ function getLevelProgress(xp: number, level: number) {
 
 function getCountdown(dateStr: string): string | null {
   const diff = new Date(dateStr).getTime() - Date.now();
-  if (diff <= 0 || diff > 30 * 86400000) return null;
+  if (diff <= 0 || diff > 60 * 86400000) return null;
   const d = Math.floor(diff / 86400000);
   const h = Math.floor((diff % 86400000) / 3600000);
   const m = Math.floor((diff % 3600000) / 60000);
-  if (d > 0) return `${d}d ${h}h`;
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
+  if (d >= 2) return `${d} days`;
+  if (d === 1) return "Tomorrow";
+  if (h >= 1) return `${h}h`;
+  if (m >= 1) return `${m} mins`;
+  return "Starting soon!";
 }
 
 function LevelBadge({ level }: { level: number }) {
@@ -649,7 +651,13 @@ export default function MemberScreen() {
           </View>
           <View style={styles.countdownChip}>
             <Feather name="clock" size={11} color="#FFC107" />
-            <Text style={styles.countdownChipText}>{nextClubCountdown}</Text>
+            <Text style={styles.countdownChipText}>
+              {nextClubCountdown === "Tomorrow"
+                ? "Tomorrow's event"
+                : nextClubCountdown === "Starting soon!"
+                ? "Starting soon!"
+                : `${nextClubCountdown} till next event`}
+            </Text>
           </View>
         </Pressable>
       )}
