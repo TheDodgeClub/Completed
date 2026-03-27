@@ -12,11 +12,13 @@ function interpolate(template: string, vars: Record<string, string>): string {
 }
 
 async function generateQrDataUrl(ticketCode: string): Promise<string> {
+  // Matches the in-app QR: same value (raw ticketCode), light-mode colors (#111111 on #FFFFFF),
+  // similar quiet zone. react-native-qrcode-svg uses size=200, quietZone=12, color=#111111, bg=#FFFFFF.
   return QRCode.toDataURL(ticketCode, {
     errorCorrectionLevel: "M",
-    margin: 2,
-    width: 220,
-    color: { dark: "#000000", light: "#ffffff" },
+    margin: 2,       // ~12px quiet zone equivalent for this width
+    width: 200,
+    color: { dark: "#111111", light: "#ffffff" },
   });
 }
 

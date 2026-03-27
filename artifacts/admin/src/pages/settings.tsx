@@ -136,7 +136,7 @@ export default function SettingsPage() {
   // Preview QR code (shared — same demo code for both previews)
   const [previewQrDataUrl, setPreviewQrDataUrl] = useState<string>("");
   useEffect(() => {
-    QRCode.toDataURL("DEMO-0001", { errorCorrectionLevel: "M", margin: 2, width: 180, color: { dark: "#000000", light: "#ffffff" } })
+    QRCode.toDataURL("DEMO-0001", { errorCorrectionLevel: "M", margin: 2, width: 200, color: { dark: "#111111", light: "#ffffff" } })
       .then(setPreviewQrDataUrl)
       .catch(() => {});
   }, []);
