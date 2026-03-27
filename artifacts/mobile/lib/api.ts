@@ -525,3 +525,7 @@ export type Announcement = {
 export async function getAnnouncements(): Promise<Announcement[]> {
   return apiFetch<Announcement[]>("/announcements");
 }
+
+export async function checkEventIn(eventId: number, pin: string): Promise<{ success?: boolean; alreadyCheckedIn?: boolean }> {
+  return apiFetch(`/events/${eventId}/checkin`, { method: "POST", body: JSON.stringify({ pin }) });
+}

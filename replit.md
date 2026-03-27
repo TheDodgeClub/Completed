@@ -24,7 +24,10 @@ pnpm workspace monorepo for The Dodge Club — a mobile-first community dodgebal
 workspace/
 ├── artifacts/
 │   ├── api-server/          # Express API server (port 8080)
-│   └── mobile/              # Expo mobile app (port 18115)
+│   ├── mobile/              # Expo mobile app (port 18115)
+│   ├── admin/               # React/Vite admin dashboard
+│   ├── landing/             # Landing page
+│   └── scanner/             # Door staff QR scanner web app (/scanner/)
 ├── lib/
 │   ├── api-spec/            # OpenAPI spec + Orval codegen config
 │   ├── api-client-react/    # Generated React Query hooks
@@ -44,6 +47,8 @@ workspace/
 - **Updates** — Message board; guests see public posts, members see all; elite-only posts locked behind Elite paywall
 - **Member Zone** — Protected dashboard with player/supporter split; achievement progress bars with share button (player only); referral code card with copy/share (all users); event history (player only); XP progress (player only); supporter badge; "Refer a Friend" section
 - **Who's Going** — Event cards in Buy Tickets tab show avatars + count of confirmed attendees
+- **PIN Check-In** — When an event's check-in window is open (30 min before → 2 hrs after), a "Check In" button appears on event cards; member enters the event PIN set by admin; records attendance via API; button turns green "Checked In ✓" on success
+- **Member QR Code** — Collapsible card on the Member tab shows a QR code encoding `dodgeclub:member:{userId}`; door staff scan this with the Scanner app for instant check-in
 - **Gift a Ticket** — When you own a ticket, a gift button opens a modal to send a ticket to a friend's email
 - **Elite Membership** — £8.99/month Stripe subscription paywall (app/elite.tsx); benefits: early ticket access, tips & tricks, elite-only posts, discounted tickets, elite badge; Stripe Customer Portal for self-service management
 
@@ -64,11 +69,27 @@ workspace/
 
 ### Data Models
 - `users` — id, email, passwordHash, name, isAdmin, avatarUrl, stripeCustomerId, **isElite**, **stripeSubscriptionId**, **eliteSince**, **accountType** (player|supporter), **referralCode**, **referredBy**
-- `events` — id, title, description, date, location, ticketUrl, imageUrl, attendeeCount, ticketPrice, ticketCapacity, stripeProductId, stripePriceId, **eliteEarlyAccess**, **eliteDiscountPercent**
+- `events` — id, title, description, date, location, ticketUrl, imageUrl, attendeeCount, ticketPrice, ticketCapacity, stripeProductId, stripePriceId, **eliteEarlyAccess**, **eliteDiscountPercent**, **checkInPin** (TEXT, admin-set short PIN)
 - `tickets` — id, userId, eventId, stripeCheckoutSessionId, stripePaymentIntentId, status (pending/paid/free/cancelled), ticketCode (16-char hex), checkedIn, amountPaid
 - `attendance` — id, userId, eventId, earnedMedal, attendedAt
 - `posts` — id, title, content, imageUrl, isMembersOnly, **isEliteOnly**, authorId
 - `merch` — id, name, description, price, imageUrl, buyUrl, category, inStock
+
+### Scanner App (Door Staff — `/scanner/`)
+- React/Vite web app; admin login via same credentials as admin dashboard
+- Loads events currently within the check-in window (30 min before → 2 hrs after event start)
+- Shows the event's PIN in a bold chip on the event card (visible to door staff)
+- QR scanner using device camera (`@zxing/browser`); decodes `dodgeclub:member:{userId}` format
+- Manual member ID fallback input for when camera is unavailable
+- Instantly shows member name + Checked In / Already Checked In / Error feedback overlay
+- API: `GET /api/events/checkin-active` (admin) · `POST /api/events/:id/checkin-scan` (admin)
+
+### PIN Check-In System
+- Admin sets a short PIN (e.g. `DODGE7`) in the admin event edit form (Check-In PIN section)
+- Check-in window: 30 min before event start to 2 hrs after
+- Member PIN flow: `POST /api/events/:id/checkin` → validates window, validates PIN, records attendance (idempotent)
+- QR scan flow: `POST /api/events/:id/checkin-scan` → admin-only, accepts `userId`, records attendance
+- Both endpoints write to `attendance` table, which drives XP/events-attended stats
 
 ### Elite Membership (£8.99/month Stripe subscription)
 - Route: `artifacts/api-server/src/routes/elite.ts` — registered at `/api/elite`

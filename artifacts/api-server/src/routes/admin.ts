@@ -33,6 +33,7 @@ function toAdminEvent(e: typeof eventsTable.$inferSelect, ttSummary?: TicketType
     eliteEarlyAccess: e.eliteEarlyAccess,
     eliteDiscountPercent: e.eliteDiscountPercent ?? null,
     xpReward: e.xpReward ?? 50,
+    checkInPin: e.checkInPin ?? null,
     ticketTypeCount: ttSummary?.count ?? 0,
     ticketTypeMinPrice: ttSummary?.minPrice ?? null,
     ticketTypeMaxPrice: ttSummary?.maxPrice ?? null,
@@ -71,7 +72,7 @@ router.post("/events", async (req, res) => {
 
 /* PUT /api/admin/events/:id — update */
 router.put("/events/:id", async (req, res) => {
-  const { title, description, date, location, ticketUrl, imageUrl, eliteEarlyAccess, eliteDiscountPercent, xpReward } = req.body;
+  const { title, description, date, location, ticketUrl, imageUrl, eliteEarlyAccess, eliteDiscountPercent, xpReward, checkInPin } = req.body;
   const [event] = await db.update(eventsTable)
     .set({
       title, description,
@@ -82,6 +83,7 @@ router.put("/events/:id", async (req, res) => {
       eliteEarlyAccess: eliteEarlyAccess !== undefined ? !!eliteEarlyAccess : undefined,
       eliteDiscountPercent: eliteDiscountPercent != null ? Number(eliteDiscountPercent) : null,
       xpReward: xpReward != null ? Number(xpReward) : undefined,
+      checkInPin: checkInPin !== undefined ? (checkInPin || null) : undefined,
     })
     .where(eq(eventsTable.id, Number(req.params.id)))
     .returning();

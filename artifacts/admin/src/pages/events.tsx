@@ -851,11 +851,12 @@ function EventFormModal({ event, onClose }: { event?: Event; onClose: () => void
       eliteEarlyAccess: event.eliteEarlyAccess ?? false,
       eliteDiscountPercent: event.eliteDiscountPercent ?? null,
       xpReward: event.xpReward ?? 50,
+      checkInPin: event.checkInPin ?? "",
     } : {
       title: "", description: "", date: "", location: "", ticketUrl: "", imageUrl: "",
       ticketPrice: null, ticketCapacity: null, stripeProductId: null, stripePriceId: null,
       eliteEarlyAccess: false, eliteDiscountPercent: null,
-      xpReward: 50,
+      xpReward: 50, checkInPin: "",
     }
   });
 
@@ -932,6 +933,20 @@ function EventFormModal({ event, onClose }: { event?: Event; onClose: () => void
               placeholder="50"
             />
             <p className="text-xs text-muted-foreground">Base XP awarded to members who attend this event. Streak and milestone bonuses are added on top.</p>
+          </div>
+
+          <div className="space-y-2 p-4 bg-blue-500/5 rounded-xl border border-blue-500/20">
+            <Label className="text-blue-400 font-semibold flex items-center gap-1.5 text-sm">
+              🔑 Check-In PIN
+            </Label>
+            <Input
+              {...register("checkInPin")}
+              className="bg-background border-border rounded-xl h-9 uppercase tracking-widest font-mono"
+              placeholder="e.g. DODGE7"
+              maxLength={8}
+              onChange={(e) => setValue("checkInPin", e.target.value.toUpperCase())}
+            />
+            <p className="text-xs text-muted-foreground">Members enter this PIN in the app to mark themselves as attending. Leave blank to disable PIN check-in. Shown to door staff in the scanner app.</p>
           </div>
 
           <div className="space-y-3 p-4 bg-yellow-500/5 rounded-xl border border-yellow-500/20">

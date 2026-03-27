@@ -1,6 +1,18 @@
 import { Router, type IRouter } from "express";
 import { db, eventsTable, attendanceTable, ticketsTable, usersTable, ticketTypesTable } from "@workspace/db";
-import { eq, gte, desc, count, and, inArray } from "drizzle-orm";
+import { eq, gte, desc, count, and, inArray, lte } from "drizzle-orm";
+import { requireAdmin } from "../middlewares/requireAdmin";
+
+// Check-in window: 30 min before start → 2 hrs after start
+const CHECK_IN_BEFORE_MS = 30 * 60 * 1000;
+const CHECK_IN_AFTER_MS = 2 * 60 * 60 * 1000;
+
+function isCheckInWindowOpen(eventDate: Date): boolean {
+  const now = Date.now();
+  const start = eventDate.getTime() - CHECK_IN_BEFORE_MS;
+  const end = eventDate.getTime() + CHECK_IN_AFTER_MS;
+  return now >= start && now <= end;
+}
 
 const router: IRouter = Router();
 
@@ -113,6 +125,82 @@ router.post("/", async (req, res) => {
     .values({ title, description, date: new Date(date), location, ticketUrl, imageUrl })
     .returning();
   res.status(201).json(toEvent(event, []));
+});
+
+/* GET /api/events/checkin-active — events currently in check-in window (admin, for scanner) */
+router.get("/checkin-active", requireAdmin, async (_req, res) => {
+  const now = new Date();
+  const windowStart = new Date(now.getTime() - CHECK_IN_AFTER_MS);
+  const windowEnd = new Date(now.getTime() + CHECK_IN_BEFORE_MS);
+  const events = await db.select().from(eventsTable)
+    .where(and(
+      eq(eventsTable.isPublished, true),
+      gte(eventsTable.date, windowStart),
+      lte(eventsTable.date, windowEnd),
+    ))
+    .orderBy(eventsTable.date);
+  res.json(events.map(e => ({
+    id: e.id,
+    title: e.title,
+    date: e.date.toISOString(),
+    location: e.location,
+    checkInPin: e.checkInPin ?? null,
+  })));
+});
+
+/* POST /api/events/:id/checkin — member PIN self check-in */
+router.post("/:id/checkin", async (req, res) => {
+  const userId = req.session?.userId;
+  if (!userId) { res.status(401).json({ error: "Unauthorised" }); return; }
+
+  const eventId = Number(req.params.id);
+  const { pin } = req.body;
+
+  const event = await db.query.eventsTable.findFirst({ where: eq(eventsTable.id, eventId) });
+  if (!event || !event.isPublished) { res.status(404).json({ error: "Event not found" }); return; }
+
+  if (!isCheckInWindowOpen(event.date)) {
+    res.status(400).json({ error: "Check-in is not open for this event yet" }); return;
+  }
+
+  if (!event.checkInPin) {
+    res.status(400).json({ error: "This event has no check-in PIN set" }); return;
+  }
+
+  if ((pin ?? "").trim().toUpperCase() !== event.checkInPin.trim().toUpperCase()) {
+    res.status(400).json({ error: "Incorrect PIN" }); return;
+  }
+
+  // Idempotent — if already checked in return success
+  const existing = await db.query.attendanceTable.findFirst({
+    where: and(eq(attendanceTable.userId, userId), eq(attendanceTable.eventId, eventId)),
+  });
+  if (existing) { res.json({ alreadyCheckedIn: true }); return; }
+
+  await db.insert(attendanceTable).values({ userId, eventId, earnedMedal: false });
+  res.json({ success: true });
+});
+
+/* POST /api/events/:id/checkin-scan — scanner QR check-in (admin only) */
+router.post("/:id/checkin-scan", requireAdmin, async (req, res) => {
+  const eventId = Number(req.params.id);
+  const { userId } = req.body;
+  if (!userId) { res.status(400).json({ error: "userId required" }); return; }
+
+  const [event, user] = await Promise.all([
+    db.query.eventsTable.findFirst({ where: eq(eventsTable.id, eventId) }),
+    db.query.usersTable.findFirst({ where: eq(usersTable.id, Number(userId)), columns: { id: true, name: true, avatarUrl: true } }),
+  ]);
+  if (!event) { res.status(404).json({ error: "Event not found" }); return; }
+  if (!user) { res.status(404).json({ error: "Member not found" }); return; }
+
+  const existing = await db.query.attendanceTable.findFirst({
+    where: and(eq(attendanceTable.userId, Number(userId)), eq(attendanceTable.eventId, eventId)),
+  });
+  if (existing) { res.json({ alreadyCheckedIn: true, member: user }); return; }
+
+  await db.insert(attendanceTable).values({ userId: Number(userId), eventId, earnedMedal: false });
+  res.json({ success: true, member: user });
 });
 
 export default router;

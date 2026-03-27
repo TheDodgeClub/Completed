@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import {
   Platform,
   Share,
 } from "react-native";
+import QRCode from "react-native-qrcode-svg";
 import * as Clipboard from "expo-clipboard";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -295,6 +296,33 @@ function EditProfileModal({
         </View>
       </KeyboardAvoidingView>
     </Modal>
+  );
+}
+
+/* ======= Member QR Card ======= */
+function MemberQRCard({ userId, Colors, styles }: { userId: number; Colors: any; styles: any }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <Pressable
+      style={styles.memberIdCard}
+      onPress={() => { setExpanded(e => !e); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+    >
+      <View style={styles.memberIdRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.memberIdLabel}>Member QR Code</Text>
+          <Text style={styles.memberIdSub}>Show to door staff for check-in</Text>
+        </View>
+        <Feather name={expanded ? "chevron-up" : "chevron-down"} size={18} color={Colors.textMuted} />
+      </View>
+      {expanded && (
+        <View style={styles.memberIdQRContainer}>
+          <View style={styles.memberIdQRBox}>
+            <QRCode value={`dodgeclub:member:${userId}`} size={180} color={Colors.text} backgroundColor={Colors.card} />
+          </View>
+          <Text style={styles.memberIdSubSmall}>Member #{userId}</Text>
+        </View>
+      )}
+    </Pressable>
   );
 }
 
@@ -602,6 +630,9 @@ export default function MemberScreen() {
           </>
         )}
       </View>
+
+      {/* ── Member ID QR Card ── */}
+      <MemberQRCard userId={user.id} Colors={Colors} styles={styles} />
 
       {/* ── Next Event Countdown ── */}
       {nextClubEvent && nextClubCountdown && (
@@ -1219,5 +1250,50 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8,
     },
     supporterBadgeText: { fontFamily: "Inter_700Bold", fontSize: 10, color: "#fff", letterSpacing: 0.5 },
+
+    /* Member ID / QR Card */
+    memberIdCard: {
+      marginHorizontal: 16,
+      marginBottom: 12,
+      backgroundColor: Colors.card,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: Colors.border,
+      overflow: "hidden",
+    },
+    memberIdRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+    },
+    memberIdLabel: {
+      fontFamily: "Inter_700Bold",
+      fontSize: 14,
+      color: Colors.text,
+      marginBottom: 2,
+    },
+    memberIdSub: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 12,
+      color: Colors.textMuted,
+    },
+    memberIdQRContainer: {
+      alignItems: "center",
+      paddingBottom: 20,
+    },
+    memberIdQRBox: {
+      backgroundColor: Colors.card,
+      padding: 16,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: Colors.border,
+    },
+    memberIdSubSmall: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 12,
+      color: Colors.textMuted,
+      marginTop: 10,
+    },
   });
 }

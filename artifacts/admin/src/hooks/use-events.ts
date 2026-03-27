@@ -29,6 +29,7 @@ export interface Event {
   eliteEarlyAccess: boolean;
   eliteDiscountPercent: number | null;
   xpReward: number;
+  checkInPin: string | null;
   ticketTypeCount: number;
   ticketTypeMinPrice: number | null;
   ticketTypeMaxPrice: number | null;
