@@ -752,6 +752,7 @@ function CheckoutFormModal({
   // Signature pad state
   const [signaturePaths, setSignaturePaths] = useState<string[]>([]);
   const [, setRenderTick] = useState(0);
+  const [scrollEnabled, setScrollEnabled] = useState(true);
   const currentStroke = useRef<string>("");
   const scrollRef = useRef<RNScrollView>(null);
   const fieldYPositions = useRef<Record<string, number>>({});
@@ -762,11 +763,15 @@ function CheckoutFormModal({
 
   const signaturePanResponder = useRef(
     PanResponder.create({
+      // Capture phase — claim the touch before ScrollView can intercept it
+      onStartShouldSetPanResponderCapture: () => true,
+      onMoveShouldSetPanResponderCapture: () => true,
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: (e) => {
         const { locationX, locationY } = e.nativeEvent;
         currentStroke.current = `M${locationX.toFixed(1)},${locationY.toFixed(1)}`;
+        setScrollEnabled(false);
         setRenderTick(t => t + 1);
       },
       onPanResponderMove: (e) => {
@@ -780,6 +785,13 @@ function CheckoutFormModal({
           currentStroke.current = "";
           setSignaturePaths(prev => [...prev, completed]);
         }
+        setScrollEnabled(true);
+        setRenderTick(t => t + 1);
+      },
+      onPanResponderTerminate: () => {
+        // Gesture stolen by system (e.g. notification) — re-enable scroll
+        currentStroke.current = "";
+        setScrollEnabled(true);
         setRenderTick(t => t + 1);
       },
     })
@@ -947,6 +959,7 @@ function CheckoutFormModal({
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
               automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
+              scrollEnabled={scrollEnabled}
             >
               {fields.map(renderField)}
 
