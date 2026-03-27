@@ -371,6 +371,14 @@ const MemberTicketRow = ({ ticket, Colors, styles }: { ticket: Ticket; Colors: a
         {ticket.amountPaid > 0 && (
           <Text style={styles.ticketAmountText}>£{(ticket.amountPaid / 100).toFixed(2)}</Text>
         )}
+        {(ticket.eventXpReward ?? 50) > 0 && (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+            <Feather name="zap" size={10} color={isCheckedIn ? "#30D158" : "#FFC107"} />
+            <Text style={{ fontFamily: "Inter_500Medium", fontSize: 10, color: isCheckedIn ? "#30D158" : "#FFC107" }}>
+              {isCheckedIn ? "XP earned" : `+${ticket.eventXpReward ?? 50} XP`}
+            </Text>
+          </View>
+        )}
       </View>
     </View>
   );

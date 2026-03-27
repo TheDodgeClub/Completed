@@ -48,6 +48,7 @@ router.get("/my", requireAuth, async (req: any, res) => {
       eventDate: eventsTable.date,
       eventLocation: eventsTable.location,
       eventImageUrl: eventsTable.imageUrl,
+      eventXpReward: eventsTable.xpReward,
     })
     .from(ticketsTable)
     .innerJoin(eventsTable, eq(ticketsTable.eventId, eventsTable.id))

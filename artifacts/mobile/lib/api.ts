@@ -101,6 +101,7 @@ export type Ticket = {
   eventDate: string;
   eventLocation: string;
   eventImageUrl: string | null;
+  eventXpReward?: number;
 };
 
 export type AttendanceRecord = {

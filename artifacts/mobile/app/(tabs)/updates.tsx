@@ -94,12 +94,23 @@ function VideoPlayerModal({ video, onClose }: { video: VideoClip; onClose: () =>
   );
 }
 
+/* ─── YouTube auto-thumbnail helper ─── */
+function getYouTubeThumbnail(url: string): string | null {
+  const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  if (ytMatch) return `https://img.youtube.com/vi/${ytMatch[1]}/mqdefault.jpg`;
+  return null;
+}
+
 /* ─── Video card ─── */
 function VideoCard({ video, onPress }: { video: VideoClip; onPress: () => void }) {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
 
   const isExternalLink = video.url.includes("youtube.com") || video.url.includes("youtu.be") || video.url.includes("vimeo.com");
+
+  const thumbnailUri = video.thumbnailUrl
+    ? (resolveImageUrl(video.thumbnailUrl) ?? undefined)
+    : (getYouTubeThumbnail(video.url) ?? undefined);
 
   return (
     <Pressable
@@ -114,8 +125,8 @@ function VideoCard({ video, onPress }: { video: VideoClip; onPress: () => void }
       }}
     >
       <View style={styles.videoThumb}>
-        {video.thumbnailUrl ? (
-          <Image source={{ uri: resolveImageUrl(video.thumbnailUrl) ?? undefined }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+        {thumbnailUri ? (
+          <Image source={{ uri: thumbnailUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
         ) : (
           <View style={[StyleSheet.absoluteFill, styles.videoThumbPlaceholder]}>
             <Feather name="play-circle" size={32} color={Colors.accent} />

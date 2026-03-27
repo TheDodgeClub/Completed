@@ -455,6 +455,17 @@ function TicketCard({ ticket, Colors, onPress, onGift }: { ticket: Ticket; Color
               <Feather name="hash" size={11} color={Colors.primary} />
               <Text style={styles.ticketCode}>{ticket.ticketCode}</Text>
             </View>
+            {ticket.checkedIn ? (
+              <View style={styles.ticketXpRow}>
+                <Feather name="zap" size={10} color="#4CAF50" />
+                <Text style={[styles.ticketXpText, { color: "#4CAF50" }]}>XP earned · checked in</Text>
+              </View>
+            ) : (ticket.eventXpReward ?? 0) > 0 ? (
+              <View style={styles.ticketXpRow}>
+                <Feather name="zap" size={10} color="#FFC107" />
+                <Text style={styles.ticketXpText}>+{ticket.eventXpReward} XP on check-in</Text>
+              </View>
+            ) : null}
           </View>
         </View>
         <View style={styles.qrHint}>
@@ -1643,6 +1654,12 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       fontSize: 11,
       color: Colors.primary,
       letterSpacing: 1,
+    },
+    ticketXpRow: { flexDirection: "row", alignItems: "center", gap: 3, marginTop: 3 },
+    ticketXpText: {
+      fontFamily: "Inter_500Medium",
+      fontSize: 10,
+      color: "#FFC107",
     },
     qrHint: { alignItems: "center", gap: 4, paddingLeft: 12 },
     qrHintText: {

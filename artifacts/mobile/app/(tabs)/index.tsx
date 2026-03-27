@@ -501,6 +501,16 @@ export default function HomeScreen() {
                   <Text style={styles.seeAll}>See All</Text>
                 </Pressable>
               </View>
+              {isAuthenticated && nextEventCountdown && (
+                <Pressable
+                  style={styles.countdownBanner}
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(tabs)/tickets"); }}
+                >
+                  <Feather name="clock" size={14} color={Colors.primary} />
+                  <Text style={styles.countdownBannerText}>{nextEventCountdown}</Text>
+                  <Feather name="chevron-right" size={13} color={Colors.primary} style={{ marginLeft: "auto" }} />
+                </Pressable>
+              )}
               {displayEvents.map(event => (
                 <EventCard
                   key={event.id}
@@ -817,6 +827,24 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       fontFamily: "Poppins_800ExtraBold",
       fontSize: 20,
       color: Colors.text,
+    },
+    countdownBanner: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      backgroundColor: Colors.card,
+      borderWidth: 1,
+      borderColor: Colors.primary + "40",
+      borderRadius: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      marginBottom: 12,
+    },
+    countdownBannerText: {
+      fontFamily: "Inter_700Bold",
+      fontSize: 14,
+      color: Colors.primary,
+      flex: 1,
     },
     seeAll: {
       fontFamily: "Inter_600SemiBold",
