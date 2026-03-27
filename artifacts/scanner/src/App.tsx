@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 import {
-  loginAdmin, getMe, getActiveEvents, scanCheckIn, getCheckinStats,
+  loginAdmin, getMe, getActiveEvents, scanCheckIn, scanTicketCheckIn, getCheckinStats,
   clearToken, type AdminUser, type ActiveEvent, type CheckInResult, type CheckInStats,
 } from "@/lib/api";
 
@@ -373,11 +373,11 @@ function ScannerOverlay({ event, onClose, onResult }: {
   const lastScannedRef = useRef<string | null>(null);
   const resultTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const processUserId = useCallback(async (userId: number) => {
+  async function doCheckIn(apiCall: () => Promise<CheckInResult>) {
     if (processing) return;
     setProcessing(true);
     try {
-      const res = await scanCheckIn(event.id, userId);
+      const res = await apiCall();
       const r: ResultState = res.alreadyCheckedIn
         ? { type: "duplicate", member: res.member, xpGained: 0 }
         : { type: "success", member: res.member, xpGained: res.xpGained ?? 0 };
@@ -390,26 +390,35 @@ function ScannerOverlay({ event, onClose, onResult }: {
     } finally {
       setProcessing(false);
       if (resultTimerRef.current) clearTimeout(resultTimerRef.current);
-      resultTimerRef.current = setTimeout(() => {
-        setResult(null);
-        lastScannedRef.current = null;
-      }, 3000);
+      resultTimerRef.current = setTimeout(() => { setResult(null); lastScannedRef.current = null; }, 3000);
     }
+  }
+
+  const processUserId = useCallback((userId: number) => {
+    doCheckIn(() => scanCheckIn(event.id, userId));
+  }, [event.id, processing, onResult]);
+
+  const processTicketCode = useCallback((ticketCode: string) => {
+    doCheckIn(() => scanTicketCheckIn(event.id, ticketCode));
   }, [event.id, processing, onResult]);
 
   const handleQRValue = useCallback((text: string) => {
     if (lastScannedRef.current === text) return;
     lastScannedRef.current = text;
-    const match = text.match(/^dodgeclub:member:(\d+)$/);
-    if (!match) {
-      const r: ResultState = { type: "error", message: "Not a Dodge Club QR code" };
-      setResult(r);
-      if (resultTimerRef.current) clearTimeout(resultTimerRef.current);
-      resultTimerRef.current = setTimeout(() => { setResult(null); lastScannedRef.current = null; }, 2500);
-      return;
-    }
-    processUserId(Number(match[1]));
-  }, [processUserId]);
+
+    // Member QR: dodgeclub:member:{userId}
+    const memberMatch = text.match(/^dodgeclub:member:(\d+)$/);
+    if (memberMatch) { processUserId(Number(memberMatch[1])); return; }
+
+    // Ticket QR: 16-char hex code (8 random bytes)
+    const ticketMatch = text.match(/^[0-9A-F]{16}$/i);
+    if (ticketMatch) { processTicketCode(text.toUpperCase()); return; }
+
+    const r: ResultState = { type: "error", message: "Not a Dodge Club QR code" };
+    setResult(r);
+    if (resultTimerRef.current) clearTimeout(resultTimerRef.current);
+    resultTimerRef.current = setTimeout(() => { setResult(null); lastScannedRef.current = null; }, 2500);
+  }, [processUserId, processTicketCode]);
 
   useEffect(() => {
     const reader = new BrowserMultiFormatReader(undefined, { delayBetweenScanAttempts: 400 });
@@ -433,8 +442,16 @@ function ScannerOverlay({ event, onClose, onResult }: {
 
   function handleManualSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const id = parseInt(manualId.trim(), 10);
-    if (!isNaN(id)) { processUserId(id); setManualId(""); }
+    const val = manualId.trim().replace(/\s/g, "").toUpperCase();
+    if (!val) return;
+    // Ticket code: 16-char hex (with or without spaces)
+    if (/^[0-9A-F]{16}$/.test(val)) {
+      processTicketCode(val);
+    } else {
+      const id = parseInt(val, 10);
+      if (!isNaN(id)) processUserId(id);
+    }
+    setManualId("");
   }
 
   const resultBg = result?.type === "success" ? "bg-green-900/95" : result?.type === "duplicate" ? "bg-amber-900/95" : "bg-red-900/95";
@@ -512,11 +529,11 @@ function ScannerOverlay({ event, onClose, onResult }: {
       {/* Manual entry */}
       <div className="shrink-0 bg-[#0a0a0a] border-t border-white/10 px-4 pt-3"
         style={{ paddingBottom: "max(env(safe-area-inset-bottom), 16px)" }}>
-        <p className="text-xs text-gray-500 text-center mb-2 font-medium">Manual · enter member ID</p>
+        <p className="text-xs text-gray-500 text-center mb-2 font-medium">Manual · member ID or ticket code</p>
         <form onSubmit={handleManualSubmit} className="flex gap-2">
-          <input type="number" value={manualId} onChange={e => setManualId(e.target.value)}
+          <input type="text" value={manualId} onChange={e => setManualId(e.target.value)}
             className="flex-1 bg-[#1c1c1e] border border-[#2c2c2e] text-white rounded-2xl px-5 py-3.5 text-base focus:outline-none focus:border-[hsl(355,78%,56%)] transition-colors"
-            placeholder="Member ID" inputMode="numeric" />
+            placeholder="Member ID or ticket code" autoCapitalize="characters" autoCorrect="off" />
           <button type="submit" disabled={processing || !manualId.trim()}
             className="min-h-[52px] px-6 bg-[hsl(355,78%,56%)] text-white font-bold rounded-2xl text-base active:opacity-80 disabled:opacity-40 transition-opacity shrink-0">
             Go

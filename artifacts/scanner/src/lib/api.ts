@@ -50,6 +50,12 @@ export async function scanCheckIn(eventId: number, userId: number): Promise<Chec
   });
 }
 
+export async function scanTicketCheckIn(eventId: number, ticketCode: string): Promise<CheckInResult> {
+  return fetchApi<CheckInResult>(`/api/events/${eventId}/checkin-scan`, {
+    method: "POST", body: JSON.stringify({ ticketCode }),
+  });
+}
+
 export async function getCheckinStats(eventId: number): Promise<CheckInStats> {
   return fetchApi<CheckInStats>(`/api/events/${eventId}/checkin-stats`);
 }

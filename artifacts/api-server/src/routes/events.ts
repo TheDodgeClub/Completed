@@ -238,18 +238,32 @@ router.post("/:id/checkin", async (req, res) => {
 /* POST /api/events/:id/checkin-scan — scanner QR check-in (admin only) */
 router.post("/:id/checkin-scan", requireAdmin, async (req, res) => {
   const eventId = Number(req.params.id);
-  const { userId } = req.body;
-  if (!userId) { res.status(400).json({ error: "userId required" }); return; }
+  const { userId, ticketCode } = req.body;
+  if (!userId && !ticketCode) { res.status(400).json({ error: "userId or ticketCode required" }); return; }
+
+  // If scanning a ticket QR, look up the user via the ticket code
+  let resolvedUserId: number;
+  if (ticketCode) {
+    const ticket = await db.query.ticketsTable.findFirst({
+      where: and(eq(ticketsTable.ticketCode, String(ticketCode).toUpperCase()), eq(ticketsTable.eventId, eventId)),
+      columns: { userId: true, status: true },
+    });
+    if (!ticket) { res.status(404).json({ error: "Ticket not found for this event" }); return; }
+    if (ticket.status !== "paid") { res.status(400).json({ error: "Ticket is not valid (not paid)" }); return; }
+    resolvedUserId = ticket.userId;
+  } else {
+    resolvedUserId = Number(userId);
+  }
 
   const [event, user] = await Promise.all([
     db.query.eventsTable.findFirst({ where: eq(eventsTable.id, eventId) }),
-    db.query.usersTable.findFirst({ where: eq(usersTable.id, Number(userId)), columns: { id: true, name: true, avatarUrl: true, accountType: true } }),
+    db.query.usersTable.findFirst({ where: eq(usersTable.id, resolvedUserId), columns: { id: true, name: true, avatarUrl: true, accountType: true } }),
   ]);
   if (!event) { res.status(404).json({ error: "Event not found" }); return; }
   if (!user) { res.status(404).json({ error: "Member not found" }); return; }
 
   const existing = await db.query.attendanceTable.findFirst({
-    where: and(eq(attendanceTable.userId, Number(userId)), eq(attendanceTable.eventId, eventId)),
+    where: and(eq(attendanceTable.userId, resolvedUserId), eq(attendanceTable.eventId, eventId)),
   });
   if (existing) {
     res.json({ alreadyCheckedIn: true, member: user, xpGained: 0 });
@@ -258,7 +272,7 @@ router.post("/:id/checkin-scan", requireAdmin, async (req, res) => {
 
   // Compute accurate xpGained including streak + milestone bonuses
   const [attendanceRows, chronoEvents] = await Promise.all([
-    db.select({ eventId: attendanceTable.eventId }).from(attendanceTable).where(eq(attendanceTable.userId, Number(userId))),
+    db.select({ eventId: attendanceTable.eventId }).from(attendanceTable).where(eq(attendanceTable.userId, resolvedUserId)),
     db.select({ id: eventsTable.id, xpReward: eventsTable.xpReward })
       .from(eventsTable)
       .where(lte(eventsTable.date, event.date))
@@ -269,11 +283,11 @@ router.post("/:id/checkin-scan", requireAdmin, async (req, res) => {
 
   // Insert attendance, tick ticket checkedIn, increment event attendeeCount — all in parallel
   await Promise.all([
-    db.insert(attendanceTable).values({ userId: Number(userId), eventId, earnedMedal: false }),
+    db.insert(attendanceTable).values({ userId: resolvedUserId, eventId, earnedMedal: false }),
     db.update(ticketsTable)
       .set({ checkedIn: true, checkedInAt: new Date() })
       .where(and(
-        eq(ticketsTable.userId, Number(userId)),
+        eq(ticketsTable.userId, resolvedUserId),
         eq(ticketsTable.eventId, eventId),
         eq(ticketsTable.checkedIn, false),
       )),
