@@ -850,10 +850,33 @@ function CheckoutFormModal({
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const currentStroke = useRef<string>("");
   const scrollRef = useRef<RNScrollView>(null);
+  // For web: store reference to the SVG container to compute local coords
+  const sigContainerRef = useRef<any>(null);
+  const sigContainerRect = useRef<{ left: number; top: number } | null>(null);
 
   const fields: CheckoutField[] = event.checkoutFields ?? [];
   const hasWaiver = !!event.waiverText;
   const isSigned = signaturePaths.length > 0;
+
+  // Lock body scroll on web while this modal is open
+  useEffect(() => {
+    if (Platform.OS === "web") {
+      const prev = (document as any).body.style.overflow;
+      (document as any).body.style.overflow = "hidden";
+      return () => { (document as any).body.style.overflow = prev; };
+    }
+  }, []);
+
+  // Helper: get local coords within the sig pad, handling web offset
+  function getLocalCoords(nativeEvent: any) {
+    if (Platform.OS === "web" && sigContainerRect.current) {
+      return {
+        x: (nativeEvent.pageX ?? nativeEvent.clientX ?? 0) - sigContainerRect.current.left,
+        y: (nativeEvent.pageY ?? nativeEvent.clientY ?? 0) - sigContainerRect.current.top,
+      };
+    }
+    return { x: nativeEvent.locationX ?? 0, y: nativeEvent.locationY ?? 0 };
+  }
 
   const signaturePanResponder = useRef(
     PanResponder.create({
@@ -863,14 +886,22 @@ function CheckoutFormModal({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: (e) => {
-        const { locationX, locationY } = e.nativeEvent;
-        currentStroke.current = `M${locationX.toFixed(1)},${locationY.toFixed(1)}`;
+        // On web, snapshot the container rect so we can offset coords correctly
+        if (Platform.OS === "web" && sigContainerRef.current) {
+          try {
+            const node = (sigContainerRef.current as any);
+            const rect = node.getBoundingClientRect?.() ?? node._nativeTag?.getBoundingClientRect?.();
+            if (rect) sigContainerRect.current = { left: rect.left, top: rect.top };
+          } catch {}
+        }
+        const { x, y } = getLocalCoords(e.nativeEvent);
+        currentStroke.current = `M${x.toFixed(1)},${y.toFixed(1)}`;
         setScrollEnabled(false);
         setRenderTick(t => t + 1);
       },
       onPanResponderMove: (e) => {
-        const { locationX, locationY } = e.nativeEvent;
-        currentStroke.current += ` L${locationX.toFixed(1)},${locationY.toFixed(1)}`;
+        const { x, y } = getLocalCoords(e.nativeEvent);
+        currentStroke.current += ` L${x.toFixed(1)},${y.toFixed(1)}`;
         setRenderTick(t => t + 1);
       },
       onPanResponderRelease: () => {
@@ -880,12 +911,14 @@ function CheckoutFormModal({
           setSignaturePaths(prev => [...prev, completed]);
         }
         setScrollEnabled(true);
+        sigContainerRect.current = null;
         setRenderTick(t => t + 1);
       },
       onPanResponderTerminate: () => {
         // Gesture stolen by system (e.g. notification) — re-enable scroll
         currentStroke.current = "";
         setScrollEnabled(true);
+        sigContainerRect.current = null;
         setRenderTick(t => t + 1);
       },
     })
@@ -1070,7 +1103,7 @@ function CheckoutFormModal({
 
                       {/* Signature pad */}
                       <Text style={cfStyles.sigPadLabel}>Your Signature *</Text>
-                      <View style={cfStyles.sigPadContainer}>
+                      <View ref={sigContainerRef} style={cfStyles.sigPadContainer}>
                         {/* Empty state hint */}
                         {signaturePaths.length === 0 && !currentStroke.current && (
                           <View style={cfStyles.sigPadPlaceholder} pointerEvents="none">
