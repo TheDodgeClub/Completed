@@ -82,6 +82,8 @@ function toProfile(user: typeof usersTable.$inferSelect, stats: Awaited<ReturnTy
     email: user.email,
     name: user.name,
     isAdmin: user.isAdmin,
+    accountType: user.accountType ?? "player",
+    isElite: user.isElite ?? false,
     memberSince: (user.memberSince ?? user.createdAt).toISOString(),
     avatarUrl: user.avatarUrl ?? null,
     username: user.username ?? null,
@@ -243,7 +245,7 @@ router.get("/activity", async (_req, res) => {
 router.get("/", async (_req, res) => {
   const users = await db.query.usersTable.findMany({
     orderBy: usersTable.name,
-    columns: { id: true, name: true, avatarUrl: true, username: true, bio: true, preferredRole: true, createdAt: true, isElite: true },
+    columns: { id: true, name: true, avatarUrl: true, username: true, bio: true, preferredRole: true, createdAt: true, isElite: true, accountType: true },
   });
   res.json(users.map(u => ({
     id: u.id,
@@ -254,6 +256,7 @@ router.get("/", async (_req, res) => {
     preferredRole: u.preferredRole ?? null,
     memberSince: (u.memberSince ?? u.createdAt).toISOString(),
     isElite: u.isElite ?? false,
+    accountType: u.accountType ?? "player",
   })));
 });
 

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -16,49 +16,22 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as WebBrowser from "expo-web-browser";
-import * as Google from "expo-auth-session/providers/google";
 import { useColors } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
+import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 
 WebBrowser.maybeCompleteAuthSession();
-
-const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
-  const { login, googleLogin } = useAuth();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-
-  const [, googleResponse, googlePromptAsync] = Google.useAuthRequest({
-    webClientId: GOOGLE_CLIENT_ID,
-  });
-
-  useEffect(() => {
-    if (googleResponse?.type === "success") {
-      const accessToken = googleResponse.authentication?.accessToken;
-      if (accessToken) {
-        setGoogleLoading(true);
-        googleLogin(accessToken)
-          .catch(err => setErrorMsg(err.message || "Google sign-in failed. Please try again."))
-          .finally(() => setGoogleLoading(false));
-      }
-    } else if (googleResponse?.type === "error") {
-      setErrorMsg("Google sign-in was cancelled or failed.");
-    }
-  }, [googleResponse]);
-
-  const handleGoogleSignIn = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setErrorMsg("");
-    googlePromptAsync();
-  };
 
   const handleLogin = async () => {
     setErrorMsg("");
@@ -159,33 +132,7 @@ export default function LoginScreen() {
           <Text style={styles.forgotLink}>Forgot your password?</Text>
         </Pressable>
 
-        {GOOGLE_CLIENT_ID && (
-          <>
-            <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            <Pressable
-              style={({ pressed }) => [styles.googleBtn, { opacity: pressed ? 0.85 : 1 }]}
-              onPress={handleGoogleSignIn}
-              disabled={googleLoading || loading}
-            >
-              {googleLoading ? (
-                <ActivityIndicator color="#444" />
-              ) : (
-                <>
-                  <Image
-                    source={{ uri: "https://www.google.com/favicon.ico" }}
-                    style={styles.googleIcon}
-                  />
-                  <Text style={styles.googleBtnText}>Continue with Google</Text>
-                </>
-              )}
-            </Pressable>
-          </>
-        )}
+        <GoogleSignInButton label="Continue with Google" onError={setErrorMsg} />
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Don't have an account? </Text>

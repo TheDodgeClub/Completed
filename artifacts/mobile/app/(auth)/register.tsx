@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -16,9 +16,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as WebBrowser from "expo-web-browser";
-import * as Google from "expo-auth-session/providers/google";
 import { useColors } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
+import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -39,13 +39,11 @@ const ROLE_OPTIONS: { type: AccountType; label: string; description: string; ico
   },
 ];
 
-const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
-
 export default function RegisterScreen() {
   const insets = useSafeAreaInsets();
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
-  const { register, googleLogin } = useAuth();
+  const { register } = useAuth();
 
   const [step, setStep] = useState<1 | 2>(1);
   const [name, setName] = useState("");
@@ -55,32 +53,7 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [accountType, setAccountType] = useState<AccountType>("player");
   const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-
-  const [, googleResponse, googlePromptAsync] = Google.useAuthRequest({
-    webClientId: GOOGLE_CLIENT_ID,
-  });
-
-  useEffect(() => {
-    if (googleResponse?.type === "success") {
-      const accessToken = googleResponse.authentication?.accessToken;
-      if (accessToken) {
-        setGoogleLoading(true);
-        googleLogin(accessToken)
-          .catch(err => setErrorMsg(err.message || "Google sign-in failed. Please try again."))
-          .finally(() => setGoogleLoading(false));
-      }
-    } else if (googleResponse?.type === "error") {
-      setErrorMsg("Google sign-in was cancelled or failed.");
-    }
-  }, [googleResponse]);
-
-  const handleGoogleSignIn = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setErrorMsg("");
-    googlePromptAsync();
-  };
 
   const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
@@ -304,33 +277,7 @@ export default function RegisterScreen() {
           <Feather name="arrow-right" size={18} color="#fff" style={{ marginLeft: 8 }} />
         </Pressable>
 
-        {GOOGLE_CLIENT_ID && (
-          <>
-            <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            <Pressable
-              style={({ pressed }) => [styles.googleBtn, { opacity: pressed ? 0.85 : 1 }]}
-              onPress={handleGoogleSignIn}
-              disabled={googleLoading || loading}
-            >
-              {googleLoading ? (
-                <ActivityIndicator color="#444" />
-              ) : (
-                <>
-                  <Image
-                    source={{ uri: "https://www.google.com/favicon.ico" }}
-                    style={styles.googleIcon}
-                  />
-                  <Text style={styles.googleBtnText}>Sign up with Google</Text>
-                </>
-              )}
-            </Pressable>
-          </>
-        )}
+        <GoogleSignInButton label="Sign up with Google" onError={setErrorMsg} />
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Already a member? </Text>
