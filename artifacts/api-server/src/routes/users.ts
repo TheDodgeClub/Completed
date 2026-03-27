@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, usersTable, attendanceTable, eventsTable, awardsTable, eventRegistrationsTable, postCommentsTable } from "@workspace/db";
+import { db, usersTable, attendanceTable, eventsTable, awardsTable, eventRegistrationsTable, postCommentsTable, postsTable } from "@workspace/db";
 import { eq, gt, desc, lte, isNotNull } from "drizzle-orm";
 
 const router: IRouter = Router();
@@ -193,16 +193,25 @@ router.get("/me/rank", async (req, res) => {
 
 /* GET /api/users/activity — recent community activity feed (public) */
 router.get("/activity", async (_req, res) => {
-  const [recentAwards, recentMembers, recentRegistrations, eliteUpgrades, recentComments] = await Promise.all([
+  const [
+    recentAwards,
+    recentMembers,
+    recentRegistrations,
+    eliteUpgrades,
+    recentComments,
+    recentAttendance,
+    recentPosts,
+    referredMembers,
+  ] = await Promise.all([
     db.query.awardsTable.findMany({
       with: { user: { columns: { id: true, name: true, avatarUrl: true, accountType: true, isElite: true } } },
       orderBy: [desc(awardsTable.awardedAt)],
       limit: 8,
     }),
     db.query.usersTable.findMany({
-      columns: { id: true, name: true, avatarUrl: true, createdAt: true, isAdmin: true, accountType: true, isElite: true },
+      columns: { id: true, name: true, avatarUrl: true, createdAt: true, isAdmin: true, accountType: true, isElite: true, referredBy: true },
       orderBy: [desc(usersTable.createdAt)],
-      limit: 6,
+      limit: 8,
     }),
     db.query.eventRegistrationsTable.findMany({
       with: {
@@ -225,6 +234,27 @@ router.get("/activity", async (_req, res) => {
       },
       orderBy: [desc(postCommentsTable.createdAt)],
       limit: 8,
+    }),
+    db.query.attendanceTable.findMany({
+      with: {
+        user: { columns: { id: true, name: true, avatarUrl: true, accountType: true, isElite: true } },
+        event: { columns: { title: true } },
+      },
+      orderBy: [desc(attendanceTable.attendedAt)],
+      limit: 10,
+    }),
+    db.query.postsTable.findMany({
+      with: {
+        author: { columns: { id: true, name: true, avatarUrl: true, accountType: true, isElite: true } },
+      },
+      orderBy: [desc(postsTable.createdAt)],
+      limit: 6,
+    }),
+    db.query.usersTable.findMany({
+      columns: { id: true, name: true, avatarUrl: true, createdAt: true, accountType: true, isElite: true, referredBy: true },
+      where: isNotNull(usersTable.referredBy),
+      orderBy: [desc(usersTable.createdAt)],
+      limit: 6,
     }),
   ]);
 
@@ -250,7 +280,9 @@ router.get("/activity", async (_req, res) => {
     });
   }
 
-  for (const member of recentMembers.filter(m => !m.isAdmin)) {
+  // Split new members into referred vs organic joins
+  const referredIds = new Set(referredMembers.map(m => m.id));
+  for (const member of recentMembers.filter(m => !m.isAdmin && !referredIds.has(m.id))) {
     items.push({
       id: `member-${member.id}`,
       type: "newMember",
@@ -307,8 +339,52 @@ router.get("/activity", async (_req, res) => {
     });
   }
 
+  for (const record of recentAttendance) {
+    items.push({
+      id: `attendance-${record.id}`,
+      type: "attendance",
+      userId: record.userId,
+      userName: record.user.name,
+      userAvatar: record.user.avatarUrl ?? null,
+      text: record.earnedMedal
+        ? `${record.user.name} attended ${record.event.title} and earned a medal 🏅`
+        : `${record.user.name} showed up to ${record.event.title} 🎯`,
+      timestamp: record.attendedAt.toISOString(),
+      accountType: (record.user.accountType ?? "player") as "player" | "supporter",
+      isElite: record.user.isElite ?? false,
+    });
+  }
+
+  for (const post of recentPosts) {
+    items.push({
+      id: `post-${post.id}`,
+      type: "post",
+      userId: post.author.id,
+      userName: post.author.name,
+      userAvatar: post.author.avatarUrl ?? null,
+      text: `New post: "${post.title}" 📢`,
+      timestamp: post.createdAt.toISOString(),
+      accountType: (post.author.accountType ?? "player") as "player" | "supporter",
+      isElite: post.author.isElite ?? false,
+    });
+  }
+
+  for (const member of referredMembers) {
+    items.push({
+      id: `referral-${member.id}`,
+      type: "referral",
+      userId: member.id,
+      userName: member.name,
+      userAvatar: member.avatarUrl ?? null,
+      text: `${member.name} joined via a referral 🤝`,
+      timestamp: member.createdAt.toISOString(),
+      accountType: (member.accountType ?? "player") as "player" | "supporter",
+      isElite: member.isElite ?? false,
+    });
+  }
+
   items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-  res.json(items.slice(0, 10));
+  res.json(items.slice(0, 12));
 });
 
 /* GET /api/users — member directory (public) */
