@@ -30,8 +30,6 @@ import { EventCard } from "@/components/EventCard";
 import { PostCard } from "@/components/PostCard";
 import { PostDetailModal } from "@/components/PostDetailModal";
 import { VideoHero } from "@/components/VideoHero";
-import { EliteBanner } from "@/components/EliteBanner";
-
 
 /* ── Supporter tier constants ── */
 const SUPPORTER_TIERS = [
@@ -309,6 +307,30 @@ export default function HomeScreen() {
             <Feather name="tag" size={13} color="#0D0D0D" />
             <Text style={styles.heroBtnSecondaryText}>Get Tickets</Text>
           </Pressable>
+
+          {isAuthenticated && user?.accountType !== "supporter" && (
+            user?.isElite ? (
+              <Pressable
+                style={({ pressed }) => [styles.heroBtn, styles.heroBtnEliteOwned, { opacity: pressed ? 0.85 : 1 }]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  router.push("/elite");
+                }}
+              >
+                <Text style={styles.heroBtnEliteOwnedText}>⚡ You're Elite</Text>
+              </Pressable>
+            ) : (
+              <Pressable
+                style={({ pressed }) => [styles.heroBtn, styles.heroBtnElite, { opacity: pressed ? 0.85 : 1 }]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  router.push("/elite");
+                }}
+              >
+                <Text style={styles.heroBtnEliteText}>Go Elite</Text>
+              </Pressable>
+            )
+          )}
         </View>
       </LinearGradient>
 
@@ -575,11 +597,6 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* Go Elite Banner — players only */}
-        {user?.accountType !== "supporter" && (
-          <EliteBanner isElite={user?.isElite ?? false} isAuthenticated={isAuthenticated} />
-        )}
-
         {/* Latest Updates */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -793,6 +810,26 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       fontFamily: "Inter_600SemiBold",
       fontSize: 11,
       color: "#0D0D0D",
+    },
+    heroBtnElite: {
+      backgroundColor: "rgba(255,193,7,0.18)",
+      borderWidth: 1,
+      borderColor: "rgba(255,193,7,0.6)",
+    },
+    heroBtnEliteText: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 11,
+      color: "#FFC107",
+    },
+    heroBtnEliteOwned: {
+      backgroundColor: "rgba(255,193,7,0.12)",
+      borderWidth: 1,
+      borderColor: "rgba(255,193,7,0.35)",
+    },
+    heroBtnEliteOwnedText: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 11,
+      color: "rgba(255,193,7,0.75)",
     },
     body: { padding: 20, gap: 8 },
     section: { marginBottom: 28 },
