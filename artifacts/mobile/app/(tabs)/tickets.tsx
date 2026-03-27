@@ -132,7 +132,8 @@ export default function TicketsScreen() {
         controlsColor: "#FFD700",
       });
       const fresh = await refetchTickets();
-      const newTicket = (fresh.data ?? []).find(t => t.eventId === event.id);
+      const eventTickets = (fresh.data ?? []).filter(t => t.eventId === event.id);
+      const newTicket = eventTickets.sort((a, b) => b.id - a.id)[0];
       if (newTicket) {
         setSelectedTicket(newTicket);
         setActiveTab("my");
