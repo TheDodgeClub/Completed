@@ -572,20 +572,13 @@ export default function MemberScreen() {
         {user.accountType === "supporter" ? (
           <>
             <View style={styles.statBlock}>
-              <Text style={[styles.statValue, { color: Colors.primary }]}>{upcomingEvents?.length ?? 0}</Text>
-              <Text style={styles.statLabel}>Events Going</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statBlock}>
               <Text style={[styles.statValue, { color: Colors.accent }]}>{user.eventsAttended ?? 0}</Text>
-              <Text style={styles.statLabel}>Attended</Text>
+              <Text style={styles.statLabel}>Events Attended</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statBlock}>
-              <Text style={[styles.statValue, { color: currentStreak > 0 ? "#FF6B35" : Colors.textMuted }]}>
-                {currentStreak > 0 ? `🔥${currentStreak}` : "–"}
-              </Text>
-              <Text style={styles.statLabel}>Attendance Streak</Text>
+              <Text style={[styles.statValue, { color: Colors.primary }]}>{(user.xp ?? 0).toLocaleString()}</Text>
+              <Text style={styles.statLabel}>XP Earned</Text>
             </View>
           </>
         ) : (
