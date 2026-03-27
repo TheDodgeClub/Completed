@@ -46,7 +46,6 @@ export default function LoginScreen() {
       if (accessToken) {
         setGoogleLoading(true);
         googleLogin(accessToken)
-          .then(() => router.dismissAll())
           .catch(err => setErrorMsg(err.message || "Google sign-in failed. Please try again."))
           .finally(() => setGoogleLoading(false));
       }
@@ -71,7 +70,6 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await login(email.trim().toLowerCase(), password);
-      router.dismissAll();
     } catch (err: any) {
       setErrorMsg(err.message || "Invalid email or password.");
     } finally {

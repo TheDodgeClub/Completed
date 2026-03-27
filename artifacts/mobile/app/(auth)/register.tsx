@@ -68,7 +68,6 @@ export default function RegisterScreen() {
       if (accessToken) {
         setGoogleLoading(true);
         googleLogin(accessToken)
-          .then(() => router.dismissAll())
           .catch(err => setErrorMsg(err.message || "Google sign-in failed. Please try again."))
           .finally(() => setGoogleLoading(false));
       }
@@ -114,7 +113,6 @@ export default function RegisterScreen() {
         accountType,
         referralCode.trim().toUpperCase() || undefined,
       );
-      router.dismissAll();
     } catch (err: any) {
       setErrorMsg(err.message || "Something went wrong. Please try again.");
       setStep(1);
