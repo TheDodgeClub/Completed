@@ -491,10 +491,24 @@ router.post("/gift", requireAuth, async (req: any, res) => {
     .limit(1);
   if (!gifterTicket) { res.status(403).json({ error: "You need to have your own ticket before gifting one." }); return; }
 
-  const isFree = !event.ticketPrice || Number(event.ticketPrice) === 0;
+  // Resolve ticket type from the gifter's ticket — gift uses the same type & price
+  let giftTicketType: typeof ticketTypesTable.$inferSelect | null = null;
+  if (gifterTicket.ticketTypeId) {
+    const [tt] = await db.select().from(ticketTypesTable).where(eq(ticketTypesTable.id, gifterTicket.ticketTypeId)).limit(1);
+    if (tt) giftTicketType = tt;
+  }
+
+  // Determine if this gift is free based on the ticket type price (or event-level price as fallback)
+  const giftPricePence = giftTicketType ? giftTicketType.price : Math.round(Number(event.ticketPrice ?? 0) * 100);
+  const isFree = giftPricePence === 0;
+
   const normalizedEmail = recipientEmail.toLowerCase();
   const [gifter] = await db.select().from(usersTable).where(eq(usersTable.id, gifterId)).limit(1);
   const gifterName = gifter?.name ?? gifter?.email ?? "A Dodge Club member";
+
+  const baseUrl = process.env.REPLIT_DOMAINS
+    ? `https://${process.env.REPLIT_DOMAINS.split(",")[0]}`
+    : (process.env.API_BASE_URL ?? "https://api.thedodgeclub.co.uk");
 
   const recipient = await db.query.usersTable.findFirst({ where: eq(usersTable.email, normalizedEmail) });
 
@@ -505,20 +519,23 @@ router.post("/gift", requireAuth, async (req: any, res) => {
     if (existing) { res.status(409).json({ error: "That person already has a ticket for this event." }); return; }
 
     if (isFree) {
-      const [ticket] = await db.insert(ticketsTable).values({ userId: recipient.id, eventId, status: "paid", ticketCode: generateTicketCode(), amountPaid: 0 }).returning();
+      const [ticket] = await db.insert(ticketsTable).values({ userId: recipient.id, eventId, status: "paid", ticketCode: generateTicketCode(), amountPaid: 0, ticketTypeId: giftTicketType?.id ?? null }).returning();
       sendGiftEmail({ toEmail: recipient.email, toName: recipient.name ?? recipient.email, gifterName, eventName: event.title, eventDate: event.date, eventLocation: event.location, ticketCode: ticket.ticketCode }).catch(e => console.error("[email] gift send error:", e));
       res.status(201).json({ ticket, gifted: true });
       return;
     }
 
     const stripe = getUncachableStripeClient();
+    const lineItems = event.stripePriceId
+      ? [{ price: event.stripePriceId, quantity: 1 }]
+      : [{ price_data: { currency: "gbp", unit_amount: giftPricePence, ...(giftTicketType?.stripeProductId ? { product: giftTicketType.stripeProductId } : { product_data: { name: `${event.title}${giftTicketType ? ` — ${giftTicketType.name}` : ""}` } }) }, quantity: 1 }];
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
-      line_items: [{ price: event.stripePriceId!, quantity: 1 }],
-      success_url: `${process.env.API_BASE_URL ?? "https://api.thedodgeclub.co.uk"}/api/tickets/gift-success?session_id={CHECKOUT_SESSION_ID}&recipientId=${recipient.id}&eventId=${eventId}`,
-      cancel_url: `${process.env.API_BASE_URL ?? "https://api.thedodgeclub.co.uk"}/api/tickets/cancel`,
+      line_items: lineItems,
+      success_url: `${baseUrl}/api/tickets/gift-success?session_id={CHECKOUT_SESSION_ID}&recipientId=${recipient.id}&eventId=${eventId}`,
+      cancel_url: `${baseUrl}/api/tickets/cancel`,
       customer_email: gifter?.email,
-      metadata: { giftTicket: "true", recipientId: String(recipient.id), eventId: String(eventId), gifterName },
+      metadata: { giftTicket: "true", recipientId: String(recipient.id), eventId: String(eventId), gifterName, ...(giftTicketType ? { ticketTypeId: String(giftTicketType.id) } : {}) },
     });
     res.json({ checkoutUrl: session.url });
     return;
@@ -530,20 +547,23 @@ router.post("/gift", requireAuth, async (req: any, res) => {
   if (existingPending) { res.status(409).json({ error: "A gift ticket has already been sent to that email address for this event." }); return; }
 
   if (isFree) {
-    const [ticket] = await db.insert(ticketsTable).values({ userId: gifterId, eventId, status: "paid", ticketCode: generateTicketCode(), amountPaid: 0, giftRecipientEmail: normalizedEmail }).returning();
+    const [ticket] = await db.insert(ticketsTable).values({ userId: gifterId, eventId, status: "paid", ticketCode: generateTicketCode(), amountPaid: 0, giftRecipientEmail: normalizedEmail, ticketTypeId: giftTicketType?.id ?? null }).returning();
     sendGiftEmail({ toEmail: normalizedEmail, toName: normalizedEmail, gifterName, eventName: event.title, eventDate: event.date, eventLocation: event.location, ticketCode: ticket.ticketCode }).catch(e => console.error("[email] gift send error:", e));
     res.status(201).json({ ticket, gifted: true });
     return;
   }
 
   const stripe = getUncachableStripeClient();
+  const lineItems = event.stripePriceId
+    ? [{ price: event.stripePriceId, quantity: 1 }]
+    : [{ price_data: { currency: "gbp", unit_amount: giftPricePence, ...(giftTicketType?.stripeProductId ? { product: giftTicketType.stripeProductId } : { product_data: { name: `${event.title}${giftTicketType ? ` — ${giftTicketType.name}` : ""}` } }) }, quantity: 1 }];
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
-    line_items: [{ price: event.stripePriceId!, quantity: 1 }],
-    success_url: `${process.env.API_BASE_URL ?? "https://api.thedodgeclub.co.uk"}/api/tickets/gift-success?session_id={CHECKOUT_SESSION_ID}&gifterId=${gifterId}&recipientEmail=${encodeURIComponent(normalizedEmail)}&eventId=${eventId}`,
-    cancel_url: `${process.env.API_BASE_URL ?? "https://api.thedodgeclub.co.uk"}/api/tickets/cancel`,
+    line_items: lineItems,
+    success_url: `${baseUrl}/api/tickets/gift-success?session_id={CHECKOUT_SESSION_ID}&gifterId=${gifterId}&recipientEmail=${encodeURIComponent(normalizedEmail)}&eventId=${eventId}`,
+    cancel_url: `${baseUrl}/api/tickets/cancel`,
     customer_email: gifter?.email,
-    metadata: { giftTicket: "true", gifterId: String(gifterId), recipientEmail: normalizedEmail, eventId: String(eventId), gifterName },
+    metadata: { giftTicket: "true", gifterId: String(gifterId), recipientEmail: normalizedEmail, eventId: String(eventId), gifterName, ...(giftTicketType ? { ticketTypeId: String(giftTicketType.id) } : {}) },
   });
   res.json({ checkoutUrl: session.url });
 });

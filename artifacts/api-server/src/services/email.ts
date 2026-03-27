@@ -135,10 +135,18 @@ export function buildStructuredEmailHtml(opts: {
 </html>`;
 }
 
+function isValidEmail(email: string | null | undefined): boolean {
+  return !!email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 export async function sendGiftEmail(params: GiftEmailParams): Promise<void> {
   const apiKey = process.env.BREVO_API_KEY;
   if (!apiKey) {
     console.warn("[email] BREVO_API_KEY not set — skipping gift email");
+    return;
+  }
+  if (!isValidEmail(params.toEmail)) {
+    console.warn(`[email] Skipping gift email — invalid address: "${params.toEmail}"`);
     return;
   }
 
@@ -200,6 +208,10 @@ export async function sendTicketConfirmationEmail(params: TicketEmailParams): Pr
   const apiKey = process.env.BREVO_API_KEY;
   if (!apiKey) {
     console.warn("[email] BREVO_API_KEY not set — skipping email");
+    return;
+  }
+  if (!isValidEmail(params.toEmail)) {
+    console.warn(`[email] Skipping confirmation email — invalid address: "${params.toEmail}"`);
     return;
   }
 
