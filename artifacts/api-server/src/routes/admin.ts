@@ -82,8 +82,11 @@ router.post("/events/:id/publish", async (req, res) => {
 
 /* POST /api/admin/events/:id/duplicate — clone an event as an unpublished draft */
 router.post("/events/:id/duplicate", async (req, res) => {
-  const [source] = await db.select().from(eventsTable).where(eq(eventsTable.id, Number(req.params.id))).limit(1);
+  const sourceId = Number(req.params.id);
+  const [source] = await db.select().from(eventsTable).where(eq(eventsTable.id, sourceId)).limit(1);
   if (!source) { res.status(404).json({ error: "Not found" }); return; }
+
+  // 1. Duplicate the event itself
   const [copy] = await db.insert(eventsTable).values({
     title: `Copy of ${source.title}`,
     description: source.description,
@@ -94,8 +97,50 @@ router.post("/events/:id/duplicate", async (req, res) => {
     checkoutFields: source.checkoutFields,
     waiverText: source.waiverText,
     xpReward: source.xpReward,
+    eliteEarlyAccess: source.eliteEarlyAccess,
+    eliteDiscountPercent: source.eliteDiscountPercent,
     isPublished: false,
   }).returning();
+
+  // 2. Duplicate ticket types (reset sold count + Stripe IDs — checkout uses price_data override anyway)
+  const sourceTypes = await db.select().from(ticketTypesTable).where(eq(ticketTypesTable.eventId, sourceId));
+  if (sourceTypes.length > 0) {
+    await db.insert(ticketTypesTable).values(
+      sourceTypes.map(t => ({
+        eventId: copy.id,
+        name: t.name,
+        description: t.description,
+        price: t.price,
+        quantity: t.quantity,
+        quantitySold: 0,
+        saleStartsAt: t.saleStartsAt,
+        saleEndsAt: t.saleEndsAt,
+        isActive: t.isActive,
+        sortOrder: t.sortOrder,
+        stripeProductId: null,
+        stripePriceId: null,
+      }))
+    );
+  }
+
+  // 3. Duplicate discount codes (reset uses count, append suffix to keep code unique)
+  const sourceCodes = await db.select().from(discountCodesTable).where(eq(discountCodesTable.eventId, sourceId));
+  if (sourceCodes.length > 0) {
+    const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
+    await db.insert(discountCodesTable).values(
+      sourceCodes.map(c => ({
+        eventId: copy.id,
+        code: `${c.code}-${suffix}`,
+        discountType: c.discountType,
+        discountAmount: c.discountAmount,
+        maxUses: c.maxUses,
+        usesCount: 0,
+        expiresAt: c.expiresAt,
+        isActive: c.isActive,
+      }))
+    );
+  }
+
   res.status(201).json(toAdminEvent(copy));
 });
 
