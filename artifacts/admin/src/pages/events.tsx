@@ -175,7 +175,19 @@ export default function Events() {
                       </div>
                     </TableCell>
                     <TableCell className="py-4 text-center">
-                      {event.stripePriceId ? (
+                      {event.ticketTypeCount > 0 ? (
+                        <div className="flex flex-col items-center gap-0.5">
+                          <div className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-400">
+                            <TicketIcon className="w-3.5 h-3.5" />
+                            {event.ticketTypeMinPrice === 0 && event.ticketTypeMaxPrice === 0
+                              ? "Free"
+                              : event.ticketTypeMinPrice === event.ticketTypeMaxPrice
+                              ? `£${((event.ticketTypeMinPrice ?? 0) / 100).toFixed(2)}`
+                              : `£${((event.ticketTypeMinPrice ?? 0) / 100).toFixed(2)}–£${((event.ticketTypeMaxPrice ?? 0) / 100).toFixed(2)}`}
+                          </div>
+                          <div className="text-xs text-muted-foreground">{event.ticketTypeCount} type{event.ticketTypeCount !== 1 ? "s" : ""}</div>
+                        </div>
+                      ) : event.stripePriceId ? (
                         <div className="flex flex-col items-center gap-0.5">
                           <div className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-400">
                             <CheckCircle className="w-3.5 h-3.5" />

@@ -29,6 +29,9 @@ export interface Event {
   eliteEarlyAccess: boolean;
   eliteDiscountPercent: number | null;
   xpReward: number;
+  ticketTypeCount: number;
+  ticketTypeMinPrice: number | null;
+  ticketTypeMaxPrice: number | null;
 }
 
 export type EventInput = Omit<Event, "id" | "isUpcoming" | "isPublished" | "attendeeCount">;

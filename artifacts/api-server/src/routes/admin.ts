@@ -10,7 +10,9 @@ router.use(requireAdmin);
 
 /* ========== EVENTS ========== */
 
-function toAdminEvent(e: typeof eventsTable.$inferSelect) {
+type TicketTypeSummary = { count: number; minPrice: number | null; maxPrice: number | null };
+
+function toAdminEvent(e: typeof eventsTable.$inferSelect, ttSummary?: TicketTypeSummary) {
   return {
     id: e.id,
     title: e.title,
@@ -31,13 +33,31 @@ function toAdminEvent(e: typeof eventsTable.$inferSelect) {
     eliteEarlyAccess: e.eliteEarlyAccess,
     eliteDiscountPercent: e.eliteDiscountPercent ?? null,
     xpReward: e.xpReward ?? 50,
+    ticketTypeCount: ttSummary?.count ?? 0,
+    ticketTypeMinPrice: ttSummary?.minPrice ?? null,
+    ticketTypeMaxPrice: ttSummary?.maxPrice ?? null,
   };
 }
 
 /* GET /api/admin/events — list all events (incl past, incl unpublished) */
 router.get("/events", async (_req, res) => {
   const events = await db.select().from(eventsTable).orderBy(desc(eventsTable.date));
-  res.json(events.map(toAdminEvent));
+  const allTypes = await db.select().from(ticketTypesTable);
+
+  const ttMap = new Map<number, TicketTypeSummary>();
+  for (const t of allTypes) {
+    const existing = ttMap.get(t.eventId);
+    const price = t.price;
+    if (!existing) {
+      ttMap.set(t.eventId, { count: 1, minPrice: price, maxPrice: price });
+    } else {
+      existing.count++;
+      if (existing.minPrice === null || price < existing.minPrice) existing.minPrice = price;
+      if (existing.maxPrice === null || price > existing.maxPrice) existing.maxPrice = price;
+    }
+  }
+
+  res.json(events.map(e => toAdminEvent(e, ttMap.get(e.id))));
 });
 
 /* POST /api/admin/events — create */
