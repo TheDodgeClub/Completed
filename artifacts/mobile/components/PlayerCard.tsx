@@ -52,13 +52,13 @@ const PlayerCard = forwardRef<View, Props>(function PlayerCard(
       Animated.sequence([
         Animated.timing(pulseAnim, {
           toValue: 1,
-          duration: 900,
+          duration: 500,
           easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
         Animated.timing(pulseAnim, {
           toValue: 0,
-          duration: 900,
+          duration: 500,
           easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
