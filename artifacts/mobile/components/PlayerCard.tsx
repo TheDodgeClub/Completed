@@ -43,7 +43,7 @@ const PlayerCard = forwardRef<View, Props>(function PlayerCard(
       shouldRasterizeIOS
     >
       <LinearGradient
-        colors={["#071E0F", "#031008", "#000000"]}
+        colors={["#0D3D1A", "#0A2E13", "#04180A"]}
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}
         style={styles.card}
