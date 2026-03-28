@@ -24,12 +24,11 @@ import { useColors } from "@/context/ThemeContext";
 import { resolveImageUrl } from "@/constants/api";
 import { useAuth } from "@/context/AuthContext";
 import {
-  listUpcomingEvents, listPosts, getAppSettings,
+  listUpcomingEvents, listPosts,
   Post,
 } from "@/lib/api";
 import { PostCard } from "@/components/PostCard";
 import { PostDetailModal } from "@/components/PostDetailModal";
-import { VideoHero } from "@/components/VideoHero";
 
 /* ── Supporter tier constants ── */
 const SUPPORTER_TIERS = [
@@ -152,14 +151,6 @@ export default function HomeScreen() {
     queryFn: listPosts,
   });
 
-  const { data: appSettings } = useQuery({
-    queryKey: ["app-settings"],
-    queryFn: getAppSettings,
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const homeVideoUrl = appSettings?.homeVideoUrl ?? null;
-
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -278,6 +269,15 @@ export default function HomeScreen() {
             </Pressable>
           )}
 
+          {/* Hero CTA */}
+          <Pressable
+            style={({ pressed }) => [styles.heroCTA, { opacity: pressed ? 0.88 : 1 }]}
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(tabs)/tickets"); }}
+          >
+            <Feather name="tag" size={13} color="#0D0D0D" />
+            <Text style={styles.heroCTAText}>Get Tickets</Text>
+          </Pressable>
+
           {/* Supporter Journey + Merged Onboarding */}
           {isAuthenticated && user?.accountType === "supporter" && (() => {
             const sp = getSupporterProgress(user.xp ?? 0);
@@ -353,9 +353,6 @@ export default function HomeScreen() {
             );
           })()}
         </LinearGradient>
-
-        {/* Video Hero */}
-        {homeVideoUrl ? <VideoHero uri={homeVideoUrl} /> : null}
 
         <View style={styles.body}>
 
@@ -542,6 +539,25 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       fontSize: 11,
       color: "#FFC107",
       marginTop: 3,
+    },
+
+    /* ── Hero CTA ── */
+    heroCTA: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 7,
+      backgroundColor: "#FFC107",
+      borderRadius: 10,
+      paddingHorizontal: 18,
+      paddingVertical: 11,
+      alignSelf: "flex-start",
+      marginTop: 4,
+      marginBottom: 4,
+    },
+    heroCTAText: {
+      fontFamily: "Inter_700Bold",
+      fontSize: 13,
+      color: "#0D0D0D",
     },
 
     /* ── Supporter Card (merged journey + onboarding) ── */
