@@ -116,36 +116,76 @@ function getAutoThumbnail(url: string): string | null {
 function VideoCard({ video, onPress }: { video: VideoClip; onPress: () => void }) {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
+  const [muted, setMuted] = useState(true);
 
   const isExternalLink = video.url.includes("youtube.com") || video.url.includes("youtu.be") || video.url.includes("vimeo.com");
+  const resolvedUrl = resolveImageUrl(video.url) ?? video.url;
+
+  const player = useVideoPlayer(isExternalLink ? null : resolvedUrl, (p) => {
+    if (!isExternalLink) {
+      p.loop = true;
+      p.muted = true;
+      p.play();
+    }
+  });
 
   const thumbnailUri = video.thumbnailUrl
     ? (resolveImageUrl(video.thumbnailUrl) ?? undefined)
     : (getAutoThumbnail(video.url) ?? undefined);
 
+  function handlePress() {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (isExternalLink) {
+      WebBrowser.openBrowserAsync(video.url);
+    } else {
+      onPress();
+    }
+  }
+
+  function toggleMute(e: any) {
+    e.stopPropagation?.();
+    const next = !muted;
+    setMuted(next);
+    player.muted = next;
+  }
+
   return (
     <Pressable
       style={({ pressed }) => [styles.videoCard, { opacity: pressed ? 0.85 : 1 }]}
-      onPress={() => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        if (isExternalLink) {
-          WebBrowser.openBrowserAsync(video.url);
-        } else {
-          onPress();
-        }
-      }}
+      onPress={handlePress}
     >
       <View style={styles.videoThumb}>
-        {thumbnailUri ? (
-          <Image source={{ uri: thumbnailUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+        {isExternalLink ? (
+          <>
+            {thumbnailUri ? (
+              <Image source={{ uri: thumbnailUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+            ) : (
+              <View style={[StyleSheet.absoluteFill, styles.videoThumbPlaceholder]}>
+                <Feather name="play-circle" size={32} color={Colors.accent} />
+              </View>
+            )}
+            <View style={styles.playOverlay}>
+              <Feather name="play-circle" size={28} color="#fff" />
+            </View>
+          </>
         ) : (
-          <View style={[StyleSheet.absoluteFill, styles.videoThumbPlaceholder]}>
-            <Feather name="play-circle" size={32} color={Colors.accent} />
-          </View>
+          <>
+            <VideoView
+              player={player}
+              style={StyleSheet.absoluteFill}
+              contentFit="cover"
+              nativeControls={false}
+            />
+            {/* Mute toggle */}
+            <Pressable
+              onPress={toggleMute}
+              style={styles.videoMuteBtn}
+              hitSlop={8}
+            >
+              <Feather name={muted ? "volume-x" : "volume-2"} size={12} color="#fff" />
+            </Pressable>
+          </>
         )}
-        <View style={styles.playOverlay}>
-          <Feather name="play-circle" size={28} color="#fff" />
-        </View>
       </View>
       <View style={styles.videoInfo}>
         <Text style={styles.videoTitle} numberOfLines={2}>{video.title}</Text>
@@ -440,6 +480,14 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     videoThumb: { width: 220, height: 124, backgroundColor: Colors.border, overflow: "hidden" },
     videoThumbPlaceholder: { backgroundColor: `${Colors.primary}20`, alignItems: "center", justifyContent: "center" },
     playOverlay: { position: "absolute", inset: 0, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.35)" },
+    videoMuteBtn: {
+      position: "absolute",
+      bottom: 8,
+      right: 8,
+      backgroundColor: "rgba(0,0,0,0.55)",
+      borderRadius: 14,
+      padding: 5,
+    },
     videoInfo: { padding: 12, gap: 4 },
     videoTitle: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.text, lineHeight: 18 },
     videoDesc: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textSecondary },

@@ -448,29 +448,10 @@ export default function HomeScreen() {
 
             {/* Featured Video Card */}
             {featuredVideo && (
-              <Pressable
-                style={({ pressed }) => [styles.featuredVideoCard, { opacity: pressed ? 0.88 : 1 }]}
-                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setFeaturedVideoPlaying(true); }}
-              >
-                <View style={styles.featuredVideoThumbWrap}>
-                  {featuredVideo.thumbnailUrl ? (
-                    <Image source={{ uri: resolveImageUrl(featuredVideo.thumbnailUrl) ?? featuredVideo.thumbnailUrl }} style={styles.featuredVideoThumb} resizeMode="cover" />
-                  ) : (
-                    <View style={[styles.featuredVideoThumb, { backgroundColor: Colors.surface2, alignItems: "center", justifyContent: "center" }]}>
-                      <Feather name="video" size={28} color={Colors.textMuted} />
-                    </View>
-                  )}
-                  <View style={styles.featuredPlayBtn}>
-                    <Feather name="play" size={18} color="#fff" />
-                  </View>
-                </View>
-                <View style={styles.featuredVideoInfo}>
-                  <View style={styles.featuredBadge}>
-                    <Text style={styles.featuredBadgeText}>Featured</Text>
-                  </View>
-                  <Text style={styles.featuredVideoTitle} numberOfLines={2}>{featuredVideo.title}</Text>
-                </View>
-              </Pressable>
+              <FeaturedVideoInlineCard
+                video={featuredVideo}
+                onExpand={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setFeaturedVideoPlaying(true); }}
+              />
             )}
 
             {postsLoading ? (
@@ -547,6 +528,123 @@ function FeaturedVideoModal({ video, onClose }: { video: { id: number; title: st
         />
       </SafeAreaView>
     </Modal>
+  );
+}
+
+function FeaturedVideoInlineCard({ video, onExpand }: { video: FeaturedVideo; onExpand: () => void }) {
+  const Colors = useColors();
+  const [muted, setMuted] = useState(true);
+  const isExternal = video.url.includes("youtube.com") || video.url.includes("youtu.be") || video.url.includes("vimeo.com");
+  const resolvedUrl = resolveImageUrl(video.url) ?? video.url;
+
+  const player = useVideoPlayer(isExternal ? null : resolvedUrl, (p) => {
+    if (!isExternal) {
+      p.loop = true;
+      p.muted = true;
+      p.play();
+    }
+  });
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!isExternal) {
+        player.muted = true;
+        player.play();
+      }
+      return () => {
+        if (!isExternal) player.pause();
+      };
+    }, [player, isExternal])
+  );
+
+  function toggleMute() {
+    const next = !muted;
+    setMuted(next);
+    player.muted = next;
+  }
+
+  const thumbnailUri = video.thumbnailUrl ? resolveImageUrl(video.thumbnailUrl) ?? video.thumbnailUrl : null;
+
+  return (
+    <Pressable
+      onPress={onExpand}
+      style={({ pressed }) => ({
+        backgroundColor: Colors.surface,
+        borderRadius: 16,
+        overflow: "hidden",
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: Colors.border,
+        opacity: pressed ? 0.92 : 1,
+      })}
+    >
+      <View style={{ width: "100%", height: 190, backgroundColor: "#000" }}>
+        {isExternal ? (
+          thumbnailUri ? (
+            <Image source={{ uri: thumbnailUri }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+          ) : (
+            <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+              <Feather name="video" size={32} color={Colors.textMuted} />
+            </View>
+          )
+        ) : (
+          <VideoView
+            player={player}
+            style={{ width: "100%", height: "100%" }}
+            contentFit="cover"
+            nativeControls={false}
+          />
+        )}
+
+        {/* Mute toggle — only for inline playback */}
+        {!isExternal && (
+          <Pressable
+            onPress={(e) => { e.stopPropagation?.(); toggleMute(); }}
+            style={{
+              position: "absolute",
+              bottom: 10,
+              right: 10,
+              backgroundColor: "rgba(0,0,0,0.55)",
+              borderRadius: 20,
+              padding: 7,
+            }}
+            hitSlop={10}
+          >
+            <Feather name={muted ? "volume-x" : "volume-2"} size={15} color="#fff" />
+          </Pressable>
+        )}
+
+        {/* Expand to fullscreen */}
+        <Pressable
+          onPress={(e) => { e.stopPropagation?.(); onExpand(); }}
+          style={{
+            position: "absolute",
+            top: 10,
+            right: 10,
+            backgroundColor: "rgba(0,0,0,0.55)",
+            borderRadius: 20,
+            padding: 7,
+          }}
+          hitSlop={10}
+        >
+          <Feather name="maximize-2" size={14} color="#fff" />
+        </Pressable>
+
+        {/* Play overlay for external links */}
+        {isExternal && (
+          <View style={{ position: "absolute", inset: 0, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.3)" }}>
+            <Feather name="play-circle" size={48} color="#fff" />
+          </View>
+        )}
+      </View>
+
+      <View style={{ flexDirection: "row", alignItems: "center", padding: 12, gap: 8 }}>
+        <View style={{ backgroundColor: Colors.primary, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
+          <Text style={{ fontFamily: "Inter_700Bold", fontSize: 10, color: "#fff", textTransform: "uppercase", letterSpacing: 0.5 }}>Featured</Text>
+        </View>
+        <Text style={{ flex: 1, fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.text }} numberOfLines={1}>{video.title}</Text>
+      </View>
+    </Pressable>
   );
 }
 
