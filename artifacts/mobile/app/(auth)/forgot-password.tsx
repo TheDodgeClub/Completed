@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -20,6 +20,14 @@ import { forgotPassword, resetPassword } from "@/lib/api";
 
 type Step = "email" | "reset";
 
+const CODE_TTL = 600;
+
+function formatCountdown(secs: number): string {
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
 export default function ForgotPasswordScreen() {
   const insets = useSafeAreaInsets();
   const Colors = useColors();
@@ -34,6 +42,32 @@ export default function ForgotPasswordScreen() {
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
+  const [secondsLeft, setSecondsLeft] = useState(CODE_TTL);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const startTimer = useCallback(() => {
+    setSecondsLeft(CODE_TTL);
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setSecondsLeft(s => {
+        if (s <= 1) {
+          clearInterval(timerRef.current!);
+          timerRef.current = null;
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
+
+  const isExpired = step === "reset" && secondsLeft === 0;
+
   const handleSendCode = async () => {
     setErrorMsg("");
     if (!email.trim()) {
@@ -46,6 +80,24 @@ export default function ForgotPasswordScreen() {
       await forgotPassword(email.trim().toLowerCase());
       setSuccessMsg("A 6-digit reset code has been sent to your email.");
       setStep("reset");
+      startTimer();
+    } catch (err: any) {
+      setErrorMsg(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    setErrorMsg("");
+    setCode("");
+    setNewPassword("");
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setLoading(true);
+    try {
+      await forgotPassword(email.trim().toLowerCase());
+      setSuccessMsg("A new code has been sent to your email.");
+      startTimer();
     } catch (err: any) {
       setErrorMsg(err.message || "Something went wrong. Please try again.");
     } finally {
@@ -67,6 +119,7 @@ export default function ForgotPasswordScreen() {
     setLoading(true);
     try {
       await resetPassword(email.trim().toLowerCase(), code.trim(), newPassword);
+      if (timerRef.current) clearInterval(timerRef.current);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setSuccessMsg("Password updated! You can now sign in.");
       setTimeout(() => router.replace("/(auth)/login"), 1800);
@@ -127,6 +180,23 @@ export default function ForgotPasswordScreen() {
           </View>
         ) : (
           <>
+            <View style={[styles.countdownBox, isExpired && styles.countdownBoxExpired]}>
+              <Feather
+                name={isExpired ? "alert-circle" : "clock"}
+                size={15}
+                color={isExpired ? "#FF6B6B" : Colors.textSecondary}
+                style={{ marginRight: 7 }}
+              />
+              {isExpired ? (
+                <Text style={styles.countdownTextExpired}>Code expired — tap Resend below</Text>
+              ) : (
+                <Text style={styles.countdownText}>
+                  Code expires in{" "}
+                  <Text style={styles.countdownValue}>{formatCountdown(secondsLeft)}</Text>
+                </Text>
+              )}
+            </View>
+
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Reset Code</Text>
               <View style={styles.inputWrap}>
@@ -140,6 +210,7 @@ export default function ForgotPasswordScreen() {
                   keyboardType="number-pad"
                   maxLength={6}
                   autoFocus
+                  editable={!isExpired}
                 />
               </View>
             </View>
@@ -155,6 +226,7 @@ export default function ForgotPasswordScreen() {
                   value={newPassword}
                   onChangeText={setNewPassword}
                   secureTextEntry={!showPassword}
+                  editable={!isExpired}
                 />
                 <Pressable onPress={() => setShowPassword(v => !v)} style={styles.eyeBtn}>
                   <Feather name={showPassword ? "eye-off" : "eye"} size={18} color={Colors.textMuted} />
@@ -178,26 +250,44 @@ export default function ForgotPasswordScreen() {
           </View>
         )}
 
-        <Pressable
-          style={({ pressed }) => [styles.primaryBtn, { opacity: pressed ? 0.85 : 1 }]}
-          onPress={step === "email" ? handleSendCode : handleResetPassword}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.primaryBtnText}>
-              {step === "email" ? "Send Reset Code" : "Update Password"}
-            </Text>
-          )}
-        </Pressable>
+        {step === "reset" && isExpired ? (
+          <Pressable
+            style={({ pressed }) => [styles.primaryBtn, { opacity: pressed ? 0.85 : 1 }]}
+            onPress={handleResendCode}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <>
+                <Feather name="refresh-cw" size={16} color="#fff" style={{ marginRight: 8 }} />
+                <Text style={styles.primaryBtnText}>Resend Code</Text>
+              </>
+            )}
+          </Pressable>
+        ) : (
+          <Pressable
+            style={({ pressed }) => [styles.primaryBtn, { opacity: pressed ? 0.85 : 1 }]}
+            onPress={step === "email" ? handleSendCode : handleResetPassword}
+            disabled={loading || isExpired}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.primaryBtnText}>
+                {step === "email" ? "Send Reset Code" : "Update Password"}
+              </Text>
+            )}
+          </Pressable>
+        )}
 
-        {step === "reset" && (
+        {step === "reset" && !isExpired && (
           <Pressable
             style={styles.resendRow}
-            onPress={() => { setStep("email"); setSuccessMsg(""); setCode(""); setNewPassword(""); }}
+            onPress={handleResendCode}
+            disabled={loading}
           >
-            <Text style={styles.resendText}>Didn't get a code? Go back</Text>
+            <Text style={styles.resendText}>Didn't get a code? Resend</Text>
           </Pressable>
         )}
 
@@ -247,6 +337,35 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       color: Colors.textSecondary,
       marginBottom: 32,
       lineHeight: 22,
+    },
+    countdownBox: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: Colors.surface,
+      borderWidth: 1,
+      borderColor: Colors.border,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      marginBottom: 20,
+    },
+    countdownBoxExpired: {
+      backgroundColor: "rgba(255,107,107,0.1)",
+      borderColor: "rgba(255,107,107,0.35)",
+    },
+    countdownText: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 13,
+      color: Colors.textSecondary,
+    },
+    countdownValue: {
+      fontFamily: "Inter_700Bold",
+      color: Colors.text,
+    },
+    countdownTextExpired: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 13,
+      color: "#FF6B6B",
     },
     inputGroup: { marginBottom: 18 },
     label: {
@@ -320,6 +439,8 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       borderRadius: 14,
       paddingVertical: 17,
       alignItems: "center",
+      flexDirection: "row",
+      justifyContent: "center",
       marginTop: 8,
       shadowColor: Colors.primary,
       shadowOffset: { width: 0, height: 4 },

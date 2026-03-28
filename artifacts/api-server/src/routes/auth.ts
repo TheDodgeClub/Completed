@@ -1,11 +1,7 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
-import { db, usersTable, attendanceTable, awardsTable, eventsTable, postsTable } from "@workspace/db";
-import { eq, lte, sql } from "drizzle-orm";
-
-/* ---------- in-memory OTP store ---------- */
-interface OtpEntry { code: string; expires: number }
-const otpStore = new Map<string, OtpEntry>();
+import { db, usersTable, attendanceTable, awardsTable, eventsTable, postsTable, passwordResetTokensTable } from "@workspace/db";
+import { eq, lte, sql, and, lt } from "drizzle-orm";
 
 async function sendPasswordResetEmail(email: string, code: string): Promise<void> {
   const apiKey = process.env.BREVO_API_KEY;
@@ -258,7 +254,9 @@ router.post("/forgot-password", async (req, res) => {
     return;
   }
   const code = String(Math.floor(100000 + Math.random() * 900000));
-  otpStore.set(email.toLowerCase(), { code, expires: Date.now() + 10 * 60 * 1000 });
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+  await db.delete(passwordResetTokensTable).where(eq(passwordResetTokensTable.email, email.toLowerCase()));
+  await db.insert(passwordResetTokensTable).values({ email: email.toLowerCase(), code, expiresAt });
   try {
     await sendPasswordResetEmail(email.toLowerCase(), code);
   } catch (err) {
@@ -304,8 +302,14 @@ router.post("/reset-password", async (req, res) => {
     res.status(400).json({ error: "Password must be at least 6 characters" });
     return;
   }
-  const entry = otpStore.get(email.toLowerCase());
-  if (!entry || entry.code !== String(code) || Date.now() > entry.expires) {
+  await db.delete(passwordResetTokensTable).where(lt(passwordResetTokensTable.expiresAt, new Date()));
+  const entry = await db.query.passwordResetTokensTable.findFirst({
+    where: and(
+      eq(passwordResetTokensTable.email, email.toLowerCase()),
+      eq(passwordResetTokensTable.code, String(code)),
+    ),
+  });
+  if (!entry || entry.usedAt || entry.expiresAt < new Date()) {
     res.status(400).json({ error: "Invalid or expired reset code" });
     return;
   }
@@ -316,7 +320,7 @@ router.post("/reset-password", async (req, res) => {
   }
   const passwordHash = await bcrypt.hash(newPassword, 10);
   await db.update(usersTable).set({ passwordHash }).where(eq(usersTable.id, user.id));
-  otpStore.delete(email.toLowerCase());
+  await db.update(passwordResetTokensTable).set({ usedAt: new Date() }).where(eq(passwordResetTokensTable.id, entry.id));
   res.json({ message: "Password updated successfully" });
 });
 

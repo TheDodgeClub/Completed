@@ -18,3 +18,4 @@ export * from "./relations";
 export * from "./announcements";
 export * from "./streak_notifications";
 export * from "./post_reports";
+export * from "./password_reset_tokens";
