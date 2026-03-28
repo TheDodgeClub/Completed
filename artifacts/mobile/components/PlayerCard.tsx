@@ -198,13 +198,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingHorizontal: 4,
   },
-  logo: { width: CARD_W - 72, height: 52 },
+  logo: { width: Math.round((CARD_W - 72) * 0.6), height: Math.round(52 * 0.6) },
   officialLabel: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 8,
-    color: "rgba(255,215,0,0.55)",
+    fontFamily: "Poppins_800ExtraBold",
+    fontSize: 10,
+    color: "rgba(255,215,0,0.85)",
     letterSpacing: 2.5,
-    marginTop: 3,
+    marginTop: 4,
     marginBottom: 2,
   },
   levelPill: {
