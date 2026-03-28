@@ -73,7 +73,7 @@ Under UK GDPR, you have the right to:
 - Restrict or object to processing
 - Data portability
 
-To exercise any of these rights, contact us at privacy@thedodgeclub.co.uk. You also have the right to complain to the Information Commissioner's Office (ICO) at ico.org.uk.
+To exercise any of these rights, contact us at info@thedodgeclub.co.uk. You also have the right to complain to the Information Commissioner's Office (ICO) at ico.org.uk.
 
 8. SECURITY
 
@@ -90,7 +90,7 @@ We may update this policy from time to time. We will notify you of significant c
 11. CONTACT US
 
 For any privacy-related questions or requests:
-Email: privacy@thedodgeclub.co.uk
+Email: info@thedodgeclub.co.uk
 Website: thedodgeclub.co.uk`;
 
 export default function PrivacyPolicyScreen() {
