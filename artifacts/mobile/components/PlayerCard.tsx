@@ -164,9 +164,10 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     alignItems: "center",
+    justifyContent: "center",
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 12,
+    paddingBottom: 32,
   },
 
   /* Neon border */
