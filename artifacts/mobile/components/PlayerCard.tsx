@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingTop: 60,
     paddingBottom: 32,
   },
 
@@ -192,13 +192,15 @@ const styles = StyleSheet.create({
   cBR:  { bottom: 10, right: 10 },
   cBRH: { bottom: 10, right: 10 },
 
-  /* Top section — logo centred, LV pill pinned absolute top-right */
+  /* Top section — absolutely pinned to card top, logo centred */
   topSection: {
+    position: "absolute",
+    top: 14,
+    left: 16,
+    right: 16,
     alignItems: "center",
-    width: "100%",
-    marginBottom: 6,
     paddingHorizontal: 4,
-  },
+  } as any,
   logo: { width: Math.round((CARD_W - 72) * 0.54), height: Math.round(52 * 0.54) },
   officialLabel: {
     fontFamily: "Poppins_800ExtraBold",
