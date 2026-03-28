@@ -380,7 +380,7 @@ export default function HomeScreen() {
               }}
             >
               <View style={[styles.quickActionIcon, { backgroundColor: Colors.accent }]}>
-                <Feather name="maximize" size={20} color={Colors.background} />
+                <Feather name="maximize" size={20} color="#111111" />
               </View>
               <Text style={styles.quickActionLabel}>My QR</Text>
             </Pressable>
@@ -389,7 +389,7 @@ export default function HomeScreen() {
               style={({ pressed }) => [styles.quickAction, { opacity: pressed ? 0.75 : 1 }]}
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push("/games/dodge"); }}
             >
-              <View style={[styles.quickActionIcon, { backgroundColor: "#5E60CE" }]}>
+              <View style={[styles.quickActionIcon, { backgroundColor: Colors.purple }]}>
                 <Text style={{ fontSize: 20 }}>🏐</Text>
               </View>
               <Text style={styles.quickActionLabel}>Mini Game</Text>
