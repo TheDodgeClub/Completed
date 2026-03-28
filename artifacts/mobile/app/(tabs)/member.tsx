@@ -240,6 +240,8 @@ function GuestView() {
 }
 
 /* ======= Edit Profile Modal ======= */
+const SKILL_OPTIONS = ["Throwing", "Catching", "Dodging", "Tactical", "All Rounder"] as const;
+
 function EditProfileModal({
   visible,
   onClose,
@@ -258,20 +260,33 @@ function EditProfileModal({
   const [name, setName] = React.useState(user?.name ?? "");
   const [username, setUsername] = React.useState(user?.username ?? "");
   const [bio, setBio] = React.useState(user?.bio ?? "");
+  const [selectedSkills, setSelectedSkills] = React.useState<string[]>(
+    user?.skills ? user.skills.split(",").filter(Boolean).map((s: string) => s.trim()) : []
+  );
   const [saving, setSaving] = React.useState(false);
+  const isPlayer = (user?.accountType ?? "player") !== "supporter";
 
   React.useEffect(() => {
     if (visible) {
       setName(user?.name ?? "");
       setUsername(user?.username ?? "");
       setBio(user?.bio ?? "");
+      setSelectedSkills(
+        user?.skills ? user.skills.split(",").filter(Boolean).map((s: string) => s.trim()) : []
+      );
     }
   }, [visible, user]);
+
+  const toggleSkill = (skill: string) => {
+    setSelectedSkills(prev =>
+      prev.includes(skill) ? prev.filter(s => s !== skill) : [...prev, skill]
+    );
+  };
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      await onSave({ name, username, bio });
+      await onSave({ name, username, bio, ...(isPlayer ? { skills: selectedSkills } : {}) });
       onClose();
     } finally {
       setSaving(false);
@@ -330,6 +345,34 @@ function EditProfileModal({
                 numberOfLines={4}
               />
             </View>
+
+            {isPlayer && (
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>My Skills</Text>
+                <Text style={styles.fieldHint}>Select all that apply</Text>
+                <View style={styles.editSkillsGrid}>
+                  {SKILL_OPTIONS.map(skill => {
+                    const selected = selectedSkills.includes(skill);
+                    return (
+                      <Pressable
+                        key={skill}
+                        style={[styles.editSkillChip, selected && styles.editSkillChipSelected]}
+                        onPress={() => toggleSkill(skill)}
+                      >
+                        <Feather
+                          name="check"
+                          size={12}
+                          color={selected ? Colors.primary : "transparent"}
+                        />
+                        <Text style={[styles.editSkillChipText, selected && styles.editSkillChipTextSelected]}>
+                          {skill}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
 
             <Pressable
               style={({ pressed }) => [styles.deleteAccountBtn, { opacity: pressed ? 0.8 : 1 }]}
@@ -838,7 +881,7 @@ export default function MemberScreen() {
           style={styles.countdownBar}
           onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(tabs)/tickets"); }}
         >
-          <Feather name="calendar" size={14} color={Colors.primary} />
+          <Feather name="calendar" size={14} color={Colors.warning} />
           <View style={{ flex: 1, marginLeft: 10 }}>
             <Text style={styles.countdownBarTitle} numberOfLines={1}>{nextClubEvent.title}</Text>
             <Text style={styles.countdownBarDate}>
@@ -846,7 +889,7 @@ export default function MemberScreen() {
             </Text>
           </View>
           <View style={styles.countdownChip}>
-            <Feather name="clock" size={11} color={Colors.primary} />
+            <Feather name="clock" size={11} color={Colors.warning} />
             <Text style={styles.countdownChipText}>
               {nextClubCountdown === "Tomorrow"
                 ? "Tomorrow's event"
@@ -1348,14 +1391,14 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       flexDirection: "row",
       alignItems: "center",
       gap: 4,
-      backgroundColor: `${Colors.primary}15`,
+      backgroundColor: "rgba(245,158,11,0.15)",
       borderRadius: 20,
       paddingHorizontal: 10,
       paddingVertical: 5,
       borderWidth: 1,
-      borderColor: `${Colors.primary}40`,
+      borderColor: "rgba(245,158,11,0.4)",
     },
-    countdownChipText: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: Colors.primary },
+    countdownChipText: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: Colors.warning },
 
     /* Stats */
     statsSection: {
@@ -1598,6 +1641,19 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       borderWidth: 1, borderColor: Colors.border,
     },
     fieldInputMultiline: { minHeight: 100, textAlignVertical: "top" },
+    fieldHint: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textMuted, marginTop: -4, marginBottom: 10 },
+    editSkillsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+    editSkillChip: {
+      flexDirection: "row", alignItems: "center", gap: 5,
+      paddingHorizontal: 14, paddingVertical: 9,
+      borderRadius: 20, borderWidth: 1.5,
+      borderColor: Colors.border, backgroundColor: Colors.surface,
+    },
+    editSkillChipSelected: {
+      borderColor: Colors.primary, backgroundColor: `${Colors.primary}12`,
+    },
+    editSkillChipText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.textSecondary },
+    editSkillChipTextSelected: { color: Colors.primary },
     roleGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
     roleOption: {
       paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12,
