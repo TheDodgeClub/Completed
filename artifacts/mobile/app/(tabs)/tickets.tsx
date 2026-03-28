@@ -103,19 +103,10 @@ export default function TicketsScreen() {
   });
 
   const [buyingEventId, setBuyingEventId] = useState<number | null>(null);
-  const [pendingQuantity, setPendingQuantity] = useState(1);
-  const [checkoutFormEvent, setCheckoutFormEvent] = useState<Event | null>(null);
-  const [checkoutContext, setCheckoutContext] = useState<{ ticketTypeId?: number; discountCode?: string } | null>(null);
+  const [checkoutSheetEvent, setCheckoutSheetEvent] = useState<Event | null>(null);
   const [giftEvent, setGiftEvent] = useState<{ id: number; title: string } | null>(null);
   const [giftEmail, setGiftEmail] = useState("");
   const [giftingEventId, setGiftingEventId] = useState<number | null>(null);
-  const [ticketTypeModalEvent, setTicketTypeModalEvent] = useState<Event | null>(null);
-
-  const needsForm = (event: Event) =>
-    (event.checkoutFields?.length ?? 0) > 0 || !!event.waiverText;
-
-  const hasActiveTicketTypes = (event: Event) =>
-    (event.ticketTypes?.filter(t => t.isActive && t.saleOpen).length ?? 0) > 0;
 
   const doBuyTicket = useCallback(async (event: Event, checkoutData?: Record<string, string>, ticketTypeId?: number, discountCode?: string, quantity: number = 1) => {
     // If a specific ticket type is provided and it's free (or discount makes it free), use free flow
@@ -158,30 +149,14 @@ export default function TicketsScreen() {
     }
   }, [registerFree, refetchTickets]);
 
-  const handleBuyTicket = useCallback(async (event: Event, quantity: number = 1) => {
+  const handleBuyTicket = useCallback((event: Event) => {
     if (!user) {
       Alert.alert("Sign in required", "Please sign in to purchase tickets.");
       return;
     }
-
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setPendingQuantity(quantity);
-
-    // If event has active ticket types, show the type selector first
-    if (hasActiveTicketTypes(event)) {
-      setTicketTypeModalEvent(event);
-      return;
-    }
-
-    // If event has checkout form or waiver, show modal
-    if (needsForm(event)) {
-      setCheckoutContext(null);
-      setCheckoutFormEvent(event);
-      return;
-    }
-
-    await doBuyTicket(event, undefined, undefined, undefined, quantity);
-  }, [user, doBuyTicket]);
+    setCheckoutSheetEvent(event);
+  }, [user]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -318,7 +293,7 @@ export default function TicketsScreen() {
                     ticketCount={ticketCountByEvent.get(event.id) ?? 0}
                     isBuying={buyingEventId === event.id}
                     isRegisteringFree={registeringFree}
-                    onBuy={(qty) => handleBuyTicket(event, qty)}
+                    onBuy={() => handleBuyTicket(event)}
                     onViewTickets={() => setActiveTab("my")}
                     Colors={Colors}
                   />
@@ -385,40 +360,17 @@ export default function TicketsScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Checkout Form & Waiver Modal */}
-      {checkoutFormEvent && (
-        <CheckoutFormModal
-          event={checkoutFormEvent}
+      {/* Unified Checkout Sheet */}
+      {checkoutSheetEvent && (
+        <UnifiedCheckoutSheet
+          event={checkoutSheetEvent}
+          user={user}
           Colors={Colors}
-          onClose={() => { setCheckoutFormEvent(null); setCheckoutContext(null); }}
-          onSubmit={(formData) => {
-            const event = checkoutFormEvent;
-            const ctx = checkoutContext;
-            const qty = pendingQuantity;
-            setCheckoutFormEvent(null);
-            setCheckoutContext(null);
-            doBuyTicket(event, formData, ctx?.ticketTypeId, ctx?.discountCode, qty);
-          }}
-        />
-      )}
-
-      {/* Ticket Type Selector Modal */}
-      {ticketTypeModalEvent && (
-        <TicketTypeModal
-          event={ticketTypeModalEvent}
-          quantity={pendingQuantity}
-          Colors={Colors}
-          onClose={() => setTicketTypeModalEvent(null)}
-          onSelect={(ticketTypeId, discountCode) => {
-            const event = ticketTypeModalEvent;
-            const qty = pendingQuantity;
-            setTicketTypeModalEvent(null);
-            if (needsForm(event)) {
-              setCheckoutContext({ ticketTypeId, discountCode });
-              setCheckoutFormEvent(event);
-            } else {
-              doBuyTicket(event, undefined, ticketTypeId, discountCode, qty);
-            }
+          onClose={() => setCheckoutSheetEvent(null)}
+          onSubmit={(formData, ticketTypeId, discountCode, quantity) => {
+            const event = checkoutSheetEvent;
+            setCheckoutSheetEvent(null);
+            doBuyTicket(event, formData, ticketTypeId, discountCode, quantity);
           }}
         />
       )}
@@ -498,12 +450,11 @@ function EventBuyCard({
   ticketCount: number;
   isBuying: boolean;
   isRegisteringFree: boolean;
-  onBuy: (quantity: number) => void;
+  onBuy: () => void;
   onViewTickets: () => void;
   Colors: any;
 }) {
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
-  const [quantity, setQuantity] = useState(1);
   const { user } = useAuth();
   const [checkedIn, setCheckedIn] = useState(false);
   const [pinModalVisible, setPinModalVisible] = useState(false);
@@ -544,15 +495,6 @@ function EventBuyCard({
   const hasActiveTypes = activeTypes.length > 0;
   const minTypePrice = hasActiveTypes ? Math.min(...activeTypes.map(t => t.price)) : null;
   const allTypesSoldOut = hasActiveTypes && activeTypes.every(t => t.isSoldOut);
-  const nonSoldOutTypes = activeTypes.filter(t => !t.isSoldOut);
-  const maxPerOrderCap = nonSoldOutTypes.length > 0
-    ? nonSoldOutTypes.reduce<number>((min, t) => {
-        const cap = t.maxPerOrder !== null ? t.maxPerOrder : (t.available !== null ? t.available : 10);
-        return Math.min(min, cap);
-      }, 10)
-    : 10;
-  const stepperMax = !hasActiveTypes ? 10 : maxPerOrderCap;
-
   const isFree = !hasActiveTypes && (event.ticketPrice === 0 || (!event.stripePriceId && event.ticketPrice == null));
   const hasTicketing = !!event.stripePriceId || event.ticketPrice === 0 || hasActiveTypes;
   const priceLabel = !hasTicketing
@@ -628,57 +570,32 @@ function EventBuyCard({
 
       {hasTicketing && (
         <>
-          {!isFree && !allTypesSoldOut && (
-            <View style={styles.quantityRow}>
-              <Pressable
-                style={styles.quantityBtn}
-                onPress={() => setQuantity(q => Math.max(1, q - 1))}
-                disabled={isBuying || isRegisteringFree}
-              >
-                <Feather name="minus" size={14} color={Colors.text} />
-              </Pressable>
-              <Text style={styles.quantityValue}>{quantity}</Text>
-              <Pressable
-                style={styles.quantityBtn}
-                onPress={() => setQuantity(q => Math.min(stepperMax, q + 1))}
-                disabled={isBuying || isRegisteringFree || quantity >= stepperMax}
-              >
-                <Feather name="plus" size={14} color={Colors.text} />
-              </Pressable>
-              <Text style={styles.quantityLabel}>ticket{quantity > 1 ? "s" : ""}</Text>
-              {stepperMax < 10 && (
-                <Text style={[styles.quantityLabel, { color: Colors.textMuted, marginLeft: 4 }]}>
-                  (max {stepperMax})
-                </Text>
-              )}
-            </View>
-          )}
           {allTypesSoldOut ? (
             <View style={[styles.buyBtn, { backgroundColor: Colors.border ?? "#333", opacity: 0.6 }]}>
               <Feather name="x-circle" size={15} color={Colors.textMuted} />
               <Text style={[styles.buyBtnText, { color: Colors.textMuted }]}>Sold Out</Text>
             </View>
           ) : (
-          <Pressable
-            style={({ pressed }) => [styles.buyBtn, { opacity: pressed || isBuying || isRegisteringFree ? 0.7 : 1 }]}
-            onPress={() => onBuy(quantity)}
-            disabled={isBuying || isRegisteringFree}
-          >
-            {isBuying || isRegisteringFree ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <>
-                <Feather name="credit-card" size={15} color="#fff" />
-                <Text style={styles.buyBtnText}>
-                  {isFree
-                    ? "Register Free"
-                    : ticketCount > 0
-                      ? `Buy ${quantity > 1 ? `${quantity} More` : "Another"} Ticket${quantity > 1 ? "s" : ""}`
-                      : `Buy ${quantity > 1 ? `${quantity} Tickets` : "Ticket"}`}
-                </Text>
-              </>
-            )}
-          </Pressable>
+            <Pressable
+              style={({ pressed }) => [styles.buyBtn, { opacity: pressed || isBuying || isRegisteringFree ? 0.7 : 1 }]}
+              onPress={() => onBuy()}
+              disabled={isBuying || isRegisteringFree}
+            >
+              {isBuying || isRegisteringFree ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <>
+                  <Feather name="credit-card" size={15} color="#fff" />
+                  <Text style={styles.buyBtnText}>
+                    {isFree
+                      ? "Register Free"
+                      : ticketCount > 0
+                        ? "Buy Another Ticket"
+                        : "Buy Ticket"}
+                  </Text>
+                </>
+              )}
+            </Pressable>
           )}
           {ticketCount > 0 && (
             <Pressable
@@ -841,36 +758,80 @@ function TicketQRModal({ ticket, Colors, onClose }: { ticket: Ticket; Colors: an
   );
 }
 
-function CheckoutFormModal({
+function UnifiedCheckoutSheet({
   event,
+  user,
   Colors,
   onClose,
   onSubmit,
 }: {
   event: Event;
+  user: ReturnType<typeof useAuth>["user"];
   Colors: any;
   onClose: () => void;
-  onSubmit: (formData: Record<string, string>) => void;
+  onSubmit: (formData: Record<string, string>, ticketTypeId: number | undefined, discountCode: string | undefined, quantity: number) => void;
 }) {
   const insets = useSafeAreaInsets();
-  const [formData, setFormData] = useState<Record<string, string>>({});
+  const SCREEN_HEIGHT = Dimensions.get("window").height;
+
+  const activeTypes = event.ticketTypes?.filter(t => t.isActive && t.saleOpen) ?? [];
+  const hasActiveTypes = activeTypes.length > 0;
+  const allTypesSoldOut = hasActiveTypes && activeTypes.every(t => t.isSoldOut);
+  const fields: CheckoutField[] = event.checkoutFields ?? [];
+  const hasWaiver = !!event.waiverText;
+  const isFreeEvent = !hasActiveTypes && (event.ticketPrice === 0 || (!event.stripePriceId && event.ticketPrice == null));
+
+  const nonSoldOutTypes = activeTypes.filter(t => !t.isSoldOut);
+  const stepperMax = (() => {
+    if (!hasActiveTypes) return 10;
+    if (nonSoldOutTypes.length === 0) return 1;
+    return nonSoldOutTypes.reduce<number>((min, t) => {
+      const cap = t.maxPerOrder !== null ? t.maxPerOrder : (t.available !== null ? t.available : 10);
+      return Math.min(min, cap);
+    }, 10);
+  })();
+
+  const [quantity, setQuantity] = useState(1);
+  const [selectedTypeId, setSelectedTypeId] = useState<number | null>(
+    activeTypes.length === 1 ? activeTypes[0].id : null
+  );
+  const [discountInput, setDiscountInput] = useState("");
+  const [validating, setValidating] = useState(false);
+  const [appliedCode, setAppliedCode] = useState<{ code: string; discountType: "percent" | "fixed"; discountAmount: number } | null>(null);
+  const [codeError, setCodeError] = useState("");
+
+  const selectedType = activeTypes.find(t => t.id === selectedTypeId) ?? null;
+  const discountedPrice = appliedCode && selectedType
+    ? (appliedCode.discountType === "percent"
+        ? Math.max(0, Math.round(selectedType.price * (1 - appliedCode.discountAmount / 100)))
+        : Math.max(0, selectedType.price - appliedCode.discountAmount))
+    : null;
+
+  const initialFormData = useMemo(() => {
+    const init: Record<string, string> = {};
+    for (const field of fields) {
+      const idL = field.id.toLowerCase();
+      const labelL = field.label.toLowerCase();
+      if (field.type === "email" || idL.includes("email") || labelL.includes("email")) {
+        if (user?.email) init[field.id] = user.email;
+      } else if (field.type === "text" && (/name/.test(idL) || /name/.test(labelL))) {
+        if (user?.name) init[field.id] = user.name;
+      }
+    }
+    return init;
+  }, []);
+
+  const [formData, setFormData] = useState<Record<string, string>>(initialFormData);
   const [waiverExpanded, setWaiverExpanded] = useState(false);
-  // Signature pad state (shared native + web)
   const [signaturePaths, setSignaturePaths] = useState<string[]>([]);
   const [, setRenderTick] = useState(0);
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const currentStroke = useRef<string>("");
   const scrollRef = useRef<RNScrollView>(null);
-  // Ref to the signature pad container (View/div)
   const sigContainerRef = useRef<any>(null);
-  // Track whether pointer is down (web only)
   const pointerDownRef = useRef(false);
-
-  const fields: CheckoutField[] = event.checkoutFields ?? [];
-  const hasWaiver = !!event.waiverText;
   const isSigned = signaturePaths.length > 0;
 
-  // Lock body scroll on web while this modal is open
   useEffect(() => {
     if (Platform.OS === "web") {
       const prev = (document as any).body.style.overflow;
@@ -879,30 +840,21 @@ function CheckoutFormModal({
     }
   }, []);
 
-  // ── Web-only: attach DOM pointer events directly to the sig pad ──
-  // PanResponder locationX/Y is unreliable on web; pointer events + getBoundingClientRect
-  // give pixel-perfect coordinates.
   useEffect(() => {
     if (Platform.OS !== "web") return;
     if (!waiverExpanded) return;
-
     let rafId: number;
-    // cleanupListeners is set inside the rAF callback so it can be called from useEffect cleanup
     let cleanupListeners: (() => void) | null = null;
-
     rafId = requestAnimationFrame(() => {
       const el: HTMLElement | null = sigContainerRef.current;
       if (!el) return;
-
       el.style.touchAction = "none";
       el.style.cursor = "crosshair";
       (el.style as any).userSelect = "none";
-
       function localCoords(e: PointerEvent) {
         const rect = el!.getBoundingClientRect();
         return { x: e.clientX - rect.left, y: e.clientY - rect.top };
       }
-
       function onDown(e: PointerEvent) {
         e.preventDefault();
         pointerDownRef.current = true;
@@ -912,7 +864,6 @@ function CheckoutFormModal({
         setScrollEnabled(false);
         setRenderTick(t => t + 1);
       }
-
       function onMove(e: PointerEvent) {
         if (!pointerDownRef.current) return;
         e.preventDefault();
@@ -920,7 +871,6 @@ function CheckoutFormModal({
         currentStroke.current += ` L${x.toFixed(1)},${y.toFixed(1)}`;
         setRenderTick(t => t + 1);
       }
-
       function onUp(e: PointerEvent) {
         if (!pointerDownRef.current) return;
         pointerDownRef.current = false;
@@ -933,12 +883,10 @@ function CheckoutFormModal({
         setScrollEnabled(true);
         setRenderTick(t => t + 1);
       }
-
       el.addEventListener("pointerdown", onDown);
       el.addEventListener("pointermove", onMove);
       el.addEventListener("pointerup", onUp);
       el.addEventListener("pointercancel", onUp);
-
       cleanupListeners = () => {
         el.removeEventListener("pointerdown", onDown);
         el.removeEventListener("pointermove", onMove);
@@ -946,14 +894,12 @@ function CheckoutFormModal({
         el.removeEventListener("pointercancel", onUp);
       };
     });
-
     return () => {
       cancelAnimationFrame(rafId);
       cleanupListeners?.();
     };
   }, [waiverExpanded]);
 
-  // ── Native-only: PanResponder for touch drawing ──
   const signaturePanResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponderCapture: () => true,
@@ -988,24 +934,55 @@ function CheckoutFormModal({
     })
   ).current;
 
-  const SCREEN_HEIGHT = Dimensions.get("window").height;
+  const handleValidateCode = async () => {
+    if (!discountInput.trim()) return;
+    setValidating(true);
+    setCodeError("");
+    setAppliedCode(null);
+    try {
+      const result = await validateDiscountCode(event.id, discountInput.trim());
+      setAppliedCode({ code: result.code, discountType: result.discountType, discountAmount: result.discountAmount });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (err: any) {
+      setCodeError(err.message ?? "Invalid discount code");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setValidating(false);
+    }
+  };
 
+  const handleSubmit = () => {
+    if (hasActiveTypes && !selectedTypeId) {
+      Alert.alert("Select a ticket type", "Please choose a ticket type to continue.");
+      return;
+    }
+    for (const field of fields) {
+      if (field.required && !formData[field.id]?.trim()) {
+        Alert.alert("Required field", `Please fill in: ${field.label}`);
+        return;
+      }
+    }
+    if (hasWaiver && !isSigned) {
+      Alert.alert("Signature required", "Please sign the waiver before proceeding.");
+      return;
+    }
+    const finalData = hasWaiver ? { ...formData, __waiver_signed: "true" } : formData;
+    onSubmit(finalData, selectedTypeId ?? undefined, appliedCode?.code, quantity);
+  };
 
-  const cfStyles = StyleSheet.create({
-    backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", flexDirection: "column" },
-    kav: { justifyContent: "flex-end" },
-    sheet: {
-      backgroundColor: Colors.surface,
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
-      maxHeight: SCREEN_HEIGHT * 0.88,
-    },
-    sheetInner: { flex: 1 },
-    sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.border, alignSelf: "center" as const, marginTop: 12, marginBottom: 8 },
+  const S = StyleSheet.create({
+    sheet: { backgroundColor: Colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: SCREEN_HEIGHT * 0.92 },
+    handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.border, alignSelf: "center" as const, marginTop: 12, marginBottom: 8 },
     sheetHeader: { flexDirection: "row" as const, alignItems: "center" as const, justifyContent: "space-between" as const, paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border },
     sheetTitle: { fontSize: 18, fontWeight: "700" as const, color: Colors.text },
     sheetSubtitle: { fontSize: 13, color: Colors.textMuted, marginTop: 2 },
     scrollContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
+    sectionLabel: { fontSize: 11, fontWeight: "700" as const, color: Colors.textMuted, textTransform: "uppercase" as const, letterSpacing: 1, marginBottom: 8 },
+    stepperRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 12, backgroundColor: Colors.background, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: Colors.border },
+    stepperBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, alignItems: "center" as const, justifyContent: "center" as const },
+    stepperValue: { fontSize: 20, fontWeight: "700" as const, color: Colors.text, minWidth: 32, textAlign: "center" as const },
+    stepperLabel: { flex: 1, fontSize: 13, color: Colors.textSecondary },
+    typeCard: { borderRadius: 14, borderWidth: 2, padding: 14, flexDirection: "row" as const, justifyContent: "space-between" as const, alignItems: "center" as const, marginBottom: 10 },
     fieldGroup: { marginBottom: 16 },
     fieldLabel: { fontSize: 13, fontWeight: "600" as const, color: Colors.textMuted, marginBottom: 6, textTransform: "uppercase" as const, letterSpacing: 0.5 },
     input: { backgroundColor: Colors.background, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, color: Colors.text, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15 },
@@ -1034,80 +1011,45 @@ function CheckoutFormModal({
     proceedBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" as const },
     cancelBtn: { marginHorizontal: 20, paddingVertical: 12, alignItems: "center" as const },
     cancelBtnText: { color: Colors.textMuted, fontSize: 15 },
+    totalRow: { flexDirection: "row" as const, justifyContent: "space-between" as const, alignItems: "center" as const, backgroundColor: Colors.background, borderRadius: 14, padding: 14, marginBottom: 4, borderWidth: 1, borderColor: Colors.border },
   });
-
-  const handleSubmit = () => {
-    // Validate required fields
-    for (const field of fields) {
-      if (field.required && !formData[field.id]?.trim()) {
-        Alert.alert("Required field", `Please fill in: ${field.label}`);
-        return;
-      }
-    }
-    if (hasWaiver && !isSigned) {
-      Alert.alert("Signature required", "Please sign the waiver before proceeding.");
-      return;
-    }
-    const finalData = hasWaiver ? { ...formData, __waiver_signed: "true" } : formData;
-    onSubmit(finalData);
-  };
 
   const renderField = (field: CheckoutField) => {
     if (field.type === "yes_no") {
       const val = formData[field.id] ?? "";
       return (
-        <View key={field.id} style={cfStyles.fieldGroup}>
-          <Text style={cfStyles.fieldLabel}>{field.label}{field.required ? " *" : ""}</Text>
-          <View style={cfStyles.chipRow}>
+        <View key={field.id} style={S.fieldGroup}>
+          <Text style={S.fieldLabel}>{field.label}{field.required ? " *" : ""}</Text>
+          <View style={S.chipRow}>
             {["Yes", "No"].map((opt) => (
-              <TouchableOpacity
-                key={opt}
-                style={[cfStyles.optionChip, { minWidth: 80, alignItems: "center" }, val === opt && cfStyles.optionChipActive]}
-                onPress={() => setFormData((d) => ({ ...d, [field.id]: opt }))}
-              >
-                <Text style={[cfStyles.optionChipText, val === opt && cfStyles.optionChipTextActive]}>
-                  {opt}
-                </Text>
+              <TouchableOpacity key={opt} style={[S.optionChip, { minWidth: 80, alignItems: "center" }, val === opt && S.optionChipActive]} onPress={() => setFormData((d) => ({ ...d, [field.id]: opt }))}>
+                <Text style={[S.optionChipText, val === opt && S.optionChipTextActive]}>{opt}</Text>
               </TouchableOpacity>
             ))}
           </View>
         </View>
       );
     }
-
     if (field.type === "select" && field.options?.length) {
       return (
-        <View
-          key={field.id}
-          style={cfStyles.fieldGroup}
-        >
-          <Text style={cfStyles.fieldLabel}>{field.label}{field.required ? " *" : ""}</Text>
-          <View style={cfStyles.chipRow}>
+        <View key={field.id} style={S.fieldGroup}>
+          <Text style={S.fieldLabel}>{field.label}{field.required ? " *" : ""}</Text>
+          <View style={S.chipRow}>
             {field.options.map((opt) => (
-              <TouchableOpacity
-                key={opt}
-                style={[cfStyles.optionChip, formData[field.id] === opt && cfStyles.optionChipActive]}
-                onPress={() => setFormData((d) => ({ ...d, [field.id]: opt }))}
-              >
-                <Text style={[cfStyles.optionChipText, formData[field.id] === opt && cfStyles.optionChipTextActive]}>
-                  {opt}
-                </Text>
+              <TouchableOpacity key={opt} style={[S.optionChip, formData[field.id] === opt && S.optionChipActive]} onPress={() => setFormData((d) => ({ ...d, [field.id]: opt }))}>
+                <Text style={[S.optionChipText, formData[field.id] === opt && S.optionChipTextActive]}>{opt}</Text>
               </TouchableOpacity>
             ))}
           </View>
         </View>
       );
     }
-
     const isMultiline = field.type === "textarea";
     return (
-      <View
-        key={field.id}
-        style={cfStyles.fieldGroup}
-      >
-        <Text style={cfStyles.fieldLabel}>{field.label}{field.required ? " *" : ""}</Text>
+      <View key={field.id} style={S.fieldGroup}>
+        <Text style={S.fieldLabel}>{field.label}{field.required ? " *" : ""}</Text>
         <TextInput
-          style={isMultiline ? cfStyles.inputMulti : cfStyles.input}
+          style={isMultiline ? S.inputMulti : S.input}
           value={formData[field.id] ?? ""}
           onChangeText={(val) => setFormData((d) => ({ ...d, [field.id]: val }))}
           placeholder={field.type === "date" ? "DD/MM/YYYY" : field.type === "email" ? "you@example.com" : field.type === "phone" ? "+44 7000 000000" : ""}
@@ -1122,146 +1064,267 @@ function CheckoutFormModal({
     );
   };
 
-  const hitSlop = { top: 12, bottom: 12, left: 12, right: 12 };
+  const perTicketPence = (() => {
+    if (selectedType) return discountedPrice !== null ? discountedPrice : selectedType.price;
+    if (!hasActiveTypes && event.ticketPrice != null) return Math.round(event.ticketPrice * 100);
+    return 0;
+  })();
+  const totalPence = perTicketPence * quantity;
+  const originalTotalPence = (selectedType?.price ?? 0) * quantity;
+  const showTotal = !!selectedType || (!hasActiveTypes && event.ticketPrice != null && event.ticketPrice > 0);
 
   return (
     <Modal visible transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
       <View style={{ flex: 1 }}>
-        {/* Dark dismissable backdrop */}
-        <Pressable
-          style={[StyleSheet.absoluteFillObject, { backgroundColor: "rgba(0,0,0,0.6)" }]}
-          onPress={onClose}
-        />
-        {/* Sheet anchored to the bottom */}
+        <Pressable style={[StyleSheet.absoluteFillObject, { backgroundColor: "rgba(0,0,0,0.6)" }]} onPress={onClose} />
         <View style={[StyleSheet.absoluteFillObject, { justifyContent: "flex-end" }]}>
-          <View style={cfStyles.sheet}>
-            {/* Handle + header — always visible, never scrolls */}
-            <View style={cfStyles.sheetHandle} />
-            <View style={cfStyles.sheetHeader}>
+          <View style={S.sheet}>
+            <View style={S.handle} />
+            <View style={S.sheetHeader}>
               <View style={{ flex: 1 }}>
-                <Text style={cfStyles.sheetTitle}>Buyer Details</Text>
-                <Text style={cfStyles.sheetSubtitle}>{event.title}</Text>
+                <Text style={S.sheetTitle}>Get Tickets</Text>
+                <Text style={S.sheetSubtitle}>{event.title}</Text>
               </View>
-              <TouchableOpacity onPress={onClose} hitSlop={hitSlop}>
+              <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
                 <Feather name="x" size={22} color={Colors.textMuted} />
               </TouchableOpacity>
             </View>
 
-            {/* Scrollable form — flexShrink:1 lets it shrink within maxHeight on iOS */}
             <ScrollView
               ref={scrollRef}
               style={{ flexShrink: 1 }}
-              contentContainerStyle={cfStyles.scrollContent}
+              contentContainerStyle={S.scrollContent}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
               scrollEnabled={scrollEnabled}
               automaticallyAdjustKeyboardInsets
             >
-              {fields.map(renderField)}
+              {/* Quantity stepper */}
+              {!isFreeEvent && !allTypesSoldOut && (
+                <View style={{ marginBottom: 20 }}>
+                  <Text style={S.sectionLabel}>How many tickets?</Text>
+                  <View style={S.stepperRow}>
+                    <Pressable
+                      style={[S.stepperBtn, { opacity: quantity <= 1 ? 0.4 : 1 }]}
+                      onPress={() => setQuantity(q => Math.max(1, q - 1))}
+                      disabled={quantity <= 1}
+                    >
+                      <Feather name="minus" size={16} color={Colors.text} />
+                    </Pressable>
+                    <Text style={S.stepperValue}>{quantity}</Text>
+                    <Pressable
+                      style={[S.stepperBtn, { opacity: quantity >= stepperMax ? 0.4 : 1 }]}
+                      onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setQuantity(q => Math.min(stepperMax, q + 1)); }}
+                      disabled={quantity >= stepperMax}
+                    >
+                      <Feather name="plus" size={16} color={Colors.text} />
+                    </Pressable>
+                    <Text style={S.stepperLabel}>
+                      ticket{quantity > 1 ? "s" : ""}{stepperMax < 10 ? `  (max ${stepperMax})` : ""}
+                    </Text>
+                  </View>
+                </View>
+              )}
 
-              {hasWaiver && (
-                <View style={cfStyles.waiverBox}>
-                  {/* Collapsible header row */}
-                  <TouchableOpacity
-                    style={cfStyles.waiverToggleRow}
-                    onPress={() => setWaiverExpanded((v) => !v)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={{ flex: 1 }}>
-                      <Text style={cfStyles.waiverTitle}>Waiver & Agreement</Text>
-                      {!waiverExpanded && (
-                        <Text style={cfStyles.waiverCollapsedHint}>
-                          {isSigned ? "Tap to view — signed" : "Tap to read and sign"}
+              {/* Ticket type selector */}
+              {hasActiveTypes && (
+                <View style={{ marginBottom: 20 }}>
+                  <Text style={S.sectionLabel}>Ticket type</Text>
+                  {activeTypes.map(type => {
+                    const isSelected = selectedTypeId === type.id;
+                    return (
+                      <Pressable
+                        key={type.id}
+                        onPress={() => {
+                          if (!type.isSoldOut) {
+                            setSelectedTypeId(type.id);
+                            setAppliedCode(null);
+                            setCodeError("");
+                            setDiscountInput("");
+                          }
+                        }}
+                        style={[S.typeCard, {
+                          borderColor: isSelected ? Colors.primary : Colors.border,
+                          backgroundColor: isSelected ? `${Colors.primary}15` : Colors.background,
+                          opacity: type.isSoldOut ? 0.5 : 1,
+                        }]}
+                      >
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ color: Colors.text, fontSize: 15, fontWeight: "600" }}>{type.name}</Text>
+                          {type.description && (
+                            <Text style={{ color: Colors.textSecondary, fontSize: 12, marginTop: 2 }}>{type.description}</Text>
+                          )}
+                          {type.available !== null && type.available <= 10 && !type.isSoldOut && (
+                            <Text style={{ color: "#F59E0B", fontSize: 11, marginTop: 4, fontWeight: "600" }}>Only {type.available} left!</Text>
+                          )}
+                          {type.maxPerOrder !== null && !type.isSoldOut && (
+                            <Text style={{ color: Colors.textMuted, fontSize: 11, marginTop: 2 }}>Max {type.maxPerOrder} per order</Text>
+                          )}
+                          {type.isSoldOut && (
+                            <Text style={{ color: "#EF4444", fontSize: 11, marginTop: 4, fontWeight: "600" }}>Sold Out</Text>
+                          )}
+                        </View>
+                        <View style={{ alignItems: "flex-end", marginLeft: 12 }}>
+                          <Text style={{ color: Colors.primary, fontSize: 18, fontWeight: "700" }}>
+                            {type.price === 0 ? "FREE" : `£${(type.price / 100).toFixed(2)}`}
+                          </Text>
+                          {isSelected && (
+                            <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center", marginTop: 6 }}>
+                              <Feather name="check" size={12} color="#fff" />
+                            </View>
+                          )}
+                        </View>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )}
+
+              {/* Discount code */}
+              {selectedType && selectedType.price > 0 && (
+                <View style={{ marginBottom: 20 }}>
+                  <Text style={S.sectionLabel}>Discount code (optional)</Text>
+                  {appliedCode ? (
+                    <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: Colors.primary + "22", borderRadius: 12, borderWidth: 1, borderColor: Colors.primary, padding: 12, gap: 10 }}>
+                      <Feather name="tag" size={16} color={Colors.primary} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: Colors.primary, fontWeight: "700", fontSize: 14 }}>{appliedCode.code} applied!</Text>
+                        <Text style={{ color: Colors.textSecondary, fontSize: 12 }}>
+                          {appliedCode.discountType === "percent"
+                            ? `${appliedCode.discountAmount}% off`
+                            : `£${(appliedCode.discountAmount / 100).toFixed(2)} off`}
+                          {discountedPrice !== null && ` → £${(discountedPrice / 100).toFixed(2)}`}
+                          {discountedPrice === 0 && " (FREE!)"}
                         </Text>
+                      </View>
+                      <Pressable onPress={() => { setAppliedCode(null); setDiscountInput(""); }} style={{ padding: 4 }}>
+                        <Feather name="x" size={16} color={Colors.textSecondary} />
+                      </Pressable>
+                    </View>
+                  ) : (
+                    <View style={{ flexDirection: "row", gap: 8 }}>
+                      <TextInput
+                        value={discountInput}
+                        onChangeText={t => { setDiscountInput(t.toUpperCase()); setCodeError(""); }}
+                        placeholder="Enter code"
+                        placeholderTextColor={Colors.textSecondary}
+                        autoCapitalize="characters"
+                        style={{ flex: 1, backgroundColor: Colors.background, borderRadius: 12, borderWidth: 1, borderColor: codeError ? "#EF4444" : Colors.border, paddingHorizontal: 14, paddingVertical: 12, color: Colors.text, fontSize: 14 }}
+                      />
+                      <Pressable
+                        onPress={handleValidateCode}
+                        disabled={validating || !discountInput.trim()}
+                        style={{ backgroundColor: Colors.primary, borderRadius: 12, paddingHorizontal: 16, justifyContent: "center", opacity: validating || !discountInput.trim() ? 0.5 : 1 }}
+                      >
+                        {validating
+                          ? <ActivityIndicator size="small" color="#fff" />
+                          : <Text style={{ color: "#fff", fontWeight: "600", fontSize: 14 }}>Apply</Text>
+                        }
+                      </Pressable>
+                    </View>
+                  )}
+                  {!!codeError && <Text style={{ color: "#EF4444", fontSize: 12, marginTop: 6 }}>{codeError}</Text>}
+                </View>
+              )}
+
+              {/* Checkout fields */}
+              {fields.length > 0 && (
+                <View style={{ marginBottom: 4 }}>
+                  <Text style={S.sectionLabel}>Your details</Text>
+                  {fields.map(renderField)}
+                </View>
+              )}
+
+              {/* Waiver */}
+              {hasWaiver && (
+                <View style={S.waiverBox}>
+                  <TouchableOpacity style={S.waiverToggleRow} onPress={() => setWaiverExpanded(v => !v)} activeOpacity={0.7}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={S.waiverTitle}>Waiver & Agreement</Text>
+                      {!waiverExpanded && (
+                        <Text style={S.waiverCollapsedHint}>{isSigned ? "Tap to view — signed" : "Tap to read and sign"}</Text>
                       )}
                     </View>
-                    <Feather
-                      name={waiverExpanded ? "chevron-up" : "chevron-down"}
-                      size={18}
-                      color={Colors.textMuted}
-                    />
+                    <Feather name={waiverExpanded ? "chevron-up" : "chevron-down"} size={18} color={Colors.textMuted} />
                   </TouchableOpacity>
 
-                  {/* Expanded content */}
                   {waiverExpanded && (
                     <>
-                      <Text style={[cfStyles.waiverText, { marginTop: 10 }]}>{event.waiverText}</Text>
-
-                      {/* Signature pad */}
-                      <Text style={cfStyles.sigPadLabel}>Your Signature *</Text>
-                      <View ref={sigContainerRef} style={cfStyles.sigPadContainer}>
-                        {/* Empty state hint */}
+                      <Text style={[S.waiverText, { marginTop: 10 }]}>{event.waiverText}</Text>
+                      <Text style={S.sigPadLabel}>Your Signature *</Text>
+                      <View ref={sigContainerRef} style={S.sigPadContainer}>
                         {signaturePaths.length === 0 && !currentStroke.current && (
-                          <View style={cfStyles.sigPadPlaceholder} pointerEvents="none">
-                            <View style={cfStyles.sigPadPlaceholderLine} />
-                            <Text style={cfStyles.sigPadPlaceholderText}>Sign here with your finger</Text>
+                          <View style={S.sigPadPlaceholder} pointerEvents="none">
+                            <View style={S.sigPadPlaceholderLine} />
+                            <Text style={S.sigPadPlaceholderText}>Sign here with your finger</Text>
                           </View>
                         )}
-
-                        {/* Drawing canvas — panHandlers native only; web uses DOM pointer events */}
-                        <Svg
-                          style={{ flex: 1 }}
-                          {...(Platform.OS !== "web" ? signaturePanResponder.panHandlers : {})}
-                        >
+                        <Svg style={{ flex: 1 }} {...(Platform.OS !== "web" ? signaturePanResponder.panHandlers : {})}>
                           {signaturePaths.map((d, i) => (
-                            <SvgPath
-                              key={i}
-                              d={d}
-                              stroke="#1a1a1a"
-                              strokeWidth={2.5}
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              fill="none"
-                            />
+                            <SvgPath key={i} d={d} stroke="#1a1a1a" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" fill="none" />
                           ))}
                           {currentStroke.current ? (
-                            <SvgPath
-                              d={currentStroke.current}
-                              stroke="#1a1a1a"
-                              strokeWidth={2.5}
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              fill="none"
-                            />
+                            <SvgPath d={currentStroke.current} stroke="#1a1a1a" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" fill="none" />
                           ) : null}
                         </Svg>
-
-                        {/* Clear button */}
                         {(signaturePaths.length > 0 || currentStroke.current) && (
                           <TouchableOpacity
-                            style={cfStyles.sigPadClearBtn}
-                            onPress={() => {
-                              setSignaturePaths([]);
-                              currentStroke.current = "";
-                              setRenderTick(t => t + 1);
-                            }}
+                            style={S.sigPadClearBtn}
+                            onPress={() => { setSignaturePaths([]); currentStroke.current = ""; setRenderTick(t => t + 1); }}
                             activeOpacity={0.7}
                           >
-                            <Text style={cfStyles.sigPadClearText}>Clear</Text>
+                            <Text style={S.sigPadClearText}>Clear</Text>
                           </TouchableOpacity>
                         )}
                       </View>
                     </>
                   )}
 
-                  {/* Signed indicator when collapsed */}
                   {!waiverExpanded && isSigned && (
-                    <View style={cfStyles.waiverAgreedBadge}>
+                    <View style={S.waiverAgreedBadge}>
                       <Feather name="edit-3" size={13} color={Colors.primary} />
-                      <Text style={cfStyles.waiverAgreedText}>Signed</Text>
+                      <Text style={S.waiverAgreedText}>Signed</Text>
                     </View>
                   )}
                 </View>
               )}
+
+              {/* Order total */}
+              {showTotal && (
+                <View style={S.totalRow}>
+                  <View>
+                    <Text style={{ color: Colors.textSecondary, fontSize: 12 }}>
+                      {quantity > 1 ? `Total (${quantity} tickets)` : "Total"}
+                    </Text>
+                    <Text style={{ color: Colors.text, fontSize: 22, fontWeight: "700" }}>
+                      {totalPence === 0 ? "FREE" : `£${(totalPence / 100).toFixed(2)}`}
+                    </Text>
+                    {appliedCode && discountedPrice !== null && discountedPrice > 0 && (
+                      <Text style={{ color: Colors.textSecondary, fontSize: 11, textDecorationLine: "line-through" }}>
+                        £{(originalTotalPence / 100).toFixed(2)}
+                      </Text>
+                    )}
+                    {quantity > 1 && perTicketPence > 0 && (
+                      <Text style={{ color: Colors.textMuted, fontSize: 11, marginTop: 2 }}>
+                        £{(perTicketPence / 100).toFixed(2)} per ticket
+                      </Text>
+                    )}
+                  </View>
+                  <Feather name="shopping-bag" size={22} color={Colors.primary} />
+                </View>
+              )}
             </ScrollView>
 
-            {/* Sticky footer buttons */}
-            <View style={cfStyles.footer}>
-              <TouchableOpacity style={cfStyles.proceedBtn} onPress={handleSubmit} activeOpacity={0.85}>
-                <Text style={cfStyles.proceedBtnText}>Proceed to Checkout</Text>
+            <View style={S.footer}>
+              <TouchableOpacity style={S.proceedBtn} onPress={handleSubmit} activeOpacity={0.85}>
+                <Text style={S.proceedBtnText}>
+                  {isFreeEvent || selectedType?.price === 0 || discountedPrice === 0
+                    ? "Register Free"
+                    : "Proceed to Checkout"}
+                </Text>
               </TouchableOpacity>
-              <TouchableOpacity style={cfStyles.cancelBtn} onPress={onClose}>
-                <Text style={cfStyles.cancelBtnText}>Cancel</Text>
+              <TouchableOpacity style={S.cancelBtn} onPress={onClose}>
+                <Text style={S.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1271,209 +1334,6 @@ function CheckoutFormModal({
   );
 }
 
-function TicketTypeModal({
-  event,
-  quantity,
-  Colors,
-  onClose,
-  onSelect,
-}: {
-  event: Event;
-  quantity: number;
-  Colors: any;
-  onClose: () => void;
-  onSelect: (ticketTypeId: number, discountCode?: string) => void;
-}) {
-  const activeTypes = event.ticketTypes?.filter(t => t.isActive && t.saleOpen) ?? [];
-  const [selectedId, setSelectedId] = useState<number | null>(activeTypes.length === 1 ? activeTypes[0].id : null);
-  const [discountInput, setDiscountInput] = useState("");
-  const [validating, setValidating] = useState(false);
-  const [appliedCode, setAppliedCode] = useState<{ code: string; discountType: "percent" | "fixed"; discountAmount: number } | null>(null);
-  const [codeError, setCodeError] = useState("");
-
-  const selectedType = activeTypes.find(t => t.id === selectedId) ?? null;
-  const discountedPrice = appliedCode && selectedType
-    ? (appliedCode.discountType === "percent"
-        ? Math.max(0, Math.round(selectedType.price * (1 - appliedCode.discountAmount / 100)))
-        : Math.max(0, selectedType.price - appliedCode.discountAmount))
-    : null;
-
-  const handleValidateCode = async () => {
-    if (!discountInput.trim()) return;
-    setValidating(true);
-    setCodeError("");
-    setAppliedCode(null);
-    try {
-      const result = await validateDiscountCode(event.id, discountInput.trim());
-      setAppliedCode({ code: result.code, discountType: result.discountType, discountAmount: result.discountAmount });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch (err: any) {
-      setCodeError(err.message ?? "Invalid discount code");
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    } finally {
-      setValidating(false);
-    }
-  };
-
-  const handleContinue = () => {
-    if (!selectedId) return;
-    onSelect(selectedId, appliedCode?.code);
-  };
-
-  return (
-    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" }}>
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
-          <View style={{ backgroundColor: Colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 }}>
-            {/* Handle */}
-            <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: Colors.border, alignSelf: "center", marginBottom: 20 }} />
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <Text style={{ color: Colors.text, fontSize: 18, fontWeight: "700" }}>Choose Ticket</Text>
-              <Pressable onPress={onClose} style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.border, alignItems: "center", justifyContent: "center" }}>
-                <Feather name="x" size={16} color={Colors.text} />
-              </Pressable>
-            </View>
-            <Text style={{ color: Colors.textSecondary, fontSize: 13, marginBottom: 16 }}>{event.title}</Text>
-
-            {/* Ticket Types */}
-            <View style={{ gap: 10, marginBottom: 20 }}>
-              {activeTypes.map(type => {
-                const isSelected = selectedId === type.id;
-                const isSoldOut = type.isSoldOut;
-                return (
-                  <Pressable
-                    key={type.id}
-                    onPress={() => { if (!isSoldOut) { setSelectedId(type.id); setAppliedCode(null); setCodeError(""); setDiscountInput(""); } }}
-                    style={{
-                      borderRadius: 14,
-                      borderWidth: 2,
-                      borderColor: isSelected ? Colors.primary : Colors.border,
-                      backgroundColor: isSelected ? `${Colors.primary}15` : Colors.background,
-                      padding: 14,
-                      flexDirection: "row",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      opacity: isSoldOut ? 0.5 : 1,
-                    }}
-                  >
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ color: Colors.text, fontSize: 15, fontWeight: "600" }}>{type.name}</Text>
-                      {type.description && <Text style={{ color: Colors.textSecondary, fontSize: 12, marginTop: 2 }}>{type.description}</Text>}
-                      {type.available !== null && type.available <= 10 && !isSoldOut && (
-                        <Text style={{ color: "#F59E0B", fontSize: 11, marginTop: 4, fontWeight: "600" }}>Only {type.available} left!</Text>
-                      )}
-                      {type.maxPerOrder !== null && !isSoldOut && (
-                        <Text style={{ color: Colors.textMuted, fontSize: 11, marginTop: 2 }}>Max {type.maxPerOrder} per order</Text>
-                      )}
-                      {isSoldOut && <Text style={{ color: "#EF4444", fontSize: 11, marginTop: 4, fontWeight: "600" }}>Sold Out</Text>}
-                    </View>
-                    <View style={{ alignItems: "flex-end", marginLeft: 12 }}>
-                      <Text style={{ color: Colors.primary, fontSize: 18, fontWeight: "700" }}>
-                        {type.price === 0 ? "FREE" : `£${(type.price / 100).toFixed(2)}`}
-                      </Text>
-                      {isSelected && <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center", marginTop: 6 }}><Feather name="check" size={12} color="#fff" /></View>}
-                    </View>
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            {/* Discount Code */}
-            {selectedType && selectedType.price > 0 && (
-              <View style={{ marginBottom: 20 }}>
-                <Text style={{ color: Colors.textSecondary, fontSize: 12, fontWeight: "600", marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>Discount Code (optional)</Text>
-                {appliedCode ? (
-                  <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#0B5E2F22", borderRadius: 12, borderWidth: 1, borderColor: Colors.primary, padding: 12, gap: 10 }}>
-                    <Feather name="tag" size={16} color={Colors.primary} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ color: Colors.primary, fontWeight: "700", fontSize: 14 }}>{appliedCode.code} applied!</Text>
-                      <Text style={{ color: Colors.textSecondary, fontSize: 12 }}>
-                        {appliedCode.discountType === "percent"
-                          ? `${appliedCode.discountAmount}% off`
-                          : `£${(appliedCode.discountAmount / 100).toFixed(2)} off`}
-                        {discountedPrice !== null && ` → £${(discountedPrice / 100).toFixed(2)}`}
-                        {discountedPrice === 0 && " (FREE!)"}
-                      </Text>
-                    </View>
-                    <Pressable onPress={() => { setAppliedCode(null); setDiscountInput(""); }} style={{ padding: 4 }}>
-                      <Feather name="x" size={16} color={Colors.textSecondary} />
-                    </Pressable>
-                  </View>
-                ) : (
-                  <View style={{ flexDirection: "row", gap: 8 }}>
-                    <TextInput
-                      value={discountInput}
-                      onChangeText={t => { setDiscountInput(t.toUpperCase()); setCodeError(""); }}
-                      placeholder="Enter code"
-                      placeholderTextColor={Colors.textSecondary}
-                      autoCapitalize="characters"
-                      style={{ flex: 1, backgroundColor: Colors.background, borderRadius: 12, borderWidth: 1, borderColor: codeError ? "#EF4444" : Colors.border, paddingHorizontal: 14, paddingVertical: 12, color: Colors.text, fontSize: 14, fontFamily: "monospace" }}
-                    />
-                    <Pressable
-                      onPress={handleValidateCode}
-                      disabled={validating || !discountInput.trim()}
-                      style={{ backgroundColor: Colors.primary, borderRadius: 12, paddingHorizontal: 16, justifyContent: "center", opacity: validating || !discountInput.trim() ? 0.5 : 1 }}
-                    >
-                      {validating ? <ActivityIndicator size="small" color="#fff" /> : <Text style={{ color: "#fff", fontWeight: "600", fontSize: 14 }}>Apply</Text>}
-                    </Pressable>
-                  </View>
-                )}
-                {!!codeError && <Text style={{ color: "#EF4444", fontSize: 12, marginTop: 6 }}>{codeError}</Text>}
-              </View>
-            )}
-
-            {/* Summary + CTA */}
-            {selectedType && (() => {
-              const perTicketPence = discountedPrice !== null ? discountedPrice : selectedType.price;
-              const totalPence = perTicketPence * quantity;
-              const isFreeOrder = totalPence === 0;
-              const originalTotalPence = selectedType.price * quantity;
-              return (
-                <View style={{ backgroundColor: Colors.background, borderRadius: 14, padding: 14, marginBottom: 16, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                  <View>
-                    <Text style={{ color: Colors.textSecondary, fontSize: 12 }}>
-                      {quantity > 1 ? `Total (${quantity} tickets)` : "Total"}
-                    </Text>
-                    <Text style={{ color: Colors.text, fontSize: 22, fontWeight: "700" }}>
-                      {isFreeOrder ? "FREE" : `£${(totalPence / 100).toFixed(2)}`}
-                    </Text>
-                    {appliedCode && discountedPrice !== null && discountedPrice > 0 && (
-                      <Text style={{ color: Colors.textSecondary, fontSize: 11, textDecorationLine: "line-through" }}>
-                        £{(originalTotalPence / 100).toFixed(2)}
-                      </Text>
-                    )}
-                    {quantity > 1 && !isFreeOrder && (
-                      <Text style={{ color: Colors.textMuted, fontSize: 11, marginTop: 2 }}>
-                        £{(perTicketPence / 100).toFixed(2)} per ticket
-                      </Text>
-                    )}
-                  </View>
-                  <Text style={{ color: Colors.textSecondary, fontSize: 13 }}>{selectedType.name}</Text>
-                </View>
-              );
-            })()}
-
-            <Pressable
-              onPress={handleContinue}
-              disabled={!selectedId}
-              style={{
-                backgroundColor: Colors.primary,
-                borderRadius: 16,
-                paddingVertical: 16,
-                alignItems: "center",
-                opacity: selectedId ? 1 : 0.4,
-              }}
-            >
-              <Text style={{ color: "#fff", fontSize: 16, fontWeight: "700" }}>
-                {selectedType?.price === 0 || discountedPrice === 0 ? "Get Free Ticket" : "Continue to Payment"}
-              </Text>
-            </Pressable>
-          </View>
-        </KeyboardAvoidingView>
-      </View>
-    </Modal>
-  );
-}
 
 function makeStyles(Colors: ReturnType<typeof useColors>) {
   return StyleSheet.create({
