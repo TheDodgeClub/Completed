@@ -362,17 +362,17 @@ export default function HomeScreen() {
           {/* ══════════ AREA 2: QUICK ACTIONS STRIP ══════════ */}
           <View style={styles.quickActionsRow}>
             <Pressable
-              style={({ pressed }) => [styles.quickAction, { opacity: pressed ? 0.75 : 1 }]}
+              style={({ pressed }) => [styles.quickAction, { opacity: pressed ? 0.6 : 0.8 }]}
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(tabs)/tickets"); }}
             >
               <View style={[styles.quickActionIcon, { backgroundColor: Colors.primary }]}>
-                <Feather name="tag" size={20} color="#FFFFFF" />
+                <Feather name="tag" size={17} color="#FFFFFF" />
               </View>
               <Text style={styles.quickActionLabel}>Get Tickets</Text>
             </Pressable>
 
             <Pressable
-              style={({ pressed }) => [styles.quickAction, { opacity: pressed ? 0.75 : 1 }]}
+              style={({ pressed }) => [styles.quickAction, { opacity: pressed ? 0.6 : 0.8 }]}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 if (!isAuthenticated) { router.push("/(auth)/login"); return; }
@@ -380,19 +380,29 @@ export default function HomeScreen() {
               }}
             >
               <View style={[styles.quickActionIcon, { backgroundColor: Colors.accent }]}>
-                <Feather name="maximize" size={20} color="#111111" />
+                <Feather name="maximize" size={17} color="#111111" />
               </View>
               <Text style={styles.quickActionLabel}>My QR</Text>
             </Pressable>
 
             <Pressable
-              style={({ pressed }) => [styles.quickAction, { opacity: pressed ? 0.75 : 1 }]}
+              style={({ pressed }) => [styles.quickAction, { opacity: pressed ? 0.6 : 0.8 }]}
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push("/games/dodge"); }}
             >
               <View style={[styles.quickActionIcon, { backgroundColor: Colors.purple }]}>
-                <Text style={{ fontSize: 20 }}>🏐</Text>
+                <Text style={{ fontSize: 17 }}>🏐</Text>
               </View>
               <Text style={styles.quickActionLabel}>Mini Game</Text>
+            </Pressable>
+
+            <Pressable
+              style={({ pressed }) => [styles.quickAction, { opacity: pressed ? 0.6 : 0.8 }]}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(tabs)/merch"); }}
+            >
+              <View style={[styles.quickActionIcon, { backgroundColor: Colors.secondary }]}>
+                <Feather name="shopping-bag" size={17} color="#FFFFFF" />
+              </View>
+              <Text style={styles.quickActionLabel}>Club Shop</Text>
             </Pressable>
           </View>
 
@@ -690,9 +700,9 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       flex: 1,
     },
     quickActionIcon: {
-      width: 56,
-      height: 56,
-      borderRadius: 16,
+      width: 46,
+      height: 46,
+      borderRadius: 13,
       alignItems: "center",
       justifyContent: "center",
     },
