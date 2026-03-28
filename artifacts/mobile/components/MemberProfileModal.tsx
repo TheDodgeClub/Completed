@@ -187,6 +187,13 @@ export function MemberProfileModal({ member, onClose }: {
             <ActivityIndicator color={Colors.primary} style={{ marginTop: 32 }} />
           ) : profile ? (
             <View style={styles.profileBody}>
+              {profile.bio ? (
+                <View style={styles.bioSection}>
+                  <Text style={styles.sectionTitle}>About</Text>
+                  <Text style={styles.bioText}>{profile.bio}</Text>
+                </View>
+              ) : null}
+
               {isSupporter && supporterProgress ? (
                 <View style={styles.xpSection}>
                   <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
@@ -271,13 +278,6 @@ export function MemberProfileModal({ member, onClose }: {
                   </View>
                 </View>
               )}
-
-              {profile.bio ? (
-                <View style={styles.bioSection}>
-                  <Text style={styles.sectionTitle}>About</Text>
-                  <Text style={styles.bioText}>{profile.bio}</Text>
-                </View>
-              ) : null}
 
               {!isSupporter && profile.preferredRole ? (
                 <View style={styles.roleRow}>
