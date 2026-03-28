@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import * as Notifications from "expo-notifications";
-import { Platform, Alert } from "react-native";
+import { Platform } from "react-native";
 import { savePushToken, setNotificationsEnabled, getNotificationStatus } from "@/lib/api";
 
 Notifications.setNotificationHandler({
@@ -13,20 +13,7 @@ Notifications.setNotificationHandler({
   }),
 });
 
-function showPrePrompt(): Promise<boolean> {
-  return new Promise(resolve => {
-    Alert.alert(
-      "Allow Notifications",
-      "The Dodge Club would like to send you event reminders and check-in alerts.",
-      [
-        { text: "Not Now", style: "cancel", onPress: () => resolve(false) },
-        { text: "Allow", onPress: () => resolve(true) },
-      ]
-    );
-  });
-}
-
-async function registerForPushNotifications(): Promise<string | null> {
+export async function registerForPushNotifications(): Promise<string | null> {
   if (Platform.OS === "web") return null;
 
   if (Platform.OS === "android") {
@@ -42,10 +29,6 @@ async function registerForPushNotifications(): Promise<string | null> {
   let finalStatus = existing;
 
   if (existing !== "granted") {
-    if (existing === "undetermined") {
-      const confirmed = await showPrePrompt();
-      if (!confirmed) return null;
-    }
     const { status } = await Notifications.requestPermissionsAsync();
     finalStatus = status;
   }
@@ -56,6 +39,18 @@ async function registerForPushNotifications(): Promise<string | null> {
 
   const token = await Notifications.getExpoPushTokenAsync();
   return token.data;
+}
+
+export async function requestAndRegisterNotifications(): Promise<boolean> {
+  try {
+    const token = await registerForPushNotifications();
+    if (!token) return false;
+    await savePushToken(token);
+    await setNotificationsEnabled(true);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function usePushNotifications(isLoggedIn: boolean) {
@@ -96,13 +91,11 @@ export function usePushNotifications(isLoggedIn: boolean) {
     setLoading(true);
     try {
       if (enable) {
-        const token = await registerForPushNotifications();
-        if (!token) {
+        const success = await requestAndRegisterNotifications();
+        if (!success) {
           setLoading(false);
           return false;
         }
-        await savePushToken(token);
-        await setNotificationsEnabled(true);
         setEnabled(true);
         return true;
       } else {

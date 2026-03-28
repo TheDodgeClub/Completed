@@ -31,6 +31,10 @@ import {
 } from "@/lib/api";
 import { PostCard } from "@/components/PostCard";
 import { PostDetailModal } from "@/components/PostDetailModal";
+import { NotificationPromptModal } from "@/components/NotificationPromptModal";
+import { requestAndRegisterNotifications } from "@/hooks/usePushNotifications";
+
+const NOTIF_PROMPT_KEY = "notif_prompt_shown";
 
 /* ── Supporter tier constants ── */
 const SUPPORTER_TIERS = [
@@ -122,6 +126,33 @@ export default function HomeScreen() {
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const { user, isAuthenticated, refreshUser } = useAuth();
   const logoHeight = screenWidth * 0.084 * 1.2;
+
+  /* ── Notification pre-prompt ── */
+  const [showNotifPrompt, setShowNotifPrompt] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    let timer: ReturnType<typeof setTimeout>;
+    AsyncStorage.getItem(NOTIF_PROMPT_KEY).then(val => {
+      if (val === null) {
+        timer = setTimeout(() => setShowNotifPrompt(true), 1500);
+      }
+    });
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [isAuthenticated]);
+
+  const handleNotifAllow = async () => {
+    await AsyncStorage.setItem(NOTIF_PROMPT_KEY, "shown");
+    setShowNotifPrompt(false);
+    requestAndRegisterNotifications();
+  };
+
+  const handleNotifDismiss = async () => {
+    await AsyncStorage.setItem(NOTIF_PROMPT_KEY, "shown");
+    setShowNotifPrompt(false);
+  };
 
   /* ── Supporter onboarding collapse state ── */
   const ONBOARD_KEY = user ? `supporter_onboarding_collapsed_${user.id}` : null;
@@ -481,6 +512,12 @@ export default function HomeScreen() {
       {featuredVideoPlaying && featuredVideo && (
         <FeaturedVideoModal video={featuredVideo} onClose={() => setFeaturedVideoPlaying(false)} />
       )}
+
+      <NotificationPromptModal
+        visible={showNotifPrompt}
+        onAllow={handleNotifAllow}
+        onDismiss={handleNotifDismiss}
+      />
     </>
   );
 }
