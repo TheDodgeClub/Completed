@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import * as Notifications from "expo-notifications";
-import { Platform } from "react-native";
+import { Platform, Alert } from "react-native";
 import { savePushToken, setNotificationsEnabled, getNotificationStatus } from "@/lib/api";
 
 Notifications.setNotificationHandler({
@@ -12,6 +12,19 @@ Notifications.setNotificationHandler({
     shouldShowList: true,
   }),
 });
+
+function showPrePrompt(): Promise<boolean> {
+  return new Promise(resolve => {
+    Alert.alert(
+      "Allow Notifications",
+      "The Dodge Club would like to send you event reminders and check-in alerts.",
+      [
+        { text: "Not Now", style: "cancel", onPress: () => resolve(false) },
+        { text: "Allow", onPress: () => resolve(true) },
+      ]
+    );
+  });
+}
 
 async function registerForPushNotifications(): Promise<string | null> {
   if (Platform.OS === "web") return null;
@@ -29,6 +42,10 @@ async function registerForPushNotifications(): Promise<string | null> {
   let finalStatus = existing;
 
   if (existing !== "granted") {
+    if (existing === "undetermined") {
+      const confirmed = await showPrePrompt();
+      if (!confirmed) return null;
+    }
     const { status } = await Notifications.requestPermissionsAsync();
     finalStatus = status;
   }

@@ -14,7 +14,11 @@
       "backgroundColor": "#0B5E2F"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Used to set your profile photo",
+        "NSUserNotificationUsageDescription": "We'll send you event reminders and check-in alerts"
+      }
     },
     "android": {},
     "web": {
@@ -30,6 +34,7 @@
       "expo-font",
       "expo-web-browser",
       "expo-video",
+      "expo-notifications",
       [
         "@stripe/stripe-react-native",
         {

@@ -314,6 +314,23 @@ router.post("/forgot-password", async (req, res) => {
   res.json({ message: "If an account exists, a reset code has been sent." });
 });
 
+/* ---------- DELETE /api/auth/account ---------- */
+router.delete("/account", async (req, res) => {
+  const userId = req.session?.userId;
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  try {
+    await db.delete(usersTable).where(eq(usersTable.id, userId));
+    req.session = null;
+    res.json({ message: "Account deleted" });
+  } catch (err) {
+    console.error("[auth] delete account error:", err);
+    res.status(500).json({ error: "Failed to delete account" });
+  }
+});
+
 /* ---------- POST /api/auth/reset-password ---------- */
 router.post("/reset-password", async (req, res) => {
   const { email, code, newPassword } = req.body;

@@ -483,6 +483,11 @@ export async function recordSession(duration: number, startedAt: string): Promis
   });
 }
 
+export async function deleteAccount(): Promise<void> {
+  await apiFetch<{ message: string }>("/auth/account", { method: "DELETE" });
+  await clearToken();
+}
+
 export async function forgotPassword(email: string): Promise<void> {
   await apiFetch<{ message: string }>("/auth/forgot-password", {
     method: "POST",

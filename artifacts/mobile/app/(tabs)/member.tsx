@@ -24,6 +24,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
+import * as WebBrowser from "expo-web-browser";
 import { useColors } from "@/context/ThemeContext";
 import { resolveImageUrl, API_BASE } from "@/constants/api";
 import { useAuth } from "@/context/AuthContext";
@@ -37,6 +38,7 @@ import {
   updateProfile,
   updateAvatar,
   requestUploadUrl,
+  deleteAccount,
   AttendanceRecord,
   UpcomingEvent,
   Achievement,
@@ -209,6 +211,12 @@ function GuestView() {
             <Text style={styles.guestFeatureText}>{item.label}</Text>
           </View>
         ))}
+        <Pressable
+          style={({ pressed }) => [styles.privacyLink, { opacity: pressed ? 0.6 : 1 }]}
+          onPress={() => WebBrowser.openBrowserAsync("https://thedodgeclub.co.uk/privacy")}
+        >
+          <Text style={styles.privacyLinkText}>Privacy Policy</Text>
+        </Pressable>
       </View>
     </ScrollView>
   );
@@ -220,11 +228,13 @@ function EditProfileModal({
   onClose,
   user,
   onSave,
+  onDeleteAccount,
 }: {
   visible: boolean;
   onClose: () => void;
   user: any;
   onSave: (data: any) => void;
+  onDeleteAccount: () => void;
 }) {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
@@ -303,6 +313,21 @@ function EditProfileModal({
                 numberOfLines={4}
               />
             </View>
+
+            <Pressable
+              style={({ pressed }) => [styles.privacyLink, { opacity: pressed ? 0.6 : 1, marginBottom: 8 }]}
+              onPress={() => WebBrowser.openBrowserAsync("https://thedodgeclub.co.uk/privacy")}
+            >
+              <Text style={styles.privacyLinkText}>Privacy Policy</Text>
+            </Pressable>
+
+            <Pressable
+              style={({ pressed }) => [styles.deleteAccountBtn, { opacity: pressed ? 0.8 : 1 }]}
+              onPress={onDeleteAccount}
+            >
+              <Feather name="trash-2" size={16} color="#FF3B30" />
+              <Text style={styles.deleteAccountText}>Delete Account</Text>
+            </Pressable>
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
@@ -497,6 +522,42 @@ export default function MemberScreen() {
       { text: "Cancel", style: "cancel" },
       { text: "Sign Out", style: "destructive", onPress: async () => { await logout(); } },
     ]);
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete Account",
+      "This will permanently delete your account and all your data — XP, tickets, and event history. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete Account",
+          style: "destructive",
+          onPress: () => {
+            Alert.alert(
+              "Are you absolutely sure?",
+              "Your account will be deleted immediately and cannot be recovered.",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Yes, Delete",
+                  style: "destructive",
+                  onPress: async () => {
+                    try {
+                      setEditVisible(false);
+                      await deleteAccount();
+                      await logout();
+                    } catch (err: any) {
+                      Alert.alert("Error", err.message ?? "Could not delete account. Please try again.");
+                    }
+                  },
+                },
+              ]
+            );
+          },
+        },
+      ]
+    );
   };
 
   const handlePickAvatar = async () => {
@@ -1016,6 +1077,13 @@ export default function MemberScreen() {
           </View>
         )}
 
+        <Pressable
+          style={({ pressed }) => [styles.privacyLink, { opacity: pressed ? 0.6 : 1, alignSelf: "center", marginBottom: 16 }]}
+          onPress={() => WebBrowser.openBrowserAsync("https://thedodgeclub.co.uk/privacy")}
+        >
+          <Text style={styles.privacyLinkText}>Privacy Policy</Text>
+        </Pressable>
+
       </View>
 
       <EditProfileModal
@@ -1023,6 +1091,7 @@ export default function MemberScreen() {
         onClose={() => setEditVisible(false)}
         user={user}
         onSave={saveProfile}
+        onDeleteAccount={handleDeleteAccount}
       />
     </ScrollView>
   );
@@ -1555,5 +1624,17 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       color: Colors.textMuted,
       marginTop: 10,
     },
+
+    /* Privacy policy & delete account */
+    privacyLink: { alignItems: "center", paddingVertical: 10 },
+    privacyLinkText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.textMuted, textDecorationLine: "underline" },
+    deleteAccountBtn: {
+      flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+      marginTop: 4, marginBottom: 32,
+      paddingVertical: 14, borderRadius: 14,
+      borderWidth: 1, borderColor: "#FF3B30",
+      backgroundColor: "rgba(255,59,48,0.06)",
+    },
+    deleteAccountText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#FF3B30" },
   });
 }
