@@ -819,7 +819,7 @@ function UnifiedCheckoutSheet({
       }
     }
     return init;
-  }, []);
+  }, [fields, user?.email, user?.name]);
 
   const [formData, setFormData] = useState<Record<string, string>>(initialFormData);
   const [waiverExpanded, setWaiverExpanded] = useState(false);
