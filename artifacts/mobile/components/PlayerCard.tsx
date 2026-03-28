@@ -52,13 +52,13 @@ const PlayerCard = forwardRef<View, Props>(function PlayerCard(
       Animated.sequence([
         Animated.timing(pulseAnim, {
           toValue: 1,
-          duration: 1600,
+          duration: 900,
           easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
         Animated.timing(pulseAnim, {
           toValue: 0,
-          duration: 1600,
+          duration: 900,
           easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
@@ -68,7 +68,7 @@ const PlayerCard = forwardRef<View, Props>(function PlayerCard(
 
   const translateY = enterAnim.interpolate({ inputRange: [0, 1], outputRange: [50, 0] });
   const cardOpacity = enterAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
-  const glowOpacity = pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [0.25, 0.75] });
+  const glowOpacity = pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [0.4, 1.0] });
 
   return (
     <Animated.View style={[styles.animOuter, { opacity: cardOpacity, transform: [{ translateY }] }]}>
@@ -194,17 +194,17 @@ const styles = StyleSheet.create({
   },
   glowHalo: {
     position: "absolute",
-    width: CARD_W + 16,
-    height: CARD_H + 16,
+    width: CARD_W + 20,
+    height: CARD_H + 20,
     borderRadius: 26,
-    borderWidth: 6,
+    borderWidth: 8,
     borderColor: GOLD,
     ...Platform.select({
       ios: {
         shadowColor: GOLD,
         shadowOffset: { width: 0, height: 0 },
         shadowOpacity: 1,
-        shadowRadius: 18,
+        shadowRadius: 28,
       },
       android: { elevation: 0 },
     }),
