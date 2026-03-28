@@ -78,8 +78,6 @@ const PlayerCard = forwardRef<View, Props>(function PlayerCard(
       <View
         ref={ref}
         style={styles.wrapper}
-        renderToHardwareTextureAndroid
-        shouldRasterizeIOS
       >
       <LinearGradient
         colors={["#0D3D1A", "#0A2E13", "#04180A"]}
