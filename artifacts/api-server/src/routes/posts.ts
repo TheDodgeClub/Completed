@@ -1,14 +1,28 @@
 import { Router, type IRouter } from "express";
-import { db, postsTable, usersTable, postCommentsTable, postReportsTable } from "@workspace/db";
-import { desc, eq, asc } from "drizzle-orm";
+import { db, postsTable, usersTable, postCommentsTable, postReportsTable, userBlocksTable } from "@workspace/db";
+import { desc, eq, asc, notInArray } from "drizzle-orm";
 
 const router: IRouter = Router();
 
 /* GET /api/posts */
-router.get("/", async (_req, res) => {
+router.get("/", async (req, res) => {
+  const currentUserId = req.session?.userId;
+
+  let blockedIds: number[] = [];
+  if (currentUserId) {
+    const blocks = await db
+      .select({ blockedId: userBlocksTable.blockedId })
+      .from(userBlocksTable)
+      .where(eq(userBlocksTable.blockerId, currentUserId));
+    blockedIds = blocks.map(b => b.blockedId);
+  }
+
   const posts = await db.query.postsTable.findMany({
     orderBy: desc(postsTable.createdAt),
     with: { author: true },
+    ...(blockedIds.length > 0
+      ? { where: notInArray(postsTable.authorId, blockedIds) }
+      : {}),
   });
 
   const result = posts.map(p => ({
@@ -54,8 +68,21 @@ router.post("/", async (req, res) => {
 /* GET /api/posts/:id/comments */
 router.get("/:id/comments", async (req, res) => {
   const postId = Number(req.params.id);
+  const currentUserId = req.session?.userId;
+
+  let blockedIds: number[] = [];
+  if (currentUserId) {
+    const blocks = await db
+      .select({ blockedId: userBlocksTable.blockedId })
+      .from(userBlocksTable)
+      .where(eq(userBlocksTable.blockerId, currentUserId));
+    blockedIds = blocks.map(b => b.blockedId);
+  }
+
   const comments = await db.query.postCommentsTable.findMany({
-    where: eq(postCommentsTable.postId, postId),
+    where: blockedIds.length > 0
+      ? (t, { and: _and }) => _and(eq(t.postId, postId), notInArray(t.userId, blockedIds))
+      : eq(postCommentsTable.postId, postId),
     with: { user: true },
     orderBy: asc(postCommentsTable.createdAt),
   });

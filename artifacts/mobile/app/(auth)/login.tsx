@@ -28,9 +28,11 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [suspended, setSuspended] = useState(false);
 
   const handleLogin = async () => {
     setErrorMsg("");
+    setSuspended(false);
     if (!email.trim() || !password.trim()) {
       setErrorMsg("Please enter your email and password.");
       return;
@@ -40,7 +42,12 @@ export default function LoginScreen() {
     try {
       await login(email.trim().toLowerCase(), password);
     } catch (err: any) {
-      setErrorMsg(err.message || "Invalid email or password.");
+      const msg: string = err.message || "";
+      if (msg.toLowerCase().includes("suspend") || msg.toLowerCase().includes("banned")) {
+        setSuspended(true);
+      } else {
+        setErrorMsg(msg || "Invalid email or password.");
+      }
     } finally {
       setLoading(false);
     }
@@ -102,7 +109,18 @@ export default function LoginScreen() {
           </View>
         </View>
 
-        {!!errorMsg && (
+        {suspended && (
+          <View style={styles.suspendedBox}>
+            <Feather name="slash" size={20} color="#FF6B6B" style={{ marginBottom: 8 }} />
+            <Text style={styles.suspendedTitle}>Account suspended</Text>
+            <Text style={styles.suspendedBody}>
+              Your account has been suspended. If you believe this is a mistake, please contact us at{" "}
+              <Text style={styles.suspendedEmail}>hello@thedodgeclub.co.uk</Text>.
+            </Text>
+          </View>
+        )}
+
+        {!suspended && !!errorMsg && (
           <View style={styles.errorBox}>
             <Feather name="alert-circle" size={15} color="#FF6B6B" style={{ marginRight: 7 }} />
             <Text style={styles.errorText}>{errorMsg}</Text>
@@ -200,6 +218,34 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       paddingVertical: 16,
     },
     eyeBtn: { padding: 8 },
+    suspendedBox: {
+      backgroundColor: "rgba(255,107,107,0.09)",
+      borderWidth: 1.5,
+      borderColor: "rgba(255,107,107,0.45)",
+      borderRadius: 14,
+      paddingHorizontal: 18,
+      paddingVertical: 18,
+      marginBottom: 16,
+      alignItems: "center",
+    },
+    suspendedTitle: {
+      fontFamily: "Poppins_700Bold",
+      fontSize: 16,
+      color: "#CC3333",
+      marginBottom: 6,
+      textAlign: "center",
+    },
+    suspendedBody: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 13,
+      color: "#AA3333",
+      textAlign: "center",
+      lineHeight: 19,
+    },
+    suspendedEmail: {
+      fontFamily: "Inter_600SemiBold",
+      textDecorationLine: "underline",
+    },
     errorBox: {
       flexDirection: "row",
       alignItems: "center",

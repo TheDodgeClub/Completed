@@ -126,10 +126,10 @@ export function MemberProfileModal({ member, onClose }: {
       "Report user",
       "Why are you reporting this member?",
       [
-        { text: "Inappropriate behaviour", onPress: () => doReport("Inappropriate behaviour") },
-        { text: "Abusive or harmful content", onPress: () => doReport("Abusive or harmful content") },
-        { text: "Spam or fake account", onPress: () => doReport("Spam or fake account") },
-        { text: "Other", onPress: () => doReport(undefined) },
+        { text: "Harassment", onPress: () => doReport("Harassment") },
+        { text: "Spam", onPress: () => doReport("Spam") },
+        { text: "Inappropriate content", onPress: () => doReport("Inappropriate content") },
+        { text: "Other", onPress: () => doReport("Other") },
         { text: "Cancel", style: "cancel" },
       ],
     );

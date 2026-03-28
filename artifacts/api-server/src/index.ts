@@ -58,6 +58,14 @@ async function runMigrations() {
         created_at TIMESTAMP NOT NULL DEFAULT NOW()
       );
 
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'user_reports_reporter_reported_unique'
+        ) THEN
+          ALTER TABLE user_reports ADD CONSTRAINT user_reports_reporter_reported_unique UNIQUE (reported_by_user_id, reported_user_id);
+        END IF;
+      END $$;
+
       CREATE TABLE IF NOT EXISTS user_blocks (
         id SERIAL PRIMARY KEY,
         blocker_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

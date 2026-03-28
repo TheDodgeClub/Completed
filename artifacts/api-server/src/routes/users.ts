@@ -611,7 +611,7 @@ router.put("/me/notifications", async (req, res) => {
   res.json({ notificationsEnabled: enabled });
 });
 
-/* POST /api/users/:id/report — report a user */
+/* POST /api/users/:id/report — report a user (idempotent: one report per user-pair) */
 router.post("/:id/report", async (req, res) => {
   const userId = req.session?.userId;
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
@@ -624,7 +624,7 @@ router.post("/:id/report", async (req, res) => {
     reportedUserId: targetId,
     reportedByUserId: userId,
     reason: reason ?? null,
-  });
+  }).onConflictDoNothing();
   res.json({ ok: true });
 });
 
