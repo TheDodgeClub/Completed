@@ -16,3 +16,4 @@ export * from "./discount_codes";
 export * from "./settings";
 export * from "./relations";
 export * from "./announcements";
+export * from "./streak_notifications";

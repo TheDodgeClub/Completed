@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { runStreakNotificationJob } from "./services/streakNotifications";
 
 const rawPort = process.env["PORT"];
 
@@ -33,3 +34,22 @@ app.listen(port, (err) => {
   }
   logger.info({ port }, "Server listening");
 });
+
+// Hourly streak notification job: fires once on startup (in case server was
+// down during a window) then every 60 minutes thereafter.
+async function startStreakNotificationCron() {
+  const run = () =>
+    runStreakNotificationJob().catch((err: unknown) =>
+      logger.error({ err }, "streak notification cron error"),
+    );
+
+  // Delay initial run by 30s to let DB connections settle after startup
+  setTimeout(() => {
+    run();
+    setInterval(run, 60 * 60 * 1000);
+  }, 30_000);
+
+  logger.info("streak notification cron scheduled (hourly)");
+}
+
+startStreakNotificationCron();
