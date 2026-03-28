@@ -278,11 +278,20 @@ export default function HomeScreen() {
 
           <Text style={styles.heroTagline}>Come alone. Win together.</Text>
 
-          {/* Next Event Banner (all users) */}
-          {nextEvent && (() => {
+          {/* Hero Banner — admin-controlled image + overlay text */}
+          {(() => {
             const bannerLinkUrl = appSettings?.homeHeroBannerLinkUrl?.trim() || null;
             const bannerTitle = appSettings?.homeHeroBannerTitle?.trim() || null;
             const bannerSubtitle = appSettings?.homeHeroBannerSubtitle?.trim() || null;
+            const adminImageUrl = appSettings?.homeHeroImageUrl ?? null;
+            const resolvedAdminUri = adminImageUrl ? (resolveImageUrl(adminImageUrl) ?? adminImageUrl) : null;
+            const fallbackImageUrl = nextEvent?.imageUrl ?? null;
+            const resolvedFallbackUri = fallbackImageUrl ? (resolveImageUrl(fallbackImageUrl) ?? fallbackImageUrl) : null;
+            const resolvedUri = resolvedAdminUri ?? resolvedFallbackUri;
+            const hasOverlayText = !!(bannerTitle || bannerSubtitle);
+
+            if (!resolvedUri && !nextEvent) return null;
+
             const handleBannerPress = () => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               if (bannerLinkUrl) {
@@ -295,9 +304,7 @@ export default function HomeScreen() {
                 router.push("/(tabs)/tickets");
               }
             };
-            const imgSrc = appSettings?.homeHeroImageUrl ?? nextEvent.imageUrl;
-            const resolvedUri = imgSrc ? (resolveImageUrl(imgSrc) ?? imgSrc) : null;
-            const hasOverlayText = bannerTitle || bannerSubtitle;
+
             return (
               <Pressable
                 style={({ pressed }) => [styles.eventBanner, { opacity: pressed ? 0.88 : 1 }]}
@@ -318,21 +325,19 @@ export default function HomeScreen() {
                     />
                     {hasOverlayText && (
                       <LinearGradient
-                        colors={["transparent", "rgba(0,0,0,0.85)"]}
+                        colors={["transparent", "rgba(0,0,0,0.92)"]}
                         style={styles.eventBannerOverlay}
                       >
                         {bannerTitle ? (
                           <Text style={styles.eventBannerTitle} numberOfLines={2}>{bannerTitle}</Text>
                         ) : null}
                         {bannerSubtitle ? (
-                          <View style={styles.eventBannerMeta}>
-                            <Text style={styles.eventBannerDate}>{bannerSubtitle}</Text>
-                          </View>
+                          <Text style={[styles.eventBannerDate, bannerTitle ? {} : styles.eventBannerTitle]}>{bannerSubtitle}</Text>
                         ) : null}
                       </LinearGradient>
                     )}
                   </>
-                ) : (
+                ) : nextEvent ? (
                   <View style={styles.eventTextBanner}>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.eventBannerTitle} numberOfLines={1}>{nextEvent.title}</Text>
@@ -342,7 +347,7 @@ export default function HomeScreen() {
                     </View>
                     <Feather name="chevron-right" size={18} color="rgba(255,255,255,0.6)" />
                   </View>
-                )}
+                ) : null}
               </Pressable>
             );
           })()}

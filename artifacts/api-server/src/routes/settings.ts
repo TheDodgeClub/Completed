@@ -65,7 +65,7 @@ router.get("/", async (_req, res) => {
     }
   }
 
-  res.set("Cache-Control", "no-store");
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate").removeHeader("ETag");
   res.json({ homeVideoUrl, homeHeroImageUrl, homeHeroImagePosition, homeHeroBannerTitle, homeHeroBannerSubtitle, homeHeroBannerLinkUrl, clubName, clubTagline, featuredVideo, communityGuidelines, privacyPolicyContent: privacyPolicy, termsOfService });
 });
 

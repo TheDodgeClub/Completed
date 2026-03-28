@@ -126,7 +126,7 @@ function HeroImageSection() {
           <CardTitle className="text-base">Home Screen Event Banner</CardTitle>
         </div>
         <CardDescription>
-          Customise the banner image, overlay text, and tap destination on the mobile home screen. Leave text fields blank to fall back to the next event's own title and date.
+          Customise the banner image, overlay text, and tap destination on the mobile home screen. Text you enter here will appear over the image. Leave both text fields blank to show the image with no overlay.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -235,7 +235,7 @@ function HeroImageSection() {
           <div>
             <p className="text-sm font-medium mb-1">Overlay Text</p>
             <p className="text-xs text-muted-foreground mb-3">
-              Text shown on top of the banner image. Leave blank to use the event's title and date automatically.
+              Text shown on top of the banner image. Set a title, a subtitle, or both. Leave blank to show no text.
             </p>
             <div className="space-y-3">
               <div className="space-y-1.5">
