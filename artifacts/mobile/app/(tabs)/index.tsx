@@ -249,12 +249,28 @@ export default function HomeScreen() {
         }
       >
         {/* ══════════ AREA 1: HERO ══════════ */}
-        <LinearGradient
-          colors={["#074A24", "#021409"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.hero, { paddingTop: insets.top + 24 }]}
-        >
+        <View style={[styles.hero, { paddingTop: insets.top + 24 }]}>
+          {/* Hero background: custom image or default gradient */}
+          {appSettings?.homeHeroImageUrl ? (
+            <>
+              <Image
+                source={{ uri: resolveImageUrl(appSettings.homeHeroImageUrl) ?? appSettings.homeHeroImageUrl }}
+                style={StyleSheet.absoluteFill}
+                resizeMode="cover"
+              />
+              <LinearGradient
+                colors={["rgba(0,0,0,0.18)", "rgba(0,0,0,0.62)"]}
+                style={StyleSheet.absoluteFill}
+              />
+            </>
+          ) : (
+            <LinearGradient
+              colors={["#074A24", "#021409"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+          )}
           {/* Logo */}
           <View style={styles.heroTopRow}>
             <Image
@@ -378,7 +394,7 @@ export default function HomeScreen() {
               </View>
             );
           })()}
-        </LinearGradient>
+        </View>
 
         <View style={styles.body}>
 

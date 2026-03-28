@@ -101,11 +101,11 @@ function ClassicTabLayout() {
         headerTintColor: Colors.text,
         headerShadowVisible: false,
         tabBarStyle: {
-          position: "absolute",
+          ...(isIOS || isWeb ? { position: "absolute" } : {}),
           backgroundColor: isIOS ? "transparent" : Colors.surface,
           borderTopWidth: 1,
           borderTopColor: Colors.border,
-          elevation: 0,
+          elevation: isIOS || isWeb ? 0 : 8,
           paddingBottom: safeAreaInsets.bottom,
           ...(isWeb ? { height: 84 } : {}),
         },
