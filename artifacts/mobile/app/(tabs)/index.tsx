@@ -400,7 +400,7 @@ export default function HomeScreen() {
           {/* ══════════ AREA 2.5: COUNTDOWN ══════════ */}
           {nextEventCountdown && (
             <View style={styles.countdownRow}>
-              <Feather name="clock" size={12} color="#FFC107" />
+              <Feather name="clock" size={12} color={Colors.warning} />
               <Text style={styles.countdownRowText}>{nextEventCountdown}</Text>
             </View>
           )}
@@ -589,7 +589,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     countdownRowText: {
       fontFamily: "Inter_600SemiBold",
       fontSize: 12,
-      color: "#FFC107",
+      color: Colors.warning,
     },
     countdownPill: {
       flexDirection: "row",
