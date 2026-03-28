@@ -38,7 +38,13 @@ async function runMigrations() {
         used_at TIMESTAMP,
         created_at TIMESTAMP NOT NULL DEFAULT NOW()
       );
-      CREATE INDEX IF NOT EXISTS idx_prt_email ON password_reset_tokens(email);
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'password_reset_tokens_email_unique'
+        ) THEN
+          ALTER TABLE password_reset_tokens ADD CONSTRAINT password_reset_tokens_email_unique UNIQUE (email);
+        END IF;
+      END $$;
     `);
     logger.info("DB migrations applied");
   } finally {
