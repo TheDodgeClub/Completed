@@ -17,6 +17,7 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useColors, useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
+import { updateProfile } from "@/lib/api";
 
 type AccountType = "player" | "supporter";
 
@@ -51,6 +52,17 @@ const ROLE_OPTIONS: {
   },
 ];
 
+const SKILL_OPTIONS = ["Throwing", "Catching", "Dodging", "Tactical", "All Rounder"] as const;
+type Skill = typeof SKILL_OPTIONS[number];
+
+const SKILL_ICONS: Record<Skill, string> = {
+  "Throwing": "crosshair",
+  "Catching": "wind",
+  "Dodging": "zap",
+  "Tactical": "target",
+  "All Rounder": "star",
+};
+
 export default function RegisterScreen() {
   const insets = useSafeAreaInsets();
   const Colors = useColors();
@@ -58,13 +70,14 @@ export default function RegisterScreen() {
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const { register } = useAuth();
 
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [referralCode, setReferralCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [accountType, setAccountType] = useState<AccountType>("player");
+  const [selectedSkills, setSelectedSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
@@ -87,6 +100,18 @@ export default function RegisterScreen() {
     setStep(2);
   };
 
+  const handleNextToSkills = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setStep(3);
+  };
+
+  const toggleSkill = (skill: Skill) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedSkills(prev =>
+      prev.includes(skill) ? prev.filter(s => s !== skill) : [...prev, skill]
+    );
+  };
+
   const handleRegister = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setLoading(true);
@@ -98,9 +123,15 @@ export default function RegisterScreen() {
         accountType,
         referralCode.trim().toUpperCase() || undefined,
       );
+      if (accountType === "player" && selectedSkills.length > 0) {
+        try {
+          await updateProfile({ skills: [...selectedSkills] });
+        } catch {
+        }
+      }
     } catch (err: any) {
       setErrorMsg(err.message || "Something went wrong. Please try again.");
-      setStep(1);
+      setStep(accountType === "player" ? 3 : 2);
     } finally {
       setLoading(false);
     }
@@ -132,9 +163,10 @@ export default function RegisterScreen() {
           </View>
 
           <View style={styles.stepIndicator}>
-            <View style={styles.stepDot} />
+            <View style={[styles.stepDot, styles.stepDotActive]} />
             <View style={styles.stepLine} />
             <View style={[styles.stepDot, styles.stepDotActive]} />
+            {accountType === "player" && <><View style={styles.stepLine} /><View style={styles.stepDot} /></>}
           </View>
 
           <Text style={styles.title}>How do you roll?</Text>
@@ -231,6 +263,91 @@ export default function RegisterScreen() {
 
           <Pressable
             style={({ pressed }) => [styles.primaryBtn, { opacity: pressed ? 0.85 : 1 }]}
+            onPress={accountType === "player" ? handleNextToSkills : handleRegister}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : accountType === "player" ? (
+              <>
+                <Text style={styles.primaryBtnText}>Next</Text>
+                <Feather name="arrow-right" size={18} color="#fff" style={{ marginLeft: 6 }} />
+              </>
+            ) : (
+              <Text style={styles.primaryBtnText}>Create Account</Text>
+            )}
+          </Pressable>
+
+          <Pressable style={styles.backBtn} onPress={() => setStep(1)}>
+            <Feather name="arrow-left" size={16} color={Colors.primary} />
+            <Text style={styles.backBtnText}>Back</Text>
+          </Pressable>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
+
+  if (step === 3) {
+    return (
+      <KeyboardAvoidingView
+        style={{ flex: 1, backgroundColor: Colors.background }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={[styles.container2, { paddingBottom: insets.bottom + 32 }]}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.logoRow}>
+            <Image
+              source={require("@/assets/images/tdc-logo.png")}
+              style={styles.logoImg}
+              resizeMode="contain"
+            />
+          </View>
+
+          <View style={styles.stepIndicator}>
+            <View style={[styles.stepDot, styles.stepDotActive]} />
+            <View style={styles.stepLine} />
+            <View style={[styles.stepDot, styles.stepDotActive]} />
+            <View style={styles.stepLine} />
+            <View style={[styles.stepDot, styles.stepDotActive]} />
+          </View>
+
+          <Text style={styles.title}>What are your strengths?</Text>
+          <Text style={styles.subtitle}>Pick the skills that describe your game. You can update these later.</Text>
+
+          <View style={styles.skillsGrid}>
+            {SKILL_OPTIONS.map(skill => {
+              const selected = selectedSkills.includes(skill);
+              return (
+                <Pressable
+                  key={skill}
+                  style={[styles.skillCard, selected && styles.skillCardSelected]}
+                  onPress={() => toggleSkill(skill)}
+                >
+                  <View style={[styles.skillIconWrap, selected && styles.skillIconWrapSelected]}>
+                    <Feather name={SKILL_ICONS[skill] as any} size={22} color={selected ? "#fff" : Colors.primary} />
+                  </View>
+                  <Text style={[styles.skillLabel, selected && styles.skillLabelSelected]}>{skill}</Text>
+                  {selected && (
+                    <View style={styles.skillCheck}>
+                      <Feather name="check" size={11} color="#fff" />
+                    </View>
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {!!errorMsg && (
+            <View style={styles.errorBox}>
+              <Feather name="alert-circle" size={15} color="#FF6B6B" style={{ marginRight: 7 }} />
+              <Text style={styles.errorText}>{errorMsg}</Text>
+            </View>
+          )}
+
+          <Pressable
+            style={({ pressed }) => [styles.primaryBtn, { opacity: pressed ? 0.85 : 1 }]}
             onPress={handleRegister}
             disabled={loading}
           >
@@ -241,7 +358,7 @@ export default function RegisterScreen() {
             )}
           </Pressable>
 
-          <Pressable style={styles.backBtn} onPress={() => setStep(1)}>
+          <Pressable style={styles.backBtn} onPress={() => setStep(2)}>
             <Feather name="arrow-left" size={16} color={Colors.primary} />
             <Text style={styles.backBtnText}>Back</Text>
           </Pressable>
@@ -716,6 +833,59 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       fontFamily: "Inter_600SemiBold",
       fontSize: 15,
       color: Colors.primary,
+    },
+    skillsGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 12,
+      marginBottom: 28,
+      justifyContent: "center",
+    },
+    skillCard: {
+      width: "44%",
+      borderRadius: 16,
+      borderWidth: 2,
+      borderColor: Colors.border,
+      backgroundColor: Colors.surface,
+      padding: 16,
+      alignItems: "center",
+      gap: 8,
+      position: "relative",
+    },
+    skillCardSelected: {
+      borderColor: Colors.primary,
+      backgroundColor: `${Colors.primary}12`,
+    },
+    skillIconWrap: {
+      width: 46,
+      height: 46,
+      borderRadius: 23,
+      backgroundColor: `${Colors.primary}15`,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    skillIconWrapSelected: {
+      backgroundColor: Colors.primary,
+    },
+    skillLabel: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 13,
+      color: Colors.text,
+      textAlign: "center",
+    },
+    skillLabelSelected: {
+      color: Colors.primary,
+    },
+    skillCheck: {
+      position: "absolute",
+      top: 10,
+      right: 10,
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      backgroundColor: Colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
     },
   });
 }

@@ -116,6 +116,7 @@ function toProfile(
     username: user.username ?? null,
     preferredRole: user.preferredRole ?? null,
     bio: user.bio ?? null,
+    skills: user.skills ?? null,
     accountType: user.accountType ?? "player",
     referralCode: user.referralCode ?? null,
   };

@@ -30,6 +30,7 @@ export const usersTable = pgTable("users", {
   referralCode: text("referral_code").unique(),
   referredBy: integer("referred_by"),
   isBanned: boolean("is_banned").notNull().default(false),
+  skills: text("skills"),
 });
 
 export const insertUserSchema = createInsertSchema(usersTable).omit({

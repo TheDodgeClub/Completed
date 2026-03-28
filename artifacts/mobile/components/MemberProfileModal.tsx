@@ -187,7 +187,7 @@ export function MemberProfileModal({ member, onClose }: {
             <ActivityIndicator color={Colors.primary} style={{ marginTop: 32 }} />
           ) : profile ? (
             <View style={styles.profileBody}>
-              {(profile.bio || profile.preferredRole || profile.memberSince) ? (
+              {(profile.bio || profile.preferredRole || profile.memberSince || (!isSupporter && profile.skills)) ? (
                 <View style={styles.bioSection}>
                   {profile.bio ? (
                     <>
@@ -211,6 +211,15 @@ export function MemberProfileModal({ member, onClose }: {
                       </View>
                     ) : null}
                   </View>
+                  {!isSupporter && profile.skills ? (
+                    <View style={styles.skillsRow}>
+                      {profile.skills.split(",").filter(Boolean).map(skill => (
+                        <View key={skill} style={styles.skillChip}>
+                          <Text style={styles.skillChipText}>{skill.trim()}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  ) : null}
                 </View>
               ) : null}
 
@@ -395,6 +404,16 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     bioText: { fontFamily: "Inter_400Regular", fontSize: 15, color: Colors.text, lineHeight: 22 },
     roleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
     memberSinceText: { fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.textMuted },
+    skillsRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 8 },
+    skillChip: {
+      backgroundColor: `${Colors.primary}15`,
+      borderRadius: 20,
+      paddingHorizontal: 12,
+      paddingVertical: 5,
+      borderWidth: 1,
+      borderColor: `${Colors.primary}30`,
+    },
+    skillChipText: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.primary },
     menuOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
     menuSheet: {
       borderTopLeftRadius: 20, borderTopRightRadius: 20,

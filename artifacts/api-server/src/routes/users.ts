@@ -88,6 +88,7 @@ function toProfile(user: typeof usersTable.$inferSelect, stats: Awaited<ReturnTy
     username: user.username ?? null,
     preferredRole: user.preferredRole ?? null,
     bio: user.bio ?? null,
+    skills: user.skills ?? null,
     ...stats,
   };
 }
@@ -360,7 +361,7 @@ router.get("/activity", async (_req, res) => {
 router.get("/", async (_req, res) => {
   const users = await db.query.usersTable.findMany({
     orderBy: usersTable.name,
-    columns: { id: true, name: true, avatarUrl: true, username: true, bio: true, preferredRole: true, createdAt: true, accountType: true },
+    columns: { id: true, name: true, avatarUrl: true, username: true, bio: true, preferredRole: true, skills: true, createdAt: true, accountType: true },
   });
   res.json(users.map(u => ({
     id: u.id,
@@ -369,6 +370,7 @@ router.get("/", async (_req, res) => {
     username: u.username ?? null,
     bio: u.bio ?? null,
     preferredRole: u.preferredRole ?? null,
+    skills: u.skills ?? null,
     memberSince: (u.memberSince ?? u.createdAt).toISOString(),
     accountType: u.accountType ?? "player",
   })));
@@ -497,12 +499,13 @@ router.put("/me", async (req, res) => {
   const userId = req.session?.userId;
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
 
-  const { name, username, bio, preferredRole } = req.body;
+  const { name, username, bio, preferredRole, skills } = req.body;
   const updates: Record<string, unknown> = {};
   if (name !== undefined) updates.name = name;
   if (username !== undefined) updates.username = username || null;
   if (bio !== undefined) updates.bio = bio || null;
   if (preferredRole !== undefined) updates.preferredRole = preferredRole || null;
+  if (skills !== undefined) updates.skills = Array.isArray(skills) ? skills.join(",") : (skills || null);
 
   if (Object.keys(updates).length === 0) {
     res.status(400).json({ error: "Nothing to update" });

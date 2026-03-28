@@ -22,6 +22,7 @@ export type UserProfile = {
   username: string | null;
   preferredRole: string | null;
   bio: string | null;
+  skills: string | null;
   accountType?: "player" | "supporter";
   referralCode?: string | null;
 };
@@ -252,6 +253,7 @@ export async function updateProfile(data: {
   username?: string;
   bio?: string;
   preferredRole?: string;
+  skills?: string[];
 }): Promise<UserProfile> {
   return apiFetch<UserProfile>("/users/me", { method: "PUT", body: JSON.stringify(data) });
 }
@@ -333,6 +335,7 @@ export type MemberSummary = {
   username: string | null;
   bio: string | null;
   preferredRole: string | null;
+  skills: string | null;
   memberSince: string;
   accountType?: "player" | "supporter";
 };
