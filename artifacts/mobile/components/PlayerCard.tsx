@@ -444,12 +444,12 @@ const styles = StyleSheet.create({
   /* Skills */
   skillsSection: { alignItems: "center", marginTop: 8, width: CARD_W - 36 },
   skillsHeading: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 8,
+    fontFamily: "Poppins_800ExtraBold",
+    fontSize: 9,
     color: GOLD,
     letterSpacing: 2.5,
     marginBottom: 6,
-    opacity: 0.7,
+    opacity: 0.85,
   },
   skillsRow: { flexDirection: "row", gap: 6, flexWrap: "wrap", justifyContent: "center" },
   skillChip: {
