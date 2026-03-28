@@ -58,7 +58,6 @@
   },
   "dependencies": {
     "@stripe/stripe-react-native": "^0.61.0",
-    "expo-auth-session": "^7.0.10",
     "expo-clipboard": "~8.0.8",
     "expo-crypto": "^15.0.8",
     "expo-notifications": "^0.32.16",
