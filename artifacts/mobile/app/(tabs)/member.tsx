@@ -772,12 +772,11 @@ export default function MemberScreen() {
           Member since {new Date(user.memberSince).toLocaleDateString("en-GB", { month: "long", year: "numeric" })}
         </Text>
 
-        {user.accountType !== "supporter" && user.skills && (() => {
-          const skills = user.skills!.split(",").filter(Boolean).map(s => s.trim());
-          return skills.length > 0 ? (
-            <Text style={styles.skillsInline}>⚡ {skills.join(" · ")}</Text>
-          ) : null;
-        })()}
+        {user.accountType !== "supporter" && user.skills && (
+          <Text style={styles.skillsInline}>
+            ⚡ {user.skills.split(",").filter(Boolean).map(s => s.trim()).join(" · ")}
+          </Text>
+        )}
 
         {/* XP Progress — players / supporter-specific tier bar */}
         {user.accountType === "supporter" ? (() => {
@@ -1333,12 +1332,18 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       borderRadius: 8, borderWidth: 1, borderColor: `${Colors.accent}40`,
     },
     roleBadgeText: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: Colors.accent },
+    skillsInline: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 11,
+      color: "rgba(255,255,255,0.55)",
+      textAlign: "center",
+      marginTop: 2,
+    },
     memberBio: {
       fontFamily: "Inter_400Regular", fontSize: 13,
       color: "rgba(255,255,255,0.75)", lineHeight: 19, marginBottom: 8,
     },
-    memberSince: { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.55)", marginBottom: 3 },
-    skillsInline: { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.55)", marginBottom: 16 },
+    memberSince: { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.55)", marginBottom: 2 },
 
     /* XP Bar */
     xpSection: { marginTop: 4 },
