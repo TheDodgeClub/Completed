@@ -309,8 +309,8 @@ export default function HomeScreen() {
                         position: "absolute",
                         left: 0,
                         right: 0,
-                        height: 330,
-                        top: -110 * (focalY / 100),
+                        height: 363,
+                        top: -121 * (focalY / 100),
                       }}
                       resizeMode="cover"
                     />
@@ -708,8 +708,8 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     eventBanner: {
       borderRadius: 18,
       overflow: "hidden",
-      height: 209,
-      marginHorizontal: -24,
+      height: 242,
+      marginHorizontal: 0,
       marginBottom: 0,
       backgroundColor: "rgba(255,255,255,0.07)",
     },
