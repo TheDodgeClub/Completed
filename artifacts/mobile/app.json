@@ -17,6 +17,7 @@
       "supportsTablet": false,
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Used to set your profile photo",
+        "NSCameraUsageDescription": "Used to scan QR codes for event check-in",
         "NSUserNotificationUsageDescription": "We'll send you event reminders and check-in alerts"
       }
     },

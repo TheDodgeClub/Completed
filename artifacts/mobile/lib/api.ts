@@ -491,6 +491,13 @@ export async function recordSession(duration: number, startedAt: string): Promis
   });
 }
 
+export async function reportPost(postId: number, reason?: string): Promise<void> {
+  await apiFetch<{ message: string }>(`/posts/${postId}/report`, {
+    method: "POST",
+    body: JSON.stringify({ reason: reason ?? null }),
+  });
+}
+
 export async function deleteAccount(): Promise<void> {
   await apiFetch<{ message: string }>("/auth/account", { method: "DELETE" });
   await clearToken();

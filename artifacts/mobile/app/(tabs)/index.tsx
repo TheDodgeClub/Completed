@@ -26,7 +26,7 @@ import { useColors } from "@/context/ThemeContext";
 import { resolveImageUrl } from "@/constants/api";
 import { useAuth } from "@/context/AuthContext";
 import {
-  listUpcomingEvents, listPosts, getAppSettings,
+  listUpcomingEvents, listPosts, getAppSettings, reportPost,
   Post, FeaturedVideo,
 } from "@/lib/api";
 import { PostCard } from "@/components/PostCard";
@@ -452,6 +452,7 @@ export default function HomeScreen() {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     setSelectedPost(post);
                   }}
+                  onReport={user ? () => reportPost(post.id) : undefined}
                 />
               ))
             ) : !featuredVideo ? (

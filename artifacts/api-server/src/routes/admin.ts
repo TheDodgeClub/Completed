@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, eventsTable, postsTable, merchTable, usersTable, attendanceTable, awardsTable, videosTable, eventRegistrationsTable, userSessionsTable, ticketsTable, announcementsTable, ticketTypesTable, discountCodesTable } from "@workspace/db";
+import { db, eventsTable, postsTable, merchTable, usersTable, attendanceTable, awardsTable, videosTable, eventRegistrationsTable, userSessionsTable, ticketsTable, announcementsTable, ticketTypesTable, discountCodesTable, postReportsTable } from "@workspace/db";
 import { eq, desc, and, avg, count, countDistinct, sum, gte, sql, lte, or, isNull } from "drizzle-orm";
 import { getUncachableStripeClient } from "../stripeClient";
 import { requireAdmin } from "../middlewares/requireAdmin";
@@ -1351,6 +1351,53 @@ router.put("/discount-codes/:id", async (req, res) => {
 
 router.delete("/discount-codes/:id", async (req, res) => {
   await db.delete(discountCodesTable).where(eq(discountCodesTable.id, Number(req.params.id)));
+  res.json({ ok: true });
+});
+
+/* ── Post Reports ── */
+
+/* GET /api/admin/post-reports — flagged posts grouped with their reports */
+router.get("/post-reports", async (_req, res) => {
+  const reports = await db.query.postReportsTable.findMany({
+    orderBy: desc(postReportsTable.createdAt),
+    with: { post: { with: { author: true } }, reporter: true },
+  });
+
+  const byPost = new Map<number, { post: any; reports: any[] }>();
+  for (const r of reports) {
+    if (!byPost.has(r.postId)) {
+      byPost.set(r.postId, {
+        post: {
+          id: r.post.id,
+          title: r.post.title,
+          content: r.post.content,
+          authorName: r.post.author.name,
+          createdAt: r.post.createdAt.toISOString(),
+        },
+        reports: [],
+      });
+    }
+    byPost.get(r.postId)!.reports.push({
+      id: r.id,
+      reason: r.reason,
+      resolved: r.resolved,
+      reportedBy: r.reporter.name,
+      createdAt: r.createdAt.toISOString(),
+    });
+  }
+
+  res.json(Array.from(byPost.values()));
+});
+
+/* POST /api/admin/post-reports/:id/resolve — mark one report resolved */
+router.post("/post-reports/:id/resolve", async (req, res) => {
+  await db.update(postReportsTable).set({ resolved: true }).where(eq(postReportsTable.id, Number(req.params.id)));
+  res.json({ ok: true });
+});
+
+/* DELETE /api/admin/post-reports/posts/:postId — delete the reported post entirely */
+router.delete("/post-reports/posts/:postId", async (req, res) => {
+  await db.delete(postsTable).where(eq(postsTable.id, Number(req.params.postId)));
   res.json({ ok: true });
 });
 

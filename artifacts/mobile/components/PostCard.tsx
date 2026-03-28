@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { View, Text, StyleSheet, Image, Pressable } from "react-native";
+import { View, Text, StyleSheet, Image, Pressable, Alert } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/context/ThemeContext";
 import { resolveImageUrl } from "@/constants/api";
@@ -10,9 +10,10 @@ type Props = {
   isLocked?: boolean;
   commentCount?: number;
   onPress?: () => void;
+  onReport?: () => void;
 };
 
-export function PostCard({ post, isLocked, commentCount, onPress }: Props) {
+export function PostCard({ post, isLocked, commentCount, onPress, onReport }: Props) {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const date = new Date(post.createdAt);
@@ -22,6 +23,20 @@ export function PostCard({ post, isLocked, commentCount, onPress }: Props) {
     year: "numeric",
   });
   const imageUri = resolveImageUrl(post.imageUrl);
+
+  function handleReportPress() {
+    Alert.alert(
+      "Report post",
+      "Why are you reporting this post?",
+      [
+        { text: "Spam", onPress: () => onReport?.() },
+        { text: "Offensive or harmful", onPress: () => onReport?.() },
+        { text: "Misinformation", onPress: () => onReport?.() },
+        { text: "Other", onPress: () => onReport?.() },
+        { text: "Cancel", style: "cancel" },
+      ]
+    );
+  }
 
   return (
     <Pressable
@@ -61,6 +76,15 @@ export function PostCard({ post, isLocked, commentCount, onPress }: Props) {
               </View>
             )}
             <Text style={styles.date}>{formatted}</Text>
+            {onReport && !isLocked && (
+              <Pressable
+                onPress={handleReportPress}
+                hitSlop={8}
+                style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
+              >
+                <Feather name="more-horizontal" size={16} color={Colors.textMuted} />
+              </Pressable>
+            )}
           </View>
         </View>
       </View>

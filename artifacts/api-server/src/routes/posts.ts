@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, postsTable, usersTable, postCommentsTable } from "@workspace/db";
+import { db, postsTable, usersTable, postCommentsTable, postReportsTable } from "@workspace/db";
 import { desc, eq, asc } from "drizzle-orm";
 
 const router: IRouter = Router();
@@ -95,6 +95,24 @@ router.post("/:id/comments", async (req, res) => {
     content: comment.content,
     createdAt: comment.createdAt.toISOString(),
   });
+});
+
+/* POST /api/posts/:id/report — requires auth; one report per user per post */
+router.post("/:id/report", async (req, res) => {
+  const userId = req.session?.userId;
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const postId = Number(req.params.id);
+  const { reason } = req.body;
+
+  const post = await db.query.postsTable.findFirst({ where: eq(postsTable.id, postId) });
+  if (!post) { res.status(404).json({ error: "Post not found" }); return; }
+
+  await db
+    .insert(postReportsTable)
+    .values({ postId, reportedByUserId: userId, reason: reason?.trim() ?? null })
+    .onConflictDoNothing();
+
+  res.json({ message: "Report submitted. Thank you." });
 });
 
 export default router;

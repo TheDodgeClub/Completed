@@ -21,7 +21,7 @@ import * as Haptics from "expo-haptics";
 import { useColors } from "@/context/ThemeContext";
 import { resolveImageUrl } from "@/constants/api";
 import { useAuth } from "@/context/AuthContext";
-import { listPosts, listVideos, VideoClip, Post, Announcement } from "@/lib/api";
+import { listPosts, listVideos, reportPost, VideoClip, Post, Announcement } from "@/lib/api";
 import { PostCard } from "@/components/PostCard";
 import { PostDetailModal } from "@/components/PostDetailModal";
 import { useAnnouncements } from "@/hooks/useAnnouncements";
@@ -291,6 +291,7 @@ export default function UpdatesScreen() {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       setSelectedPost(post);
                     }}
+                    onReport={user ? () => reportPost(post.id) : undefined}
                   />
                 ))
               ) : (

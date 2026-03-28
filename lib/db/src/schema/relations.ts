@@ -9,6 +9,7 @@ import { eventRegistrationsTable } from "./event_registrations";
 import { messagesTable } from "./messages";
 import { postCommentsTable } from "./post_comments";
 import { userSessionsTable } from "./user_sessions";
+import { postReportsTable } from "./post_reports";
 
 export const usersRelations = relations(usersTable, ({ many }) => ({
   attendance: many(attendanceTable),
@@ -54,8 +55,14 @@ export const attendanceRelations = relations(attendanceTable, ({ one }) => ({
   event: one(eventsTable, { fields: [attendanceTable.eventId], references: [eventsTable.id] }),
 }));
 
-export const postsRelations = relations(postsTable, ({ one }) => ({
+export const postsRelations = relations(postsTable, ({ one, many }) => ({
   author: one(usersTable, { fields: [postsTable.authorId], references: [usersTable.id] }),
+  reports: many(postReportsTable),
+}));
+
+export const postReportsRelations = relations(postReportsTable, ({ one }) => ({
+  post: one(postsTable, { fields: [postReportsTable.postId], references: [postsTable.id] }),
+  reporter: one(usersTable, { fields: [postReportsTable.reportedByUserId], references: [usersTable.id] }),
 }));
 
 export const teamHistoryRelations = relations(teamHistoryTable, ({ one }) => ({
