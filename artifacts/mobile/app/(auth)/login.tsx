@@ -15,12 +15,8 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import * as WebBrowser from "expo-web-browser";
 import { useColors } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
-import { GoogleSignInButton } from "@/components/GoogleSignInButton";
-
-WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -131,8 +127,6 @@ export default function LoginScreen() {
         >
           <Text style={styles.forgotLink}>Forgot your password?</Text>
         </Pressable>
-
-        <GoogleSignInButton label="Continue with Google" onError={setErrorMsg} />
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Don't have an account? </Text>
@@ -251,43 +245,6 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       color: "#666666",
       textDecorationLine: "underline",
     },
-    dividerRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      marginTop: 20,
-      marginBottom: 4,
-    },
-    dividerLine: {
-      flex: 1,
-      height: 1,
-      backgroundColor: Colors.border,
-    },
-    dividerText: {
-      marginHorizontal: 12,
-      color: Colors.textSecondary,
-      fontSize: 13,
-    },
-    googleBtn: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: "#fff",
-      borderWidth: 1.5,
-      borderColor: Colors.border,
-      borderRadius: 12,
-      paddingVertical: 14,
-      marginTop: 12,
-      gap: 10,
-    },
-    googleIcon: {
-      width: 18,
-      height: 18,
-    },
-    googleBtnText: {
-      color: "#333",
-      fontSize: 15,
-      fontWeight: "600",
-    } as const,
     footer: {
       flexDirection: "row",
       justifyContent: "center",

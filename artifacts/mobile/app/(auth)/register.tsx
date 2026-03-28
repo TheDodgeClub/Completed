@@ -18,24 +18,37 @@ import * as Haptics from "expo-haptics";
 import * as WebBrowser from "expo-web-browser";
 import { useColors } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
-import { GoogleSignInButton } from "@/components/GoogleSignInButton";
-
-WebBrowser.maybeCompleteAuthSession();
 
 type AccountType = "player" | "supporter";
 
-const ROLE_OPTIONS: { type: AccountType; label: string; description: string; icon: string }[] = [
+const ROLE_OPTIONS: {
+  type: AccountType;
+  label: string;
+  description: string;
+  icon: string;
+  benefits: string[];
+}[] = [
   {
     type: "player",
     label: "Player",
-    description: "I play dodgeball — track stats, earn achievements, and climb the leaderboard.",
+    description: "I play dodgeball",
     icon: "zap",
+    benefits: [
+      "Track your XP & event stats",
+      "Earn medals and achievements",
+      "Compete on the leaderboard",
+    ],
   },
   {
     type: "supporter",
     label: "Supporter",
-    description: "I cheer from the sidelines — follow events, buy tickets, and support my favourite players.",
+    description: "I cheer from the sidelines",
     icon: "heart",
+    benefits: [
+      "Buy and gift event tickets",
+      "Follow players and cheer them on",
+      "Access member-only news",
+    ],
   },
 ];
 
@@ -112,8 +125,14 @@ export default function RegisterScreen() {
             />
           </View>
 
+          <View style={styles.stepIndicator}>
+            <View style={styles.stepDot} />
+            <View style={styles.stepLine} />
+            <View style={[styles.stepDot, styles.stepDotActive]} />
+          </View>
+
           <Text style={styles.title}>How do you roll?</Text>
-          <Text style={styles.subtitle}>This shapes your profile and experience in the app.</Text>
+          <Text style={styles.subtitle}>Pick your role — it shapes your profile and experience.</Text>
 
           <View style={styles.roleGrid}>
             {ROLE_OPTIONS.map(opt => {
@@ -128,13 +147,21 @@ export default function RegisterScreen() {
                   }}
                 >
                   <View style={[styles.roleIconWrap, selected && styles.roleIconWrapSelected]}>
-                    <Feather name={opt.icon as any} size={28} color={selected ? "#fff" : Colors.primary} />
+                    <Feather name={opt.icon as any} size={26} color={selected ? "#fff" : Colors.primary} />
                   </View>
                   <Text style={[styles.roleLabel, selected && styles.roleLabelSelected]}>{opt.label}</Text>
-                  <Text style={[styles.roleDesc, selected && styles.roleDescSelected]}>{opt.description}</Text>
+                  <Text style={[styles.roleTagline, selected && styles.roleTaglineSelected]}>{opt.description}</Text>
+                  <View style={styles.benefitsList}>
+                    {opt.benefits.map(b => (
+                      <View key={b} style={styles.benefitRow}>
+                        <Feather name="check-circle" size={12} color={selected ? Colors.primary : "#AAAAAA"} style={{ marginTop: 1 }} />
+                        <Text style={[styles.benefitText, selected && styles.benefitTextSelected]}>{b}</Text>
+                      </View>
+                    ))}
+                  </View>
                   {selected && (
                     <View style={styles.roleCheck}>
-                      <Feather name="check" size={14} color="#fff" />
+                      <Feather name="check" size={13} color="#fff" />
                     </View>
                   )}
                 </Pressable>
@@ -277,7 +304,16 @@ export default function RegisterScreen() {
           <Feather name="arrow-right" size={18} color="#fff" style={{ marginLeft: 8 }} />
         </Pressable>
 
-        <GoogleSignInButton label="Sign up with Google" onError={setErrorMsg} />
+        <View style={styles.termsRow}>
+          <Text style={styles.termsText}>By creating an account you agree to our </Text>
+          <Pressable onPress={() => WebBrowser.openBrowserAsync("https://thedodgeclub.co.uk/terms")}>
+            <Text style={styles.termsLink}>Terms of Service</Text>
+          </Pressable>
+          <Text style={styles.termsText}> and </Text>
+          <Pressable onPress={() => WebBrowser.openBrowserAsync("https://thedodgeclub.co.uk/privacy")}>
+            <Text style={styles.termsLink}>Privacy Policy</Text>
+          </Pressable>
+        </View>
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Already a member? </Text>
@@ -416,47 +452,31 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       color: "#fff",
       letterSpacing: 0.3,
     },
-    dividerRow: {
+    termsRow: {
       flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: "center",
       alignItems: "center",
       marginTop: 16,
-      marginBottom: 4,
+      paddingHorizontal: 8,
     },
-    dividerLine: {
-      flex: 1,
-      height: 1,
-      backgroundColor: Colors.border,
+    termsText: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 12,
+      color: "#999999",
+      lineHeight: 18,
     },
-    dividerText: {
-      marginHorizontal: 12,
-      color: Colors.textSecondary,
-      fontSize: 13,
+    termsLink: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 12,
+      color: Colors.primary,
+      lineHeight: 18,
+      textDecorationLine: "underline",
     },
-    googleBtn: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: "#fff",
-      borderWidth: 1.5,
-      borderColor: Colors.border,
-      borderRadius: 12,
-      paddingVertical: 14,
-      marginTop: 12,
-      gap: 10,
-    },
-    googleIcon: {
-      width: 18,
-      height: 18,
-    },
-    googleBtnText: {
-      color: "#333",
-      fontSize: 15,
-      fontWeight: "600",
-    } as const,
     footer: {
       flexDirection: "row",
       justifyContent: "center",
-      marginTop: 28,
+      marginTop: 20,
     },
     footerText: {
       fontFamily: "Inter_400Regular",
@@ -479,9 +499,9 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       borderWidth: 2,
       borderColor: "#E8E8E8",
       backgroundColor: "#F9F9F9",
-      padding: 18,
+      padding: 16,
       alignItems: "center",
-      gap: 10,
+      gap: 8,
       position: "relative",
     },
     roleCardSelected: {
@@ -489,9 +509,9 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       backgroundColor: `${Colors.primary}08`,
     },
     roleIconWrap: {
-      width: 56,
-      height: 56,
-      borderRadius: 28,
+      width: 52,
+      height: 52,
+      borderRadius: 26,
       backgroundColor: `${Colors.primary}15`,
       alignItems: "center",
       justifyContent: "center",
@@ -501,21 +521,41 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     },
     roleLabel: {
       fontFamily: "Inter_700Bold",
-      fontSize: 17,
+      fontSize: 16,
       color: "#111",
     },
     roleLabelSelected: {
       color: Colors.primary,
     },
-    roleDesc: {
+    roleTagline: {
       fontFamily: "Inter_400Regular",
-      fontSize: 12,
-      color: "#777",
+      fontSize: 11,
+      color: "#999",
       textAlign: "center",
-      lineHeight: 17,
+      lineHeight: 15,
     },
-    roleDescSelected: {
-      color: "#555",
+    roleTaglineSelected: {
+      color: "#666",
+    },
+    benefitsList: {
+      width: "100%",
+      gap: 5,
+      marginTop: 4,
+    },
+    benefitRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 5,
+    },
+    benefitText: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 11,
+      color: "#AAAAAA",
+      flex: 1,
+      lineHeight: 15,
+    },
+    benefitTextSelected: {
+      color: "#555555",
     },
     roleCheck: {
       position: "absolute",

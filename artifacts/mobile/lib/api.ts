@@ -212,16 +212,6 @@ export async function logout() {
   await clearToken();
 }
 
-export async function googleLogin(accessToken: string) {
-  const data = await apiFetch<{ user: UserProfile; token: string }>("/auth/google", {
-    method: "POST",
-    body: JSON.stringify({ accessToken }),
-  });
-  await setToken(data.token);
-  await AsyncStorage.setItem(USER_KEY, JSON.stringify(data.user));
-  return data;
-}
-
 export async function getMe(): Promise<UserProfile> {
   return apiFetch<UserProfile>("/auth/me");
 }
