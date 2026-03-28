@@ -18,6 +18,7 @@ import {
   Dimensions,
   type ScrollView as RNScrollView,
 } from "react-native";
+import { TicketSuccessOverlay } from "@/components/TicketSuccessOverlay";
 import Svg, { Path as SvgPath } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -98,13 +99,31 @@ export default function TicketsScreen() {
     enabled: !!user,
   });
 
+  type SuccessOverlayInfo = { eventName: string; quantity: number; ticketTypeName: string; pendingTicket?: Ticket };
+  const [successOverlay, setSuccessOverlay] = useState<SuccessOverlayInfo | null>(null);
+  const pendingFreeEventRef = useRef<{ eventName: string; quantity: number; ticketTypeName: string } | null>(null);
+
+  const handleSuccessDismiss = useCallback(() => {
+    const pending = successOverlay?.pendingTicket ?? null;
+    setSuccessOverlay(null);
+    if (pending) setSelectedTicket(pending);
+    setActiveTab("my");
+  }, [successOverlay]);
+
   const { mutate: registerFree, isPending: registeringFree } = useMutation({
     mutationFn: ({ eventId, checkoutData, ticketTypeId, quantity }: { eventId: number; checkoutData?: Record<string, string>; ticketTypeId?: number; quantity?: number }) =>
       registerFreeTicket(eventId, checkoutData, ticketTypeId, quantity),
-    onSuccess: async () => {
+    onSuccess: async (data) => {
       await refetchTickets();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setActiveTab("my");
+      const info = pendingFreeEventRef.current;
+      pendingFreeEventRef.current = null;
+      if (info) {
+        setSuccessOverlay({ ...info, pendingTicket: data.ticket });
+      } else {
+        setSelectedTicket(data.ticket);
+        setActiveTab("my");
+      }
     },
     onError: (err: any) => Alert.alert("Error", err.message ?? "Could not register"),
   });
@@ -120,10 +139,12 @@ export default function TicketsScreen() {
     const selectedType = ticketTypeId ? event.ticketTypes?.find(t => t.id === ticketTypeId) : null;
     const typePrice = selectedType?.price ?? null;
     const isFreeType = selectedType !== null && typePrice === 0;
+    const typeName = selectedType?.name ?? "Ticket";
 
     // Free event (no type selected, or free type)
     if (isFreeType || (!ticketTypeId && !event.stripePriceId)) {
       if (isFreeType || event.ticketPrice === 0) {
+        pendingFreeEventRef.current = { eventName: event.title, quantity, ticketTypeName: typeName };
         registerFree({ eventId: event.id, checkoutData, ticketTypeId, quantity });
       } else {
         Alert.alert("Tickets not available", "This event does not have tickets configured yet.");
@@ -141,9 +162,8 @@ export default function TicketsScreen() {
         // If server already issued a free ticket (after discount)
         if (result.free && result.ticket) {
           await refetchTickets();
-          setSelectedTicket(result.ticket);
-          setActiveTab("my");
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          setSuccessOverlay({ eventName: event.title, quantity, ticketTypeName: typeName, pendingTicket: result.ticket });
           return;
         }
 
@@ -169,12 +189,11 @@ export default function TicketsScreen() {
           return;
         }
 
-        // Payment succeeded — confirm ticket on server
+        // Payment succeeded — confirm ticket on server then show success overlay
         const { ticket } = await confirmPaymentIntentTicket(result.paymentIntentId);
         await refetchTickets();
-        setSelectedTicket(ticket);
-        setActiveTab("my");
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setSuccessOverlay({ eventName: event.title, quantity, ticketTypeName: typeName, pendingTicket: ticket });
       } else {
         // Web fallback — Stripe Checkout redirect
         const { url } = await createCheckoutSession(event.id, checkoutData, ticketTypeId, discountCode, quantity);
@@ -361,6 +380,17 @@ export default function TicketsScreen() {
           ticket={selectedTicket}
           Colors={Colors}
           onClose={() => setSelectedTicket(null)}
+        />
+      )}
+
+      {/* Purchase success overlay */}
+      {successOverlay && (
+        <TicketSuccessOverlay
+          visible={!!successOverlay}
+          eventName={successOverlay.eventName}
+          quantity={successOverlay.quantity}
+          ticketTypeName={successOverlay.ticketTypeName}
+          onDismiss={handleSuccessDismiss}
         />
       )}
 
