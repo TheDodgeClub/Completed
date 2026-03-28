@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
-import { db, usersTable, attendanceTable, awardsTable, eventsTable } from "@workspace/db";
+import { db, usersTable, attendanceTable, awardsTable, eventsTable, postsTable } from "@workspace/db";
 import { eq, lte, sql } from "drizzle-orm";
 
 /* ---------- in-memory OTP store ---------- */
@@ -322,11 +322,14 @@ router.delete("/account", async (req, res) => {
     return;
   }
   try {
-    await db
-      .update(usersTable)
-      .set({ referredBy: null })
-      .where(eq(usersTable.referredBy, userId));
-    await db.delete(usersTable).where(eq(usersTable.id, userId));
+    await db.transaction(async (tx) => {
+      await tx
+        .update(usersTable)
+        .set({ referredBy: null })
+        .where(eq(usersTable.referredBy, userId));
+      await tx.delete(postsTable).where(eq(postsTable.authorId, userId));
+      await tx.delete(usersTable).where(eq(usersTable.id, userId));
+    });
     req.session = null;
     res.json({ message: "Account deleted" });
   } catch (err) {
