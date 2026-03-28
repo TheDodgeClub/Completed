@@ -331,6 +331,14 @@ function EditProfileModal({
               />
             </View>
 
+            <Pressable
+              style={({ pressed }) => [styles.deleteAccountBtn, { opacity: pressed ? 0.8 : 1 }]}
+              onPress={onDeleteAccount}
+            >
+              <Feather name="trash-2" size={16} color="#FF3B30" />
+              <Text style={styles.deleteAccountText}>Delete Account</Text>
+            </Pressable>
+
             <View style={styles.legalFooterRow}>
               <Pressable onPress={() => router.push("/legal/privacy")} style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}>
                 <Text style={styles.privacyLinkText}>Privacy Policy</Text>
@@ -344,14 +352,6 @@ function EditProfileModal({
                 <Text style={styles.privacyLinkText}>Community Guidelines</Text>
               </Pressable>
             </View>
-
-            <Pressable
-              style={({ pressed }) => [styles.deleteAccountBtn, { opacity: pressed ? 0.8 : 1 }]}
-              onPress={onDeleteAccount}
-            >
-              <Feather name="trash-2" size={16} color="#FF3B30" />
-              <Text style={styles.deleteAccountText}>Delete Account</Text>
-            </Pressable>
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
