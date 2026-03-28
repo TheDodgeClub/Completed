@@ -190,7 +190,10 @@ export default function HomeScreen() {
   const feedPosts = useMemo(() => {
     if (!posts) return [];
     const visible = isAuthenticated ? posts : posts.filter(p => !p.isMembersOnly);
-    return visible.slice(0, 5);
+    return visible
+      .slice()
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 5);
   }, [posts, isAuthenticated]);
 
   return (
