@@ -115,12 +115,12 @@ export default function TicketsScreen() {
       registerFreeTicket(eventId, checkoutData, ticketTypeId, quantity),
     onSuccess: async (data) => {
       await refetchTickets();
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       const info = pendingFreeEventRef.current;
       pendingFreeEventRef.current = null;
       if (info) {
         setSuccessOverlay({ ...info, pendingTicket: data.ticket });
       } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setSelectedTicket(data.ticket);
         setActiveTab("my");
       }
@@ -162,7 +162,6 @@ export default function TicketsScreen() {
         // If server already issued a free ticket (after discount)
         if (result.free && result.ticket) {
           await refetchTickets();
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           setSuccessOverlay({ eventName: event.title, quantity, ticketTypeName: typeName, pendingTicket: result.ticket });
           return;
         }
@@ -192,7 +191,6 @@ export default function TicketsScreen() {
         // Payment succeeded — confirm ticket on server then show success overlay
         const { ticket } = await confirmPaymentIntentTicket(result.paymentIntentId);
         await refetchTickets();
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setSuccessOverlay({ eventName: event.title, quantity, ticketTypeName: typeName, pendingTicket: ticket });
       } else {
         // Web fallback — Stripe Checkout redirect

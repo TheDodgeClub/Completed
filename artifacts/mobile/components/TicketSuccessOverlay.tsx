@@ -7,6 +7,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 
 interface TicketSuccessOverlayProps {
   visible: boolean;
@@ -27,6 +28,7 @@ export function TicketSuccessOverlay({
   const checkScale = useRef(new Animated.Value(0)).current;
   const textOpacity = useRef(new Animated.Value(0)).current;
   const textTranslateY = useRef(new Animated.Value(20)).current;
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!visible) return;
@@ -63,7 +65,8 @@ export function TicketSuccessOverlay({
         }),
       ]),
     ]).start(() => {
-      setTimeout(() => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      dismissTimerRef.current = setTimeout(() => {
         Animated.timing(overlayOpacity, {
           toValue: 0,
           duration: 350,
@@ -73,14 +76,18 @@ export function TicketSuccessOverlay({
         });
       }, 1800);
     });
+
+    return () => {
+      if (dismissTimerRef.current) {
+        clearTimeout(dismissTimerRef.current);
+        dismissTimerRef.current = null;
+      }
+    };
   }, [visible]);
 
   if (!visible) return null;
 
-  const summary =
-    quantity > 1
-      ? `${quantity} × ${ticketTypeName} — ${eventName}`
-      : `${ticketTypeName} — ${eventName}`;
+  const summary = `${quantity} × ${ticketTypeName} — ${eventName}`;
 
   return (
     <Modal visible transparent animationType="none" statusBarTranslucent>
