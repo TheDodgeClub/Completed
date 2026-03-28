@@ -709,7 +709,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       borderRadius: 18,
       overflow: "hidden",
       height: 242,
-      marginHorizontal: 0,
+      marginHorizontal: -12,
       marginBottom: 0,
       backgroundColor: "rgba(255,255,255,0.07)",
     },
