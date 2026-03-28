@@ -331,12 +331,19 @@ function EditProfileModal({
               />
             </View>
 
-            <Pressable
-              style={({ pressed }) => [styles.privacyLink, { opacity: pressed ? 0.6 : 1, marginBottom: 8 }]}
-              onPress={() => router.push("/legal/privacy")}
-            >
-              <Text style={styles.privacyLinkText}>Privacy Policy</Text>
-            </Pressable>
+            <View style={styles.legalFooterRow}>
+              <Pressable onPress={() => router.push("/legal/privacy")} style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}>
+                <Text style={styles.privacyLinkText}>Privacy Policy</Text>
+              </Pressable>
+              <Text style={styles.legalSepText}>·</Text>
+              <Pressable onPress={() => router.push("/legal/terms")} style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}>
+                <Text style={styles.privacyLinkText}>Terms of Use</Text>
+              </Pressable>
+              <Text style={styles.legalSepText}>·</Text>
+              <Pressable onPress={() => router.push("/legal/guidelines")} style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}>
+                <Text style={styles.privacyLinkText}>Community Guidelines</Text>
+              </Pressable>
+            </View>
 
             <Pressable
               style={({ pressed }) => [styles.deleteAccountBtn, { opacity: pressed ? 0.8 : 1 }]}
@@ -1724,7 +1731,12 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
 
     /* Privacy policy & delete account */
     privacyLink: { alignItems: "center", paddingVertical: 10 },
-    privacyLinkText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.textMuted, textDecorationLine: "underline" },
+    privacyLinkText: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.textMuted, textDecorationLine: "underline" },
+    legalFooterRow: {
+      flexDirection: "row", flexWrap: "wrap", justifyContent: "center",
+      alignItems: "center", gap: 6, paddingVertical: 10, marginBottom: 4,
+    },
+    legalSepText: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textMuted, opacity: 0.4 },
     deleteAccountBtn: {
       flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
       marginTop: 4, marginBottom: 32,
