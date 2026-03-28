@@ -1,25 +1,34 @@
 import React, { ReactNode, useState, useEffect } from "react";
 import { View, ActivityIndicator, Text } from "react-native";
-import { StripeProvider } from "@stripe/stripe-react-native";
+import Constants from "expo-constants";
 import { getStripePublishableKey } from "@/lib/api";
+
+const isExpoGo = Constants.executionEnvironment === "storeClient";
+
+// Only load the Stripe native module outside of Expo Go.
+// Static top-level import crashes Expo Go because the OnrampSdk native
+// binary isn't registered there — lazy require avoids that entirely.
+let StripeProvider: React.ComponentType<any> | null = null;
+if (!isExpoGo) {
+  try {
+    StripeProvider = require("@stripe/stripe-react-native").StripeProvider;
+  } catch {
+    StripeProvider = null;
+  }
+}
 
 type KeyState =
   | { status: "loading" }
   | { status: "ready"; key: string }
   | { status: "error" };
 
-/**
- * Fetches the Stripe publishable key from the API before rendering
- * the StripeProvider. Blocks child render until the key is ready so
- * that no PaymentSheet call is attempted with an unconfigured SDK.
- * On error the app still renders but paid-ticket checkout routes will
- * surface a clear "payment unavailable" error rather than a cryptic
- * SDK failure.
- */
 export function StripeWrapper({ children }: { children: ReactNode }) {
-  const [keyState, setKeyState] = useState<KeyState>({ status: "loading" });
+  const [keyState, setKeyState] = useState<KeyState>(
+    isExpoGo ? { status: "error" } : { status: "loading" }
+  );
 
   useEffect(() => {
+    if (isExpoGo) return;
     let cancelled = false;
     getStripePublishableKey()
       .then((key) => {
@@ -42,13 +51,10 @@ export function StripeWrapper({ children }: { children: ReactNode }) {
     );
   }
 
-  if (keyState.status === "error") {
-    // Render without StripeProvider — app works but doBuyTicket will show
-    // "payment unavailable" rather than crashing the PaymentSheet SDK
+  if (keyState.status === "error" || !StripeProvider) {
     return (
       <>
         {children}
-        {/* Stripe config unavailable — payment flows will surface this via doBuyTicket error handling */}
         <View style={{ display: "none" }}>
           <Text>stripe_unavailable</Text>
         </View>
@@ -58,7 +64,7 @@ export function StripeWrapper({ children }: { children: ReactNode }) {
 
   return (
     <StripeProvider
-      publishableKey={keyState.key}
+      publishableKey={(keyState as { status: "ready"; key: string }).key}
       urlScheme="mobile"
       merchantIdentifier="merchant.co.uk.thedodgeclub"
     >
