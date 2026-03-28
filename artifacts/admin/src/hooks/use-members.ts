@@ -21,6 +21,7 @@ export interface AdminMember {
   referralCode: string | null;
   referredByName: string | null;
   referralCount: number;
+  skills: string | null;
 }
 
 export interface UserReportEntry {

@@ -677,6 +677,7 @@ router.get("/members", async (_req, res) => {
       referredByName: u.referredBy ? (userNameMap.get(u.referredBy) ?? null) : null,
       referralCount: referralCountMap.get(u.id) ?? 0,
       isBanned: u.isBanned ?? false,
+      skills: u.skills ?? null,
     };
   });
   res.json(result);

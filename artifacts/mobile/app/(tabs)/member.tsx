@@ -1283,7 +1283,6 @@ export default function MemberScreen() {
                 avatarUrl={user.avatarUrl}
                 level={level}
                 xp={user.xp ?? 0}
-                eventsAttended={user.eventsAttended ?? 0}
                 medalsEarned={user.medalsEarned ?? 0}
                 ringsEarned={user.ringsEarned ?? 0}
                 skills={user.skills}

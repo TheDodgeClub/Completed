@@ -253,6 +253,201 @@ function SupportersTab({ members, isLoading, toast }: { members: AdminMember[] |
 }
 
 /* ─── Player Detail Sheet ─── */
+function PlayerCardPreview({ member }: { member: AdminMember }) {
+  const skillList = member.skills
+    ? member.skills.split(",").filter(Boolean).map(s => s.trim()).slice(0, 3)
+    : [];
+  const levelName = LEVEL_NAMES[(member.level ?? 1) - 1] ?? "Player";
+  const avatarSrc = member.avatarUrl
+    ? (member.avatarUrl.startsWith("/objects/") ? `/api/storage${member.avatarUrl}` : member.avatarUrl)
+    : null;
+
+  return (
+    <div className="space-y-2">
+      <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2">
+        <span className="text-lg">🃏</span> Player Card
+      </h3>
+      <div className="flex justify-center">
+        <div
+          style={{
+            width: 240,
+            height: 396,
+            borderRadius: 14,
+            background: "linear-gradient(160deg, #071E0F 0%, #031008 55%, #000000 100%)",
+            border: "2px solid rgba(57,255,20,0.25)",
+            boxShadow: "0 0 28px rgba(57,255,20,0.35), inset 0 0 0 1.5px rgba(255,215,0,0.15)",
+            position: "relative",
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            padding: "12px 14px 10px",
+            fontFamily: "inherit",
+          }}
+        >
+          {/* Corner brackets */}
+          {[
+            { top: 7, left: 7 }, { top: 7, right: 7 },
+            { bottom: 7, left: 7 }, { bottom: 7, right: 7 },
+          ].map((pos, i) => (
+            <span key={i} style={{
+              position: "absolute", ...pos,
+              width: 14, height: 14,
+              borderTop: i < 2 ? "2px solid #39FF14" : "none",
+              borderBottom: i >= 2 ? "2px solid #39FF14" : "none",
+              borderLeft: (i === 0 || i === 2) ? "2px solid #39FF14" : "none",
+              borderRight: (i === 1 || i === 3) ? "2px solid #39FF14" : "none",
+              borderRadius: i === 0 ? "4px 0 0 0" : i === 1 ? "0 4px 0 0" : i === 2 ? "0 0 0 4px" : "0 0 4px 0",
+            }} />
+          ))}
+
+          {/* Top row: logo | spacer | LV pill */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", marginBottom: 8 }}>
+            <img
+              src={`${import.meta.env.BASE_URL}tdc-logo.png`}
+              alt="TDC"
+              style={{ width: 30, height: 30, objectFit: "contain", filter: "brightness(0) invert(1)" }}
+              onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
+            <div style={{
+              background: "#FFD700",
+              borderRadius: 7,
+              padding: "3px 8px",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              lineHeight: 1,
+            }}>
+              <span style={{ fontWeight: 800, fontSize: 15, color: "#000", lineHeight: 1 }}>{member.level ?? 1}</span>
+              <span style={{ fontWeight: 700, fontSize: 7, color: "#000", letterSpacing: 1 }}>LV</span>
+            </div>
+          </div>
+
+          {/* Avatar with glow */}
+          <div style={{ position: "relative", width: 130, height: 130, marginBottom: 0 }}>
+            <div style={{
+              position: "absolute", inset: -10,
+              borderRadius: "50%",
+              background: "radial-gradient(circle, rgba(57,255,20,0.22) 0%, transparent 70%)",
+            }} />
+            <div style={{
+              width: 130, height: 130, borderRadius: "50%",
+              border: "2.5px solid #FFD700",
+              overflow: "hidden",
+              background: "#0B2E17",
+              boxShadow: "0 0 12px rgba(255,215,0,0.4)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}>
+              {avatarSrc ? (
+                <img src={avatarSrc} alt={member.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                <span style={{ fontWeight: 800, fontSize: 48, color: "#FFD700", lineHeight: 1 }}>
+                  {member.name.charAt(0).toUpperCase()}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Name banner */}
+          <div style={{
+            width: "100%",
+            background: "rgba(0,0,0,0.70)",
+            borderTop: "1px solid rgba(255,215,0,0.25)",
+            borderBottom: "1px solid rgba(255,215,0,0.25)",
+            padding: "5px 8px",
+            marginTop: 8,
+            textAlign: "center",
+          }}>
+            <div style={{ fontWeight: 800, fontSize: 13, color: "#fff", letterSpacing: 1.2, lineHeight: 1.2 }}>
+              {member.name.toUpperCase()}
+            </div>
+            {member.username && (
+              <div style={{ fontWeight: 400, fontSize: 10, color: "rgba(255,255,255,0.45)", marginTop: 1 }}>
+                @{member.username}
+              </div>
+            )}
+          </div>
+
+          {/* Tier + XP row */}
+          <div style={{ display: "flex", gap: 6, marginTop: 6, alignItems: "center" }}>
+            <span style={{
+              background: "rgba(57,255,20,0.10)",
+              border: "1px solid rgba(57,255,20,0.22)",
+              borderRadius: 5,
+              padding: "2px 8px",
+              fontSize: 8,
+              fontWeight: 700,
+              color: "#39FF14",
+              letterSpacing: 1.4,
+            }}>{levelName.toUpperCase()}</span>
+            <span style={{
+              background: "rgba(255,215,0,0.10)",
+              border: "1px solid rgba(255,215,0,0.25)",
+              borderRadius: 5,
+              padding: "2px 8px",
+              fontSize: 8,
+              fontWeight: 700,
+              color: "#FFD700",
+              letterSpacing: 1.1,
+            }}>{(member.xp ?? 0).toLocaleString()} XP</span>
+          </div>
+
+          {/* Stats band */}
+          <div style={{
+            display: "flex",
+            width: "100%",
+            background: "rgba(255,215,0,0.05)",
+            border: "1px solid rgba(255,215,0,0.22)",
+            borderRadius: 9,
+            marginTop: 8,
+            padding: "7px 0",
+          }}>
+            {[
+              { val: member.medalsEarned, label: "MEDALS" },
+              { val: member.ringsEarned ?? 0, label: "RINGS" },
+            ].map((s, i) => (
+              <div key={s.label} style={{
+                flex: 1,
+                textAlign: "center",
+                borderLeft: i > 0 ? "1px solid rgba(255,215,0,0.2)" : "none",
+              }}>
+                <div style={{ fontWeight: 800, fontSize: 20, color: "#fff", lineHeight: 1 }}>{s.val}</div>
+                <div style={{ fontWeight: 700, fontSize: 7, color: "#FFD700", letterSpacing: 1.4, marginTop: 2 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Skills */}
+          {skillList.length > 0 && (
+            <div style={{ display: "flex", gap: 5, flexWrap: "wrap", justifyContent: "center", marginTop: 8 }}>
+              {skillList.map(skill => (
+                <span key={skill} style={{
+                  border: "1px solid rgba(255,255,255,0.18)",
+                  borderRadius: 8,
+                  padding: "2px 8px",
+                  fontSize: 9,
+                  fontWeight: 600,
+                  color: "rgba(255,255,255,0.75)",
+                  background: "rgba(255,255,255,0.04)",
+                }}>{skill}</span>
+              ))}
+            </div>
+          )}
+
+          {/* Footer */}
+          <div style={{
+            position: "absolute", bottom: 8,
+            fontSize: 8, color: "rgba(57,255,20,0.4)",
+            letterSpacing: 1.2, fontWeight: 400,
+          }}>thedodgeclub.co.uk</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PlayerDetailSheet({ member, onClose, toast }: { member: AdminMember | null; onClose: () => void; toast: any }) {
   const { data: attendance, isLoading: loadingAttendance } = useMemberAttendance(member?.id ?? null);
   const { data: awards, isLoading: loadingAwards } = useMemberAwards(member?.id ?? null);
@@ -356,6 +551,9 @@ function PlayerDetailSheet({ member, onClose, toast }: { member: AdminMember | n
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-8">
+              {/* Player Card Preview */}
+              <PlayerCardPreview member={member} />
+
               {/* Account Type Toggle */}
               <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-secondary/30 border border-border/40">
                 <div className="space-y-0.5">
