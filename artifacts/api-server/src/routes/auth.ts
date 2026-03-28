@@ -322,6 +322,10 @@ router.delete("/account", async (req, res) => {
     return;
   }
   try {
+    await db
+      .update(usersTable)
+      .set({ referredBy: null })
+      .where(eq(usersTable.referredBy, userId));
     await db.delete(usersTable).where(eq(usersTable.id, userId));
     req.session = null;
     res.json({ message: "Account deleted" });
