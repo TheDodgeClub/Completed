@@ -280,7 +280,9 @@ export default function HomeScreen() {
 
           {/* Next Event Banner (all users) */}
           {nextEvent && (() => {
-            const bannerLinkUrl = appSettings?.homeHeroBannerLinkUrl;
+            const bannerLinkUrl = appSettings?.homeHeroBannerLinkUrl?.trim() || null;
+            const bannerTitle = appSettings?.homeHeroBannerTitle?.trim() || null;
+            const bannerSubtitle = appSettings?.homeHeroBannerSubtitle?.trim() || null;
             const handleBannerPress = () => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               if (bannerLinkUrl) {
@@ -293,11 +295,9 @@ export default function HomeScreen() {
                 router.push("/(tabs)/tickets");
               }
             };
-            const displayTitle = appSettings?.homeHeroBannerTitle || nextEvent.title;
-            const displaySubtitle = appSettings?.homeHeroBannerSubtitle ||
-              new Date(nextEvent.date).toLocaleDateString("en-GB", { weekday: "short", month: "short", day: "numeric" });
             const imgSrc = appSettings?.homeHeroImageUrl ?? nextEvent.imageUrl;
             const resolvedUri = imgSrc ? (resolveImageUrl(imgSrc) ?? imgSrc) : null;
+            const hasOverlayText = bannerTitle || bannerSubtitle;
             return (
               <Pressable
                 style={({ pressed }) => [styles.eventBanner, { opacity: pressed ? 0.88 : 1 }]}
@@ -316,21 +316,29 @@ export default function HomeScreen() {
                       }}
                       resizeMode="cover"
                     />
-                    <LinearGradient
-                      colors={["transparent", "rgba(0,0,0,0.85)"]}
-                      style={styles.eventBannerOverlay}
-                    >
-                      <Text style={styles.eventBannerTitle} numberOfLines={2}>{displayTitle}</Text>
-                      <View style={styles.eventBannerMeta}>
-                        <Text style={styles.eventBannerDate}>{displaySubtitle}</Text>
-                      </View>
-                    </LinearGradient>
+                    {hasOverlayText && (
+                      <LinearGradient
+                        colors={["transparent", "rgba(0,0,0,0.85)"]}
+                        style={styles.eventBannerOverlay}
+                      >
+                        {bannerTitle ? (
+                          <Text style={styles.eventBannerTitle} numberOfLines={2}>{bannerTitle}</Text>
+                        ) : null}
+                        {bannerSubtitle ? (
+                          <View style={styles.eventBannerMeta}>
+                            <Text style={styles.eventBannerDate}>{bannerSubtitle}</Text>
+                          </View>
+                        ) : null}
+                      </LinearGradient>
+                    )}
                   </>
                 ) : (
                   <View style={styles.eventTextBanner}>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.eventBannerTitle} numberOfLines={1}>{displayTitle}</Text>
-                      <Text style={styles.eventBannerDate}>{displaySubtitle}</Text>
+                      <Text style={styles.eventBannerTitle} numberOfLines={1}>{nextEvent.title}</Text>
+                      <Text style={styles.eventBannerDate}>
+                        {new Date(nextEvent.date).toLocaleDateString("en-GB", { weekday: "short", month: "short", day: "numeric" })}
+                      </Text>
                     </View>
                     <Feather name="chevron-right" size={18} color="rgba(255,255,255,0.6)" />
                   </View>
