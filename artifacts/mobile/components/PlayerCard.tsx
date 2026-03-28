@@ -411,7 +411,7 @@ const styles = StyleSheet.create({
   footerText: {
     fontFamily: "Inter_700Bold",
     fontSize: 11,
-    color: "rgba(255,255,255,0.75)",
+    color: "rgba(255,255,255,0.80)",
     letterSpacing: 1.2,
   },
 });
