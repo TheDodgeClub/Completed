@@ -284,6 +284,7 @@ export type FeaturedVideo = {
 export type AppSettings = {
   homeVideoUrl: string | null;
   homeHeroImageUrl: string | null;
+  homeHeroImagePosition: string | null;
   clubName: string | null;
   clubTagline: string | null;
   featuredVideo: FeaturedVideo | null;

@@ -43,18 +43,54 @@ function HeroImageSection() {
   const { mutate: updateSettings, isPending } = useUpdateSettings();
   const { toast } = useToast();
 
+  const initialized = useRef(false);
   const [heroImageUrl, setHeroImageUrl] = useState("");
+  const [focalX, setFocalX] = useState(50);
+  const [focalY, setFocalY] = useState(50);
+  const [isDragging, setIsDragging] = useState(false);
+  const previewRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (settings) setHeroImageUrl(settings.homeHeroImageUrl ?? "");
+    if (settings && !initialized.current) {
+      initialized.current = true;
+      setHeroImageUrl(settings.homeHeroImageUrl ?? "");
+      const pos = settings.homeHeroImagePosition;
+      if (pos) {
+        const parts = pos.split(" ");
+        if (parts.length === 2) {
+          setFocalX(Math.max(0, Math.min(100, Number(parts[0]) || 50)));
+          setFocalY(Math.max(0, Math.min(100, Number(parts[1]) || 50)));
+        }
+      }
+    }
   }, [settings]);
 
-  function handleSave() {
+  function handleImageChange(url: string) {
+    setHeroImageUrl(url);
     updateSettings(
-      { homeHeroImageUrl: heroImageUrl.trim() || null },
+      { homeHeroImageUrl: url || null },
       {
-        onSuccess: () => toast({ title: "Saved", description: "Home screen hero image updated." }),
-        onError: () => toast({ title: "Error", description: "Failed to save.", variant: "destructive" }),
+        onSuccess: () => toast({ title: url ? "Hero image saved." : "Hero image removed." }),
+        onError: () => toast({ title: "Failed to save image.", variant: "destructive" }),
+      }
+    );
+  }
+
+  function updateFocal(e: React.PointerEvent<HTMLDivElement>) {
+    if (!previewRef.current) return;
+    const rect = previewRef.current.getBoundingClientRect();
+    const x = Math.round(Math.min(100, Math.max(0, ((e.clientX - rect.left) / rect.width) * 100)));
+    const y = Math.round(Math.min(100, Math.max(0, ((e.clientY - rect.top) / rect.height) * 100)));
+    setFocalX(x);
+    setFocalY(y);
+  }
+
+  function handleSavePosition() {
+    updateSettings(
+      { homeHeroImagePosition: `${focalX} ${focalY}` },
+      {
+        onSuccess: () => toast({ title: "Position saved." }),
+        onError: () => toast({ title: "Failed to save position.", variant: "destructive" }),
       }
     );
   }
@@ -69,19 +105,109 @@ function HeroImageSection() {
           <CardTitle className="text-base">Home Screen Hero Image</CardTitle>
         </div>
         <CardDescription>
-          Upload a background image for the hero section at the top of the mobile app home screen. When set, this replaces the default green gradient. Leave blank to use the gradient.
+          Upload a background image for the hero section. Replaces the default green gradient. After uploading, drag the crosshair to set which part of the image shows on screen.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <ImageUploader
           value={heroImageUrl || undefined}
-          onChange={(url) => setHeroImageUrl(url)}
+          onChange={handleImageChange}
           label="Hero Background Image"
         />
-        <Button onClick={handleSave} disabled={isPending} size="sm" className="w-full sm:w-auto">
-          {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Save className="w-3.5 h-3.5 mr-1.5" />}
-          Save Hero Image
-        </Button>
+
+        {heroImageUrl && (
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm font-medium mb-0.5">Focal Point</p>
+              <p className="text-xs text-muted-foreground">
+                Drag the circle on the preview to choose which part of the image stays centred in the mobile hero.
+              </p>
+            </div>
+
+            {/* Drag-to-position preview — 16:7 matches wide hero crop */}
+            <div
+              ref={previewRef}
+              className="relative rounded-xl overflow-hidden border border-border cursor-crosshair select-none"
+              style={{ aspectRatio: "16 / 7" }}
+              onPointerDown={(e) => {
+                setIsDragging(true);
+                updateFocal(e);
+                e.currentTarget.setPointerCapture(e.pointerId);
+              }}
+              onPointerMove={(e) => { if (isDragging) updateFocal(e); }}
+              onPointerUp={() => setIsDragging(false)}
+              onPointerLeave={() => setIsDragging(false)}
+            >
+              <img
+                src={heroImageUrl}
+                alt="Hero preview"
+                draggable={false}
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  objectPosition: `${focalX}% ${focalY}%`,
+                  pointerEvents: "none",
+                  userSelect: "none",
+                } as React.CSSProperties}
+              />
+              <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.22)", pointerEvents: "none" }} />
+              <div
+                style={{
+                  position: "absolute",
+                  top: 8,
+                  left: 8,
+                  fontSize: 11,
+                  color: "rgba(255,255,255,0.85)",
+                  background: "rgba(0,0,0,0.5)",
+                  borderRadius: 4,
+                  padding: "2px 8px",
+                  pointerEvents: "none",
+                  fontWeight: 500,
+                }}
+              >
+                Mobile hero preview
+              </div>
+              {/* Focal crosshair dot */}
+              <div
+                style={{
+                  position: "absolute",
+                  left: `${focalX}%`,
+                  top: `${focalY}%`,
+                  transform: "translate(-50%, -50%)",
+                  width: 32,
+                  height: 32,
+                  border: "2.5px solid white",
+                  borderRadius: "50%",
+                  background: "rgba(255,255,255,0.18)",
+                  pointerEvents: "none",
+                  boxShadow: "0 0 0 1.5px rgba(0,0,0,0.35), 0 2px 8px rgba(0,0,0,0.4)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <div style={{ width: 6, height: 6, background: "white", borderRadius: "50%", boxShadow: "0 0 0 1px rgba(0,0,0,0.3)" }} />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground font-mono">X: {focalX}%  Y: {focalY}%</span>
+              <Button onClick={handleSavePosition} disabled={isPending} size="sm" variant="outline">
+                {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Save className="w-3.5 h-3.5 mr-1.5" />}
+                Save Position
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {!heroImageUrl && (
+          <p className="text-xs text-muted-foreground">
+            Leave blank to use the default green gradient background.
+          </p>
+        )}
       </CardContent>
     </Card>
   );

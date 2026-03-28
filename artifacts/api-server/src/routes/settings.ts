@@ -27,7 +27,7 @@ async function setSetting(key: string, value: string | null): Promise<void> {
 
 /* GET /api/settings — public settings for the mobile app */
 router.get("/", async (_req, res) => {
-  const [homeVideoUrl, clubName, clubTagline, featuredVideoEnabled, featuredVideoId, communityGuidelines, privacyPolicyContent, privacyPolicyLegacy, termsOfService, homeHeroImageUrl] = await Promise.all([
+  const [homeVideoUrl, clubName, clubTagline, featuredVideoEnabled, featuredVideoId, communityGuidelines, privacyPolicyContent, privacyPolicyLegacy, termsOfService, homeHeroImageUrl, homeHeroImagePosition] = await Promise.all([
     getSetting("homeVideoUrl"),
     getSetting("clubName"),
     getSetting("clubTagline"),
@@ -38,6 +38,7 @@ router.get("/", async (_req, res) => {
     getSetting("privacyPolicy"),
     getSetting("termsOfService"),
     getSetting("homeHeroImageUrl"),
+    getSetting("homeHeroImagePosition"),
   ]);
   const privacyPolicy = privacyPolicyContent ?? privacyPolicyLegacy;
 
@@ -62,7 +63,7 @@ router.get("/", async (_req, res) => {
   }
 
   res.set("Cache-Control", "no-store");
-  res.json({ homeVideoUrl, homeHeroImageUrl, clubName, clubTagline, featuredVideo, communityGuidelines, privacyPolicyContent: privacyPolicy, termsOfService });
+  res.json({ homeVideoUrl, homeHeroImageUrl, homeHeroImagePosition, clubName, clubTagline, featuredVideo, communityGuidelines, privacyPolicyContent: privacyPolicy, termsOfService });
 });
 
 /* GET /api/admin/settings — same as above but admin-gated */

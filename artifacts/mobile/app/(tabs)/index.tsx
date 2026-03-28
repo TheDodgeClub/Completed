@@ -195,6 +195,14 @@ export default function HomeScreen() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [featuredVideoPlaying, setFeaturedVideoPlaying] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [heroHeight, setHeroHeight] = useState(350);
+
+  const focalY = useMemo(() => {
+    const pos = appSettings?.homeHeroImagePosition;
+    if (!pos) return 50;
+    const parts = pos.split(" ");
+    return Math.max(0, Math.min(100, Number(parts[1]) || 50));
+  }, [appSettings?.homeHeroImagePosition]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -250,15 +258,26 @@ export default function HomeScreen() {
         }
       >
         {/* ══════════ AREA 1: HERO ══════════ */}
-        <View style={[styles.hero, { paddingTop: insets.top + 24 }]}>
+        <View
+          style={[styles.hero, { paddingTop: insets.top + 24 }]}
+          onLayout={(e) => setHeroHeight(e.nativeEvent.layout.height)}
+        >
           {/* Hero background: custom image or default gradient */}
           {appSettings?.homeHeroImageUrl ? (
             <>
-              <Image
-                source={{ uri: resolveImageUrl(appSettings.homeHeroImageUrl) ?? appSettings.homeHeroImageUrl }}
-                style={StyleSheet.absoluteFill}
-                resizeMode="cover"
-              />
+              <View style={[StyleSheet.absoluteFill, { overflow: "hidden" }]}>
+                <Image
+                  source={{ uri: resolveImageUrl(appSettings.homeHeroImageUrl) ?? appSettings.homeHeroImageUrl }}
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    right: 0,
+                    height: heroHeight * 1.5,
+                    top: -(heroHeight * 0.5) * (focalY / 100),
+                  }}
+                  resizeMode="cover"
+                />
+              </View>
               <LinearGradient
                 colors={["rgba(0,0,0,0.18)", "rgba(0,0,0,0.62)"]}
                 style={StyleSheet.absoluteFill}
