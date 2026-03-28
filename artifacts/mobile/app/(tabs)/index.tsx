@@ -14,7 +14,9 @@ import {
   Modal,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { VideoView, useVideoPlayer } from "expo-video";
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
@@ -24,8 +26,8 @@ import { useColors } from "@/context/ThemeContext";
 import { resolveImageUrl } from "@/constants/api";
 import { useAuth } from "@/context/AuthContext";
 import {
-  listUpcomingEvents, listPosts,
-  Post,
+  listUpcomingEvents, listPosts, getAppSettings,
+  Post, FeaturedVideo,
 } from "@/lib/api";
 import { PostCard } from "@/components/PostCard";
 import { PostDetailModal } from "@/components/PostDetailModal";
@@ -151,12 +153,20 @@ export default function HomeScreen() {
     queryFn: listPosts,
   });
 
+  const { data: appSettings, refetch: refetchSettings } = useQuery({
+    queryKey: ["app-settings"],
+    queryFn: getAppSettings,
+  });
+
+  const featuredVideo: FeaturedVideo | null = appSettings?.featuredVideo ?? null;
+
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [featuredVideoPlaying, setFeaturedVideoPlaying] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([refetchEvents(), refetchPosts(), refreshUser()]);
+    await Promise.all([refetchEvents(), refetchPosts(), refetchSettings(), refreshUser()]);
     setRefreshing(false);
   };
 
@@ -238,10 +248,9 @@ export default function HomeScreen() {
                     resizeMode="cover"
                   />
                   <LinearGradient
-                    colors={["transparent", "rgba(0,0,0,0.78)"]}
+                    colors={["transparent", "rgba(0,0,0,0.72)"]}
                     style={styles.eventBannerOverlay}
                   >
-                    <Text style={styles.eventBannerTitle} numberOfLines={2}>{nextEvent.title}</Text>
                     <View style={styles.eventBannerMeta}>
                       <Text style={styles.eventBannerDate}>
                         {new Date(nextEvent.date).toLocaleDateString("en-GB", { weekday: "short", month: "short", day: "numeric" })}
@@ -356,8 +365,8 @@ export default function HomeScreen() {
               style={({ pressed }) => [styles.quickAction, { opacity: pressed ? 0.75 : 1 }]}
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(tabs)/tickets"); }}
             >
-              <View style={[styles.quickActionIcon, { backgroundColor: Colors.primary + "22" }]}>
-                <Feather name="tag" size={20} color={Colors.primary} />
+              <View style={[styles.quickActionIcon, { backgroundColor: Colors.primary }]}>
+                <Feather name="tag" size={20} color="#FFFFFF" />
               </View>
               <Text style={styles.quickActionLabel}>Get Tickets</Text>
             </Pressable>
@@ -370,8 +379,8 @@ export default function HomeScreen() {
                 setQrVisible(true);
               }}
             >
-              <View style={[styles.quickActionIcon, { backgroundColor: "#FFC10722" }]}>
-                <Feather name="maximize" size={20} color="#FFC107" />
+              <View style={[styles.quickActionIcon, { backgroundColor: Colors.accent }]}>
+                <Feather name="maximize" size={20} color={Colors.background} />
               </View>
               <Text style={styles.quickActionLabel}>My QR</Text>
             </Pressable>
@@ -380,20 +389,10 @@ export default function HomeScreen() {
               style={({ pressed }) => [styles.quickAction, { opacity: pressed ? 0.75 : 1 }]}
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push("/games/dodge"); }}
             >
-              <View style={[styles.quickActionIcon, { backgroundColor: "#5E60CE22" }]}>
+              <View style={[styles.quickActionIcon, { backgroundColor: "#5E60CE" }]}>
                 <Text style={{ fontSize: 20 }}>🏐</Text>
               </View>
               <Text style={styles.quickActionLabel}>Mini Game</Text>
-            </Pressable>
-
-            <Pressable
-              style={({ pressed }) => [styles.quickAction, { opacity: pressed ? 0.75 : 1 }]}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(tabs)/updates"); }}
-            >
-              <View style={[styles.quickActionIcon, { backgroundColor: "#FF6B6B22" }]}>
-                <Feather name="bell" size={20} color="#FF6B6B" />
-              </View>
-              <Text style={styles.quickActionLabel}>Updates</Text>
             </Pressable>
           </View>
 
@@ -405,6 +404,34 @@ export default function HomeScreen() {
                 <Text style={styles.seeAll}>See All</Text>
               </Pressable>
             </View>
+
+            {/* Featured Video Card */}
+            {featuredVideo && (
+              <Pressable
+                style={({ pressed }) => [styles.featuredVideoCard, { opacity: pressed ? 0.88 : 1 }]}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setFeaturedVideoPlaying(true); }}
+              >
+                <View style={styles.featuredVideoThumbWrap}>
+                  {featuredVideo.thumbnailUrl ? (
+                    <Image source={{ uri: resolveImageUrl(featuredVideo.thumbnailUrl) ?? featuredVideo.thumbnailUrl }} style={styles.featuredVideoThumb} resizeMode="cover" />
+                  ) : (
+                    <View style={[styles.featuredVideoThumb, { backgroundColor: Colors.surface2, alignItems: "center", justifyContent: "center" }]}>
+                      <Feather name="video" size={28} color={Colors.textMuted} />
+                    </View>
+                  )}
+                  <View style={styles.featuredPlayBtn}>
+                    <Feather name="play" size={18} color="#fff" />
+                  </View>
+                </View>
+                <View style={styles.featuredVideoInfo}>
+                  <View style={styles.featuredBadge}>
+                    <Text style={styles.featuredBadgeText}>Featured</Text>
+                  </View>
+                  <Text style={styles.featuredVideoTitle} numberOfLines={2}>{featuredVideo.title}</Text>
+                </View>
+              </Pressable>
+            )}
+
             {postsLoading ? (
               <ActivityIndicator color={Colors.primary} style={{ marginTop: 16 }} />
             ) : feedPosts.length > 0 ? (
@@ -418,12 +445,12 @@ export default function HomeScreen() {
                   }}
                 />
               ))
-            ) : (
+            ) : !featuredVideo ? (
               <View style={styles.empty}>
                 <Feather name="message-square" size={32} color={Colors.textMuted} />
                 <Text style={styles.emptyText}>No updates yet</Text>
               </View>
-            )}
+            ) : null}
           </View>
 
         </View>
@@ -440,7 +467,38 @@ export default function HomeScreen() {
           onClose={() => setQrVisible(false)}
         />
       )}
+
+      {featuredVideoPlaying && featuredVideo && (
+        <FeaturedVideoModal video={featuredVideo} onClose={() => setFeaturedVideoPlaying(false)} />
+      )}
     </>
+  );
+}
+
+/* ── Featured Video Player Modal ── */
+function FeaturedVideoModal({ video, onClose }: { video: { id: number; title: string; url: string; thumbnailUrl: string | null }; onClose: () => void }) {
+  const Colors = useColors();
+  const resolvedUrl = resolveImageUrl(video.url) ?? video.url;
+  const player = useVideoPlayer(resolvedUrl, p => { p.play(); });
+  return (
+    <Modal visible animationType="slide" onRequestClose={onClose} statusBarTranslucent>
+      <SafeAreaView style={{ flex: 1, backgroundColor: "#000" }}>
+        <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12 }}>
+          <Pressable onPress={onClose} style={{ padding: 4 }}>
+            <Feather name="x" size={24} color="#fff" />
+          </Pressable>
+          <Text style={{ flex: 1, fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#fff", marginLeft: 12 }} numberOfLines={1}>
+            {video.title}
+          </Text>
+        </View>
+        <VideoView
+          player={player}
+          style={{ flex: 1 }}
+          contentFit="contain"
+          nativeControls
+        />
+      </SafeAreaView>
+    </Modal>
   );
 }
 
@@ -674,6 +732,62 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       fontFamily: "Inter_400Regular",
       fontSize: 14,
       color: Colors.textMuted,
+    },
+
+    /* ── Featured Video Card ── */
+    featuredVideoCard: {
+      flexDirection: "row",
+      backgroundColor: Colors.surface,
+      borderRadius: 14,
+      overflow: "hidden",
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: Colors.border,
+      alignItems: "center",
+    },
+    featuredVideoThumbWrap: {
+      width: 100,
+      height: 70,
+      position: "relative",
+    },
+    featuredVideoThumb: {
+      width: 100,
+      height: 70,
+    },
+    featuredPlayBtn: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "rgba(0,0,0,0.38)",
+    },
+    featuredVideoInfo: {
+      flex: 1,
+      padding: 12,
+      gap: 5,
+    },
+    featuredBadge: {
+      alignSelf: "flex-start",
+      backgroundColor: Colors.primary,
+      borderRadius: 4,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+    },
+    featuredBadgeText: {
+      fontFamily: "Inter_700Bold",
+      fontSize: 9,
+      color: "#fff",
+      textTransform: "uppercase",
+      letterSpacing: 0.6,
+    },
+    featuredVideoTitle: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 13,
+      color: Colors.text,
+      lineHeight: 18,
     },
   });
 }

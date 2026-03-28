@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, settingsTable, usersTable } from "@workspace/db";
+import { db, settingsTable, usersTable, videosTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { sendTicketConfirmationEmail } from "../services/email";
 
@@ -27,12 +27,35 @@ async function setSetting(key: string, value: string | null): Promise<void> {
 
 /* GET /api/settings — public settings for the mobile app */
 router.get("/", async (_req, res) => {
-  const [homeVideoUrl, clubName, clubTagline] = await Promise.all([
+  const [homeVideoUrl, clubName, clubTagline, featuredVideoEnabled, featuredVideoId] = await Promise.all([
     getSetting("homeVideoUrl"),
     getSetting("clubName"),
     getSetting("clubTagline"),
+    getSetting("homeFeaturedVideoEnabled"),
+    getSetting("homeFeaturedVideoId"),
   ]);
-  res.json({ homeVideoUrl, clubName, clubTagline });
+
+  let featuredVideo: { id: number; title: string; url: string; thumbnailUrl: string | null } | null = null;
+  if (featuredVideoEnabled === "true" && featuredVideoId) {
+    const id = parseInt(featuredVideoId, 10);
+    if (!isNaN(id)) {
+      const [video] = await db
+        .select()
+        .from(videosTable)
+        .where(eq(videosTable.id, id))
+        .limit(1);
+      if (video && video.isPublished) {
+        featuredVideo = {
+          id: video.id,
+          title: video.title,
+          url: video.url,
+          thumbnailUrl: video.thumbnailUrl ?? null,
+        };
+      }
+    }
+  }
+
+  res.json({ homeVideoUrl, clubName, clubTagline, featuredVideo });
 });
 
 /* GET /api/admin/settings — same as above but admin-gated */

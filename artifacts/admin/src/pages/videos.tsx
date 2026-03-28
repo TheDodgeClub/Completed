@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Edit2, Trash2, Globe, EyeOff, Video as VideoIcon, ExternalLink, Upload, X, Link, Save, Loader2, Camera, Image as ImageIcon } from "lucide-react";
+import { Plus, Edit2, Trash2, Globe, EyeOff, Video as VideoIcon, ExternalLink, Upload, X, Link, Save, Loader2, Camera, Image as ImageIcon, Star } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { cn } from "@/lib/utils";
 
@@ -176,11 +177,143 @@ function HeroVideoSection() {
   );
 }
 
+function FeaturedVideoSection({ videos }: { videos: Video[] }) {
+  const { data: settings, isLoading } = useSettings();
+  const { mutate: updateSettings, isPending } = useUpdateSettings();
+  const { toast } = useToast();
+
+  const publishedVideos = videos.filter(v => v.isPublished);
+
+  const [enabled, setEnabled] = useState(false);
+  const [selectedId, setSelectedId] = useState<string>("");
+
+  useEffect(() => {
+    if (settings) {
+      setEnabled(settings.homeFeaturedVideoEnabled === "true");
+      setSelectedId(settings.homeFeaturedVideoId ?? "");
+    }
+  }, [settings]);
+
+  function handleSave() {
+    updateSettings(
+      {
+        homeFeaturedVideoEnabled: enabled ? "true" : "false",
+        homeFeaturedVideoId: selectedId || null,
+      },
+      {
+        onSuccess: () => toast({ title: "Saved", description: "Featured video settings updated." }),
+        onError: () => toast({ title: "Error", description: "Failed to save.", variant: "destructive" }),
+      }
+    );
+  }
+
+  if (isLoading) return null;
+
+  const selectedVideo = publishedVideos.find(v => String(v.id) === selectedId);
+
+  return (
+    <div className="space-y-4">
+      <Card className="border-primary/20 bg-primary/5">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <Star className="w-5 h-5 text-primary" />
+            <CardTitle className="text-base">Featured Video in Latest Updates</CardTitle>
+          </div>
+          <CardDescription>
+            When enabled, a featured video card appears at the top of the "Latest Updates" section on the home screen. Only published videos can be featured.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-3">
+            <Switch
+              checked={enabled}
+              onCheckedChange={setEnabled}
+              id="featured-toggle"
+            />
+            <Label htmlFor="featured-toggle" className="cursor-pointer">
+              {enabled ? "Featured video is visible on home screen" : "Featured video is hidden"}
+            </Label>
+          </div>
+
+          {enabled && (
+            <div className="space-y-3">
+              {publishedVideos.length === 0 ? (
+                <div className="rounded-xl border border-border/50 p-6 text-center text-muted-foreground">
+                  <VideoIcon className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                  <p className="text-sm font-medium">No published videos</p>
+                  <p className="text-xs mt-1">Publish a video in the "Updates Videos" tab first.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label>Select a video to feature</Label>
+                  <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                    {publishedVideos.map(video => (
+                      <button
+                        key={video.id}
+                        type="button"
+                        onClick={() => setSelectedId(String(video.id))}
+                        className={cn(
+                          "w-full flex items-center gap-3 rounded-xl border p-3 text-left transition-colors",
+                          String(video.id) === selectedId
+                            ? "border-primary bg-primary/10"
+                            : "border-border/50 hover:border-border hover:bg-secondary/30"
+                        )}
+                      >
+                        {video.thumbnailUrl ? (
+                          <img src={video.thumbnailUrl} alt={video.title}
+                            className="w-14 h-10 object-cover rounded-lg border border-border/50 shrink-0"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                        ) : (
+                          <div className="w-14 h-10 rounded-lg bg-secondary flex items-center justify-center shrink-0">
+                            <VideoIcon className="w-4 h-4 text-muted-foreground" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className={cn("text-sm font-semibold truncate", String(video.id) === selectedId ? "text-primary" : "text-foreground")}>
+                            {video.title}
+                          </p>
+                          {video.description && (
+                            <p className="text-xs text-muted-foreground truncate mt-0.5">{video.description}</p>
+                          )}
+                        </div>
+                        {String(video.id) === selectedId && (
+                          <div className="shrink-0 w-4 h-4 rounded-full bg-primary flex items-center justify-center">
+                            <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 12 12">
+                              <path d="M10 3L5 8.5 2 5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                            </svg>
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedVideo && (
+                <div className="rounded-xl border border-border/50 bg-secondary/30 p-3">
+                  <p className="text-xs text-muted-foreground mb-1">Currently selected</p>
+                  <p className="text-sm font-semibold">{selectedVideo.title}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <Button onClick={handleSave} disabled={isPending || (enabled && !selectedId)} size="sm" className="w-full sm:w-auto">
+            {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Save className="w-3.5 h-3.5 mr-1.5" />}
+            Save Featured Video
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function Videos() {
   const { data: videos, isLoading } = useVideos();
   const [editingVideo, setEditingVideo] = useState<Video | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<"hero" | "updates" | "featured">("hero");
 
   const { mutate: publish } = usePublishVideo();
   const { toast } = useToast();
@@ -195,6 +328,8 @@ export default function Videos() {
 
   if (isLoading) return <div className="p-8 text-muted-foreground animate-pulse">Loading videos...</div>;
 
+  const allVideos = videos ?? [];
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -202,99 +337,129 @@ export default function Videos() {
           <h1 className="text-3xl font-display font-bold text-foreground">Videos</h1>
           <p className="text-muted-foreground mt-1">Manage video content for the mobile app.</p>
         </div>
-        <Button onClick={() => setIsCreateOpen(true)} className="bg-primary hover:bg-primary/90 text-white rounded-xl shadow-lg shadow-primary/20">
-          <Plus className="w-4 h-4 mr-2" /> Add Video
-        </Button>
+        {activeTab === "updates" && (
+          <Button onClick={() => setIsCreateOpen(true)} className="bg-primary hover:bg-primary/90 text-white rounded-xl shadow-lg shadow-primary/20">
+            <Plus className="w-4 h-4 mr-2" /> Add Video
+          </Button>
+        )}
       </div>
 
-      <HeroVideoSection />
+      {/* Tab bar */}
+      <div className="flex rounded-xl border border-border/50 overflow-hidden bg-secondary/30 p-1 gap-1">
+        {(["hero", "updates", "featured"] as const).map((tab) => {
+          const labels: Record<typeof tab, string> = { hero: "Hero Video", updates: "Updates Videos", featured: "Featured in Updates" };
+          return (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setActiveTab(tab)}
+              className={cn(
+                "flex-1 py-2 px-3 text-sm font-medium rounded-lg transition-colors",
+                activeTab === tab
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {labels[tab]}
+            </button>
+          );
+        })}
+      </div>
 
-      <div>
-        <h2 className="text-lg font-semibold mb-3">Updates Videos</h2>
-        <p className="text-sm text-muted-foreground mb-4">Published videos appear in the mobile app's Updates section.</p>
-        <div className="bg-card border border-border/50 rounded-2xl overflow-hidden shadow-lg shadow-black/10">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader className="bg-secondary/50 border-b border-border/50">
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="text-muted-foreground py-4 px-4">Published</TableHead>
-                  <TableHead className="text-muted-foreground py-4">Title</TableHead>
-                  <TableHead className="text-muted-foreground py-4">URL</TableHead>
-                  <TableHead className="text-muted-foreground py-4">Thumbnail</TableHead>
-                  <TableHead className="text-muted-foreground py-4 px-6 text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {!videos || videos.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="h-40 text-center text-muted-foreground">
-                      <VideoIcon className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
-                      <p className="font-medium">No videos yet</p>
-                      <p className="text-sm">Add your first video to share with members.</p>
-                    </TableCell>
+      {/* Hero Video tab */}
+      {activeTab === "hero" && <HeroVideoSection />}
+
+      {/* Updates Videos tab */}
+      {activeTab === "updates" && (
+        <div>
+          <p className="text-sm text-muted-foreground mb-4">Published videos appear in the mobile app's Updates section.</p>
+          <div className="bg-card border border-border/50 rounded-2xl overflow-hidden shadow-lg shadow-black/10">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-secondary/50 border-b border-border/50">
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="text-muted-foreground py-4 px-4">Published</TableHead>
+                    <TableHead className="text-muted-foreground py-4">Title</TableHead>
+                    <TableHead className="text-muted-foreground py-4">URL</TableHead>
+                    <TableHead className="text-muted-foreground py-4">Thumbnail</TableHead>
+                    <TableHead className="text-muted-foreground py-4 px-6 text-right">Actions</TableHead>
                   </TableRow>
-                ) : (
-                  videos.map((video) => (
-                    <TableRow key={video.id} className="group border-border/50 hover:bg-white/[0.02] transition-colors">
-                      <TableCell className="px-4 py-4">
-                        <Button
-                          variant="ghost" size="sm"
-                          onClick={() => handlePublish(video)}
-                          className={`h-7 px-2.5 rounded-lg text-xs font-semibold gap-1.5 ${video.isPublished
-                            ? "text-emerald-400 bg-emerald-400/10 hover:bg-emerald-400/20"
-                            : "text-muted-foreground bg-secondary hover:bg-secondary/80"
-                          }`}
-                        >
-                          {video.isPublished ? <Globe className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
-                          {video.isPublished ? "Live" : "Draft"}
-                        </Button>
-                      </TableCell>
-                      <TableCell className="py-4">
-                        <div>
-                          <div className="font-semibold text-foreground group-hover:text-primary transition-colors">{video.title}</div>
-                          {video.description && (
-                            <div className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{video.description}</div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-4">
-                        <a href={video.url} target="_blank" rel="noreferrer"
-                          className="flex items-center gap-1.5 text-sm text-blue-400 hover:text-blue-300 transition-colors max-w-[200px]">
-                          <ExternalLink className="w-3.5 h-3.5 shrink-0" />
-                          <span className="line-clamp-1">{video.url}</span>
-                        </a>
-                      </TableCell>
-                      <TableCell className="py-4">
-                        {video.thumbnailUrl ? (
-                          <img src={video.thumbnailUrl} alt={video.title}
-                            className="w-16 h-10 object-cover rounded-lg border border-border/50"
-                            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                        ) : (
-                          <div className="w-16 h-10 rounded-lg bg-secondary flex items-center justify-center">
-                            <VideoIcon className="w-4 h-4 text-muted-foreground" />
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell className="py-4 px-6 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary"
-                            onClick={() => setEditingVideo(video)}>
-                            <Edit2 className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-destructive/10 hover:text-destructive"
-                            onClick={() => setDeleteId(video.id)}>
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
+                </TableHeader>
+                <TableBody>
+                  {allVideos.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-40 text-center text-muted-foreground">
+                        <VideoIcon className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
+                        <p className="font-medium">No videos yet</p>
+                        <p className="text-sm">Add your first video to share with members.</p>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    allVideos.map((video) => (
+                      <TableRow key={video.id} className="group border-border/50 hover:bg-white/[0.02] transition-colors">
+                        <TableCell className="px-4 py-4">
+                          <Button
+                            variant="ghost" size="sm"
+                            onClick={() => handlePublish(video)}
+                            className={`h-7 px-2.5 rounded-lg text-xs font-semibold gap-1.5 ${video.isPublished
+                              ? "text-emerald-400 bg-emerald-400/10 hover:bg-emerald-400/20"
+                              : "text-muted-foreground bg-secondary hover:bg-secondary/80"
+                            }`}
+                          >
+                            {video.isPublished ? <Globe className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                            {video.isPublished ? "Live" : "Draft"}
+                          </Button>
+                        </TableCell>
+                        <TableCell className="py-4">
+                          <div>
+                            <div className="font-semibold text-foreground group-hover:text-primary transition-colors">{video.title}</div>
+                            {video.description && (
+                              <div className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{video.description}</div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-4">
+                          <a href={video.url} target="_blank" rel="noreferrer"
+                            className="flex items-center gap-1.5 text-sm text-blue-400 hover:text-blue-300 transition-colors max-w-[200px]">
+                            <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+                            <span className="line-clamp-1">{video.url}</span>
+                          </a>
+                        </TableCell>
+                        <TableCell className="py-4">
+                          {video.thumbnailUrl ? (
+                            <img src={video.thumbnailUrl} alt={video.title}
+                              className="w-16 h-10 object-cover rounded-lg border border-border/50"
+                              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                          ) : (
+                            <div className="w-16 h-10 rounded-lg bg-secondary flex items-center justify-center">
+                              <VideoIcon className="w-4 h-4 text-muted-foreground" />
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell className="py-4 px-6 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary"
+                              onClick={() => setEditingVideo(video)}>
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-destructive/10 hover:text-destructive"
+                              onClick={() => setDeleteId(video.id)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Featured in Updates tab */}
+      {activeTab === "featured" && <FeaturedVideoSection videos={allVideos} />}
 
       {isCreateOpen && <VideoFormModal onClose={() => setIsCreateOpen(false)} />}
       {editingVideo && <VideoFormModal video={editingVideo} onClose={() => setEditingVideo(null)} />}

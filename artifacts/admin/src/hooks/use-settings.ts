@@ -5,6 +5,9 @@ export type AppSettings = {
   homeVideoUrl?: string | null;
   clubName?: string | null;
   clubTagline?: string | null;
+  homeFeaturedVideoEnabled?: string | null;
+  homeFeaturedVideoId?: string | null;
+  [key: string]: string | null | undefined;
 };
 
 export function useSettings() {

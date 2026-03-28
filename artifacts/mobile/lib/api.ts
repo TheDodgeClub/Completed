@@ -284,10 +284,18 @@ export async function listPosts(): Promise<Post[]> {
 }
 
 /* ---- app settings ---- */
+export type FeaturedVideo = {
+  id: number;
+  title: string;
+  url: string;
+  thumbnailUrl: string | null;
+};
+
 export type AppSettings = {
   homeVideoUrl: string | null;
   clubName: string | null;
   clubTagline: string | null;
+  featuredVideo: FeaturedVideo | null;
 };
 
 export async function getAppSettings(): Promise<AppSettings> {
