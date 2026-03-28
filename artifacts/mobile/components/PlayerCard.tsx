@@ -368,28 +368,29 @@ const styles = StyleSheet.create({
   },
 
   /* Skills */
-  skillsSection: { alignItems: "center", marginTop: 10 },
+  skillsSection: { alignItems: "center", marginTop: 10, width: CARD_W - 36 },
   skillsHeading: {
     fontFamily: "Inter_700Bold",
     fontSize: 9,
-    color: NEON,
-    letterSpacing: 2,
-    marginBottom: 6,
-    opacity: 0.85,
+    color: GOLD,
+    letterSpacing: 2.5,
+    marginBottom: 8,
+    opacity: 0.7,
   },
-  skillsRow: { flexDirection: "row", gap: 6, flexWrap: "wrap", justifyContent: "center" },
+  skillsRow: { flexDirection: "row", gap: 8, flexWrap: "wrap", justifyContent: "center" },
   skillChip: {
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.18)",
+    borderWidth: 1.5,
+    borderColor: GOLD_DIM,
     borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    backgroundColor: "rgba(255,255,255,0.05)",
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    backgroundColor: "rgba(255,215,0,0.07)",
   },
   skillChipText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 10,
-    color: "rgba(255,255,255,0.80)",
+    fontFamily: "Inter_700Bold",
+    fontSize: 12,
+    color: GOLD,
+    letterSpacing: 0.4,
   },
 
   /* Footer */
