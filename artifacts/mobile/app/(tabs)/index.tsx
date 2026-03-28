@@ -12,6 +12,7 @@ import {
   useWindowDimensions,
   Animated,
   Modal,
+  Platform,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -131,7 +132,7 @@ export default function HomeScreen() {
   const [showNotifPrompt, setShowNotifPrompt] = useState(false);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || Platform.OS === "web") return;
     let timer: ReturnType<typeof setTimeout>;
     AsyncStorage.getItem(NOTIF_PROMPT_KEY).then(val => {
       if (val === null) {
