@@ -3,6 +3,7 @@ import { db, ticketsTable, eventsTable, usersTable, ticketTypesTable, discountCo
 import { eq, and, sql, inArray } from "drizzle-orm";
 import { getUncachableStripeClient, getStripePublishableKey } from "../stripeClient";
 import { sendTicketConfirmationEmail, sendGiftEmail } from "../services/email";
+import { fulfillPaymentIntent } from "../services/fulfillPaymentIntent";
 import crypto from "crypto";
 
 const router: IRouter = Router();
@@ -738,17 +739,18 @@ router.post("/payment-intent", requireAuth, async (req: any, res) => {
   res.json({ clientSecret: paymentIntent.client_secret, paymentIntentId: paymentIntent.id, amount: totalAmount });
 });
 
-/* POST /api/tickets/confirm-payment — called by mobile after PaymentSheet success */
+/* POST /api/tickets/confirm-payment — fast-path called by mobile after PaymentSheet success.
+   Fulfillment is idempotent and shared with the payment_intent.succeeded webhook fallback. */
 router.post("/confirm-payment", requireAuth, async (req: any, res) => {
-  const userId = req.session.userId;
+  const userId: number = req.session.userId;
   const { paymentIntentId } = req.body as { paymentIntentId?: string };
   if (!paymentIntentId) { res.status(400).json({ error: "paymentIntentId required" }); return; }
 
   const stripe = await getUncachableStripeClient();
 
-  let pi: any;
+  let pi: { id: string; status: string; amount: number; metadata: Record<string, string> };
   try {
-    pi = await stripe.paymentIntents.retrieve(paymentIntentId);
+    pi = await stripe.paymentIntents.retrieve(paymentIntentId) as typeof pi;
   } catch {
     res.status(400).json({ error: "Payment intent not found" }); return;
   }
@@ -757,66 +759,17 @@ router.post("/confirm-payment", requireAuth, async (req: any, res) => {
     res.status(402).json({ error: "Payment has not succeeded" }); return;
   }
 
-  const metaUserId = Number(pi.metadata?.userId);
-  if (metaUserId !== userId) { res.status(403).json({ error: "Forbidden" }); return; }
+  const result = await fulfillPaymentIntent({ ...pi, userId });
 
-  const ticketId = pi.metadata?.ticketId ? Number(pi.metadata.ticketId) : null;
+  if (result.outcome === "user_mismatch") { res.status(403).json({ error: "Forbidden" }); return; }
+  if (result.outcome === "missing_metadata") { res.status(400).json({ error: "Invalid payment intent metadata" }); return; }
+  if (result.outcome === "not_found") { res.status(404).json({ error: "Ticket not found" }); return; }
+
+  // Return the confirmed ticket with event details
+  const ticketId = result.ticketId;
   const eventId = pi.metadata?.eventId ? Number(pi.metadata.eventId) : null;
-  const quantity = Math.max(1, Math.min(10, parseInt(pi.metadata?.quantity ?? "1") || 1));
-  const discountCodeId = pi.metadata?.discountCodeId ? Number(pi.metadata.discountCodeId) : null;
-  const ticketTypeId = pi.metadata?.ticketTypeId ? Number(pi.metadata.ticketTypeId) : null;
-  const perTicketAmount = quantity > 0 ? Math.round(pi.amount / quantity) : pi.amount;
-
-  if (!ticketId || !eventId) { res.status(400).json({ error: "Invalid payment intent metadata" }); return; }
-
-  // Check if already confirmed (idempotency)
-  const [existing] = await db.select().from(ticketsTable).where(eq(ticketsTable.id, ticketId)).limit(1);
-  if (existing?.status === "paid") {
-    const [evt] = await db.select().from(eventsTable).where(eq(eventsTable.id, eventId)).limit(1);
-    res.json({ ticket: { ...existing, eventTitle: evt?.title, eventDate: evt?.date, eventLocation: evt?.location, eventImageUrl: evt?.imageUrl, eventXpReward: evt?.xpReward } });
-    return;
-  }
-
-  // Confirm the pending ticket
-  await db.update(ticketsTable).set({
-    status: "paid",
-    amountPaid: perTicketAmount,
-    stripePaymentIntentId: paymentIntentId,
-  }).where(and(eq(ticketsTable.id, ticketId), eq(ticketsTable.userId, userId)));
-
-  // Create additional tickets for quantity > 1
-  const additionalCodes: string[] = [];
-  if (quantity > 1) {
-    const vals = Array.from({ length: quantity - 1 }, () => ({
-      userId, eventId, status: "paid" as const,
-      ticketCode: generateTicketCode(), amountPaid: perTicketAmount,
-      stripePaymentIntentId: paymentIntentId,
-      ticketTypeId, discountCodeId,
-    }));
-    const extras = await db.insert(ticketsTable).values(vals).returning({ ticketCode: ticketsTable.ticketCode });
-    additionalCodes.push(...extras.map(t => t.ticketCode));
-  }
-
-  // Update discount code usage
-  if (discountCodeId) {
-    const [dc] = await db.select().from(discountCodesTable).where(eq(discountCodesTable.id, discountCodeId)).limit(1);
-    if (dc) await db.update(discountCodesTable).set({ usesCount: dc.usesCount + quantity }).where(eq(discountCodesTable.id, discountCodeId));
-  }
-
-  // Update ticket type sold count
-  if (ticketTypeId) {
-    await db.update(ticketTypesTable).set({ quantitySold: sql`${ticketTypesTable.quantitySold} + ${quantity}` }).where(eq(ticketTypesTable.id, ticketTypeId));
-  }
-
-  // Send confirmation email
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
-  const [event] = await db.select().from(eventsTable).where(eq(eventsTable.id, eventId)).limit(1);
-  if (user && event && existing) {
-    const allCodes = [existing.ticketCode, ...additionalCodes];
-    sendTicketConfirmationEmail({ toEmail: user.email, toName: user.name ?? user.email, eventName: event.title, eventDate: event.date, eventLocation: event.location, ticketCodes: allCodes, eventConfig: event }).catch(e => console.error("[email] send error:", e));
-  }
-
   const [confirmedTicket] = await db.select().from(ticketsTable).where(eq(ticketsTable.id, ticketId)).limit(1);
+  const [event] = eventId ? await db.select().from(eventsTable).where(eq(eventsTable.id, eventId)).limit(1) : [undefined];
   res.json({ ticket: { ...confirmedTicket, eventTitle: event?.title, eventDate: event?.date, eventLocation: event?.location, eventImageUrl: event?.imageUrl, eventXpReward: event?.xpReward } });
 });
 
