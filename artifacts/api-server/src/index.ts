@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { runStreakNotificationJob } from "./services/streakNotifications";
+import { pool } from "@workspace/db";
 
 const rawPort = process.env["PORT"];
 
@@ -25,6 +26,27 @@ async function initStripe() {
   }
 }
 
+async function runMigrations() {
+  const client = await pool.connect();
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS password_reset_tokens (
+        id SERIAL PRIMARY KEY,
+        email TEXT NOT NULL,
+        code TEXT NOT NULL,
+        expires_at TIMESTAMP NOT NULL,
+        used_at TIMESTAMP,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_prt_email ON password_reset_tokens(email);
+    `);
+    logger.info("DB migrations applied");
+  } finally {
+    client.release();
+  }
+}
+
+await runMigrations();
 await initStripe();
 
 app.listen(port, (err) => {

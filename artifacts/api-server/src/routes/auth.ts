@@ -248,6 +248,7 @@ router.post("/forgot-password", async (req, res) => {
     res.status(400).json({ error: "Email is required" });
     return;
   }
+  await db.delete(passwordResetTokensTable).where(lt(passwordResetTokensTable.expiresAt, new Date()));
   const user = await db.query.usersTable.findFirst({ where: eq(usersTable.email, email.toLowerCase()) });
   if (!user) {
     res.json({ message: "If an account exists, a reset code has been sent." });
