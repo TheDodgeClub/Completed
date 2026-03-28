@@ -157,7 +157,7 @@ export default function RegisterScreen() {
           <View style={styles.logoRow}>
             <Image
               source={require("@/assets/images/tdc-logo.png")}
-              style={styles.logoImg}
+              style={[styles.logoImg, { tintColor: isDark ? "#FFFFFF" : "#000000" }]}
               resizeMode="contain"
             />
           </View>
@@ -300,7 +300,7 @@ export default function RegisterScreen() {
           <View style={styles.logoRow}>
             <Image
               source={require("@/assets/images/tdc-logo.png")}
-              style={styles.logoImg}
+              style={[styles.logoImg, { tintColor: isDark ? "#FFFFFF" : "#000000" }]}
               resizeMode="contain"
             />
           </View>
@@ -369,7 +369,7 @@ export default function RegisterScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: "#FFFFFF" }}
+      style={{ flex: 1, backgroundColor: Colors.background }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView
@@ -379,13 +379,13 @@ export default function RegisterScreen() {
         <View style={styles.logoRow}>
           <Image
             source={require("@/assets/images/tdc-logo.png")}
-            style={styles.logoImg}
+            style={[styles.logoImg, { tintColor: isDark ? "#FFFFFF" : "#000000" }]}
             resizeMode="contain"
           />
         </View>
 
-        <Text style={styles.titleDark}>Join the Club</Text>
-        <Text style={styles.subtitleDark}>Create your free account and enter the Member Zone</Text>
+        <Text style={styles.title}>Join the Club</Text>
+        <Text style={styles.subtitle}>Create your free account and enter the Member Zone</Text>
 
         <View style={styles.stepIndicator}>
           <View style={[styles.stepDot, styles.stepDotActive]} />
@@ -394,13 +394,13 @@ export default function RegisterScreen() {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.labelDark}>Full Name</Text>
-          <View style={styles.inputWrapLight}>
-            <Feather name="user" size={18} color="#999999" style={styles.inputIcon} />
+          <Text style={styles.label}>Full Name</Text>
+          <View style={styles.inputWrap}>
+            <Feather name="user" size={18} color={Colors.textMuted} style={styles.inputIcon} />
             <TextInput
-              style={styles.inputLight}
+              style={styles.input}
               placeholder="Your name"
-              placeholderTextColor="#999999"
+              placeholderTextColor={Colors.textMuted}
               value={name}
               onChangeText={setName}
               autoCapitalize="words"
@@ -409,13 +409,13 @@ export default function RegisterScreen() {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.labelDark}>Email</Text>
-          <View style={styles.inputWrapLight}>
-            <Feather name="mail" size={18} color="#999999" style={styles.inputIcon} />
+          <Text style={styles.label}>Email</Text>
+          <View style={styles.inputWrap}>
+            <Feather name="mail" size={18} color={Colors.textMuted} style={styles.inputIcon} />
             <TextInput
-              style={styles.inputLight}
+              style={styles.input}
               placeholder="your@email.com"
-              placeholderTextColor="#999999"
+              placeholderTextColor={Colors.textMuted}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -426,19 +426,19 @@ export default function RegisterScreen() {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.labelDark}>Password</Text>
-          <View style={styles.inputWrapLight}>
-            <Feather name="lock" size={18} color="#999999" style={styles.inputIcon} />
+          <Text style={styles.label}>Password</Text>
+          <View style={styles.inputWrap}>
+            <Feather name="lock" size={18} color={Colors.textMuted} style={styles.inputIcon} />
             <TextInput
-              style={[styles.inputLight, { flex: 1 }]}
+              style={[styles.input, { flex: 1 }]}
               placeholder="Min. 6 characters"
-              placeholderTextColor="#999999"
+              placeholderTextColor={Colors.textMuted}
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
             />
             <Pressable onPress={() => setShowPassword(v => !v)} style={styles.eyeBtn}>
-              <Feather name={showPassword ? "eye-off" : "eye"} size={18} color="#999999" />
+              <Feather name={showPassword ? "eye-off" : "eye"} size={18} color={Colors.textMuted} />
             </Pressable>
           </View>
         </View>
@@ -470,7 +470,7 @@ export default function RegisterScreen() {
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerTextDark}>Already a member? </Text>
+          <Text style={styles.footerText}>Already a member? </Text>
           <Pressable onPress={() => router.replace("/(auth)/login")}>
             <Text style={styles.link}>Sign in</Text>
           </Pressable>
@@ -486,7 +486,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       paddingTop: 100,
       paddingHorizontal: 24,
       paddingBottom: 24,
-      backgroundColor: "#FFFFFF",
+      backgroundColor: Colors.background,
       flexGrow: 1,
     },
     container2: {
@@ -506,7 +506,6 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     logoImg: {
       width: 180,
       height: 54,
-      tintColor: Colors.primary,
     },
     stepIndicator: {
       flexDirection: "row",
@@ -518,7 +517,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       width: 10,
       height: 10,
       borderRadius: 5,
-      backgroundColor: "#E0E0E0",
+      backgroundColor: Colors.border,
     },
     stepDotActive: {
       backgroundColor: Colors.primary,
@@ -528,7 +527,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     stepLine: {
       flex: 1,
       height: 2,
-      backgroundColor: "#E0E0E0",
+      backgroundColor: Colors.border,
       borderRadius: 1,
     },
     title: {
@@ -537,22 +536,10 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       color: Colors.text,
       marginBottom: 6,
     },
-    titleDark: {
-      fontFamily: "Poppins_800ExtraBold",
-      fontSize: 28,
-      color: "#111111",
-      marginBottom: 6,
-    },
     subtitle: {
       fontFamily: "Inter_400Regular",
       fontSize: 15,
       color: Colors.textSecondary,
-      marginBottom: 24,
-    },
-    subtitleDark: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 15,
-      color: "#666666",
       marginBottom: 24,
     },
     inputGroup: { marginBottom: 18 },
@@ -560,14 +547,6 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       fontFamily: "Inter_600SemiBold",
       fontSize: 13,
       color: Colors.textSecondary,
-      marginBottom: 8,
-      letterSpacing: 0.5,
-      textTransform: "uppercase",
-    },
-    labelDark: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 13,
-      color: "#666666",
       marginBottom: 8,
       letterSpacing: 0.5,
       textTransform: "uppercase",
@@ -581,19 +560,10 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     inputWrap: {
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: Colors.surface2,
+      backgroundColor: Colors.surface,
       borderRadius: 14,
       borderWidth: 1,
       borderColor: Colors.border,
-      paddingHorizontal: 14,
-    },
-    inputWrapLight: {
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: "#F5F5F5",
-      borderRadius: 14,
-      borderWidth: 1,
-      borderColor: "#E8E8E8",
       paddingHorizontal: 14,
     },
     inputIcon: { marginRight: 10 },
@@ -602,13 +572,6 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       fontFamily: "Inter_400Regular",
       fontSize: 16,
       color: Colors.text,
-      paddingVertical: 16,
-    },
-    inputLight: {
-      flex: 1,
-      fontFamily: "Inter_400Regular",
-      fontSize: 16,
-      color: "#111111",
       paddingVertical: 16,
     },
     eyeBtn: { padding: 8 },
@@ -660,7 +623,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     termsText: {
       fontFamily: "Inter_400Regular",
       fontSize: 12,
-      color: "#999999",
+      color: Colors.textMuted,
       lineHeight: 18,
     },
     termsLink: {
@@ -679,11 +642,6 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       fontFamily: "Inter_400Regular",
       fontSize: 14,
       color: Colors.textSecondary,
-    },
-    footerTextDark: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 14,
-      color: "#666666",
     },
     link: {
       fontFamily: "Inter_600SemiBold",

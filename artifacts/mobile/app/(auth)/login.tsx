@@ -15,12 +15,13 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { useColors } from "@/context/ThemeContext";
+import { useColors, useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const Colors = useColors();
+  const { isDark } = useTheme();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const { login } = useAuth();
   const [email, setEmail] = useState("");
@@ -55,17 +56,17 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: "#FFFFFF" }}
+      style={{ flex: 1, backgroundColor: Colors.background }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView
-        contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + 32 }]}
+        contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + 32, paddingTop: insets.top + 64 }]}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.logoRow}>
           <Image
             source={require("@/assets/images/tdc-logo.png")}
-            style={styles.logoImg}
+            style={[styles.logoImg, { tintColor: isDark ? "#FFFFFF" : "#000000" }]}
             resizeMode="contain"
           />
         </View>
@@ -76,11 +77,11 @@ export default function LoginScreen() {
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Email</Text>
           <View style={styles.inputWrap}>
-            <Feather name="mail" size={18} color="#999999" style={styles.inputIcon} />
+            <Feather name="mail" size={18} color={Colors.textMuted} style={styles.inputIcon} />
             <TextInput
               style={styles.input}
               placeholder="your@email.com"
-              placeholderTextColor="#999999"
+              placeholderTextColor={Colors.textMuted}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -93,18 +94,18 @@ export default function LoginScreen() {
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Password</Text>
           <View style={styles.inputWrap}>
-            <Feather name="lock" size={18} color="#999999" style={styles.inputIcon} />
+            <Feather name="lock" size={18} color={Colors.textMuted} style={styles.inputIcon} />
             <TextInput
               style={[styles.input, { flex: 1 }]}
               placeholder="••••••••"
-              placeholderTextColor="#999999"
+              placeholderTextColor={Colors.textMuted}
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
               autoComplete="password"
             />
             <Pressable onPress={() => setShowPassword(v => !v)} style={styles.eyeBtn}>
-              <Feather name={showPassword ? "eye-off" : "eye"} size={18} color="#999999" />
+              <Feather name={showPassword ? "eye-off" : "eye"} size={18} color={Colors.textMuted} />
             </Pressable>
           </View>
         </View>
@@ -160,42 +161,39 @@ export default function LoginScreen() {
 function makeStyles(Colors: ReturnType<typeof useColors>) {
   return StyleSheet.create({
     container: {
-      paddingTop: 128,
       paddingHorizontal: 24,
       paddingBottom: 24,
-      gap: 0,
-      backgroundColor: "#FFFFFF",
+      backgroundColor: Colors.background,
       flexGrow: 1,
     },
     logoRow: {
       flexDirection: "row",
       alignItems: "center",
       gap: 12,
-      marginBottom: 16,
+      marginBottom: 32,
       marginTop: 8,
     },
     logoImg: {
       width: 180,
       height: 54,
-      tintColor: "#000000",
     },
     title: {
       fontFamily: "Poppins_800ExtraBold",
       fontSize: 28,
-      color: "#111111",
+      color: Colors.text,
       marginBottom: 6,
     },
     subtitle: {
       fontFamily: "Inter_400Regular",
       fontSize: 15,
-      color: "#666666",
+      color: Colors.textSecondary,
       marginBottom: 36,
     },
     inputGroup: { marginBottom: 18 },
     label: {
       fontFamily: "Inter_600SemiBold",
       fontSize: 13,
-      color: "#666666",
+      color: Colors.textSecondary,
       marginBottom: 8,
       letterSpacing: 0.5,
       textTransform: "uppercase",
@@ -203,10 +201,10 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     inputWrap: {
       flexDirection: "row",
       alignItems: "center",
-      backgroundColor: "#F5F5F5",
+      backgroundColor: Colors.surface,
       borderRadius: 14,
       borderWidth: 1,
-      borderColor: "#E8E8E8",
+      borderColor: Colors.border,
       paddingHorizontal: 14,
     },
     inputIcon: { marginRight: 10 },
@@ -214,7 +212,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       flex: 1,
       fontFamily: "Inter_400Regular",
       fontSize: 16,
-      color: "#111111",
+      color: Colors.text,
       paddingVertical: 16,
     },
     eyeBtn: { padding: 8 },
@@ -288,7 +286,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     forgotLink: {
       fontFamily: "Inter_600SemiBold",
       fontSize: 14,
-      color: "#666666",
+      color: Colors.textSecondary,
       textDecorationLine: "underline",
     },
     footer: {
@@ -299,7 +297,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     footerText: {
       fontFamily: "Inter_400Regular",
       fontSize: 14,
-      color: "#666666",
+      color: Colors.textSecondary,
     },
     link: {
       fontFamily: "Inter_600SemiBold",

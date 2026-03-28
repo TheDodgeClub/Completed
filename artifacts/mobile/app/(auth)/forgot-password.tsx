@@ -15,7 +15,7 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { useColors } from "@/context/ThemeContext";
+import { useColors, useTheme } from "@/context/ThemeContext";
 import { forgotPassword, resetPassword } from "@/lib/api";
 
 type Step = "email" | "reset";
@@ -31,6 +31,7 @@ function formatCountdown(secs: number): string {
 export default function ForgotPasswordScreen() {
   const insets = useSafeAreaInsets();
   const Colors = useColors();
+  const { isDark } = useTheme();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
 
   const [step, setStep] = useState<Step>("email");
@@ -146,7 +147,7 @@ export default function ForgotPasswordScreen() {
         <View style={styles.logoRow}>
           <Image
             source={require("@/assets/images/tdc-logo.png")}
-            style={styles.logoImg}
+            style={[styles.logoImg, { tintColor: isDark ? "#FFFFFF" : "#000000" }]}
             resizeMode="contain"
           />
         </View>
