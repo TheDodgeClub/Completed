@@ -108,7 +108,7 @@ export default function RegisterScreen() {
   const toggleSkill = (skill: Skill) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedSkills(prev =>
-      prev.includes(skill) ? prev.filter(s => s !== skill) : [...prev, skill]
+      prev.includes(skill) ? prev.filter(s => s !== skill) : prev.length >= 3 ? prev : [...prev, skill]
     );
   };
 
@@ -313,8 +313,8 @@ export default function RegisterScreen() {
             <View style={[styles.stepDot, styles.stepDotActive]} />
           </View>
 
-          <Text style={styles.title}>What are your strengths?</Text>
-          <Text style={styles.subtitle}>Pick the skills that describe your game. You can update these later.</Text>
+          <Text style={styles.title}>What are your top strengths?</Text>
+          <Text style={styles.subtitle}>Select your top 3 skills that best describe your game. You can update these later.</Text>
 
           <View style={styles.skillsGrid}>
             {SKILL_OPTIONS.map(skill => {

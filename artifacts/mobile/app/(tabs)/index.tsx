@@ -81,8 +81,8 @@ function QRModal({ visible, userId, onClose }: { visible: boolean; userId: numbe
         <Pressable style={[qrModalStyles.sheet, { backgroundColor: Colors.card }]} onPress={() => {}}>
           <Text style={[qrModalStyles.title, { color: Colors.text }]}>Member QR Code</Text>
           <Text style={[qrModalStyles.sub, { color: Colors.textMuted }]}>Show to door staff for check-in</Text>
-          <View style={[qrModalStyles.qrBox, { backgroundColor: Colors.surface }]}>
-            <QRCode value={`dodgeclub:member:${userId}`} size={200} color={Colors.text} backgroundColor={Colors.surface} />
+          <View style={qrModalStyles.qrBox}>
+            <QRCode value={`dodgeclub:member:${userId}`} size={200} color="#000000" backgroundColor="#FFFFFF" />
           </View>
           <Text style={[qrModalStyles.memberId, { color: Colors.textMuted }]}>Member #{userId}</Text>
           <Pressable style={[qrModalStyles.closeBtn, { backgroundColor: Colors.primary }]} onPress={onClose}>
@@ -110,7 +110,7 @@ const qrModalStyles = StyleSheet.create({
   },
   title: { fontFamily: "Poppins_800ExtraBold", fontSize: 18 },
   sub: { fontFamily: "Inter_400Regular", fontSize: 13 },
-  qrBox: { padding: 20, borderRadius: 16, marginVertical: 8 },
+  qrBox: { padding: 20, borderRadius: 16, marginVertical: 8, backgroundColor: "#FFFFFF" },
   memberId: { fontFamily: "Inter_400Regular", fontSize: 12 },
   closeBtn: {
     paddingHorizontal: 28,

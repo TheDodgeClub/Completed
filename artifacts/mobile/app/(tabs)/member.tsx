@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -48,6 +48,9 @@ import {
 } from "@/lib/api";
 import { getToken } from "@/lib/api";
 import { useAnnouncements } from "@/hooks/useAnnouncements";
+import { captureRef } from "react-native-view-shot";
+import * as Sharing from "expo-sharing";
+import PlayerCard from "@/components/PlayerCard";
 
 
 const LEVEL_THRESHOLDS = [0, 300, 800, 1600, 2500, 5000, 10000, 20000, 40000, 80000];
@@ -279,7 +282,7 @@ function EditProfileModal({
 
   const toggleSkill = (skill: string) => {
     setSelectedSkills(prev =>
-      prev.includes(skill) ? prev.filter(s => s !== skill) : [...prev, skill]
+      prev.includes(skill) ? prev.filter(s => s !== skill) : prev.length >= 3 ? prev : [...prev, skill]
     );
   };
 
@@ -349,7 +352,7 @@ function EditProfileModal({
             {isPlayer && (
               <View style={styles.fieldGroup}>
                 <Text style={styles.fieldLabel}>My Skills</Text>
-                <Text style={styles.fieldHint}>Select all that apply</Text>
+                <Text style={styles.fieldHint}>Select up to 3</Text>
                 <View style={styles.editSkillsGrid}>
                   {SKILL_OPTIONS.map(skill => {
                     const selected = selectedSkills.includes(skill);
@@ -493,6 +496,26 @@ export default function MemberScreen() {
   const [checkInError, setCheckInError] = React.useState<string | null>(null);
   const [checkInXpGained, setCheckInXpGained] = React.useState<number | null>(null);
   const [checkedInEventId, setCheckedInEventId] = React.useState<number | null>(null);
+  const [cardVisible, setCardVisible] = React.useState(false);
+  const [sharingCard, setSharingCard] = React.useState(false);
+  const cardRef = useRef<View>(null);
+
+  const handleShareCard = async () => {
+    setSharingCard(true);
+    try {
+      const uri = await captureRef(cardRef, { format: "png", quality: 1 });
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(uri, { mimeType: "image/png", dialogTitle: "Share your Dodge Club player card" });
+      } else {
+        await Share.share({ url: uri, message: "Check out my Dodge Club player card!" });
+      }
+    } catch {
+      // sharing not supported (e.g. web) — silently ignore
+    } finally {
+      setSharingCard(false);
+    }
+  };
 
   const userId = user?.id ?? 0;
   const { announcements } = useAnnouncements();
@@ -742,6 +765,15 @@ export default function MemberScreen() {
               <Feather name="edit-2" size={14} color="#fff" />
               <Text style={styles.editBtnText}>Edit</Text>
             </Pressable>
+            {user.accountType !== "supporter" && (
+              <Pressable
+                style={({ pressed }) => [styles.shareCardBtn, { opacity: pressed ? 0.8 : 1 }]}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setCardVisible(true); }}
+              >
+                <Feather name="share-2" size={14} color="#FFD700" />
+                <Text style={styles.shareCardBtnText}>My Card</Text>
+              </Pressable>
+            )}
             <Pressable onPress={handleLogout} style={styles.logoutBtn}>
               <Feather name="log-out" size={18} color="rgba(255,255,255,0.7)" />
             </Pressable>
@@ -766,17 +798,27 @@ export default function MemberScreen() {
           )}
         </View>
 
+        {user.accountType !== "supporter" && user.skills && (() => {
+          const skills = user.skills!.split(",").filter(Boolean).map(s => s.trim()).slice(0, 3);
+          return skills.length > 0 ? (
+            <View style={styles.profileSkillsBlock}>
+              <Text style={styles.profileSkillsLabel}>SKILLS</Text>
+              <View style={styles.profileSkillsRow}>
+                {skills.map(skill => (
+                  <View key={skill} style={styles.profileSkillChip}>
+                    <Text style={styles.profileSkillChipText}>{skill}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : null;
+        })()}
+
         {user.bio && <Text style={styles.memberBio}>{user.bio}</Text>}
 
         <Text style={styles.memberSince}>
           Member since {new Date(user.memberSince).toLocaleDateString("en-GB", { month: "long", year: "numeric" })}
         </Text>
-
-        {user.accountType !== "supporter" && user.skills && (
-          <Text style={styles.skillsInline}>
-            ⚡ {user.skills.split(",").filter(Boolean).map(s => s.trim()).join(" · ")}
-          </Text>
-        )}
 
         {/* XP Progress — players / supporter-specific tier bar */}
         {user.accountType === "supporter" ? (() => {
@@ -1227,6 +1269,48 @@ export default function MemberScreen() {
         onSave={saveProfile}
         onDeleteAccount={handleDeleteAccount}
       />
+
+      {/* Share My Card Modal */}
+      <Modal visible={cardVisible} transparent animationType="fade" onRequestClose={() => setCardVisible(false)}>
+        <View style={styles.cardModalOverlay}>
+          <View style={styles.cardModalInner}>
+            <Text style={styles.cardModalTitle}>Your Player Card</Text>
+            <Text style={styles.cardModalSub}>Share with friends on any platform</Text>
+
+            <View style={styles.cardModalCardWrap}>
+              <PlayerCard
+                ref={cardRef}
+                name={user.name}
+                username={user.username}
+                avatarUrl={user.avatarUrl}
+                level={level}
+                xp={user.xp ?? 0}
+                eventsAttended={user.eventsAttended ?? 0}
+                medalsEarned={user.medalsEarned ?? 0}
+                ringsEarned={user.ringsEarned ?? 0}
+                skills={user.skills}
+              />
+            </View>
+
+            <View style={styles.cardModalActions}>
+              <Pressable
+                style={({ pressed }) => [styles.shareCardActionBtn, { opacity: pressed || sharingCard ? 0.7 : 1 }]}
+                onPress={handleShareCard}
+                disabled={sharingCard}
+              >
+                <Feather name="share-2" size={16} color="#000" />
+                <Text style={styles.shareCardActionBtnText}>{sharingCard ? "Sharing..." : "Share Card"}</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [styles.cardModalCloseBtn, { opacity: pressed ? 0.7 : 1 }]}
+                onPress={() => setCardVisible(false)}
+              >
+                <Text style={styles.cardModalCloseBtnText}>Close</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -1315,6 +1399,13 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       borderRadius: 20, borderWidth: 1, borderColor: "rgba(255,255,255,0.2)",
     },
     editBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#fff" },
+    shareCardBtn: {
+      flexDirection: "row", alignItems: "center", gap: 5,
+      backgroundColor: "rgba(255,215,0,0.12)",
+      paddingHorizontal: 12, paddingVertical: 6,
+      borderRadius: 20, borderWidth: 1, borderColor: "rgba(255,215,0,0.35)",
+    },
+    shareCardBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: "#FFD700" },
     logoutBtn: { padding: 8 },
 
     memberName: { fontFamily: "Poppins_800ExtraBold", fontSize: 26, color: "#fff", marginBottom: 2 },
@@ -1332,18 +1423,94 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       borderRadius: 8, borderWidth: 1, borderColor: `${Colors.accent}40`,
     },
     roleBadgeText: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: Colors.accent },
-    skillsInline: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 11,
-      color: "rgba(255,255,255,0.55)",
-      textAlign: "center",
-      marginTop: 2,
+    profileSkillsBlock: { marginBottom: 10, alignItems: "center" },
+    profileSkillsLabel: {
+      fontFamily: "Inter_700Bold", fontSize: 9,
+      color: "rgba(255,255,255,0.45)", letterSpacing: 1.2,
+      textTransform: "uppercase", marginBottom: 6,
+    },
+    profileSkillsRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, justifyContent: "center" },
+    profileSkillChip: {
+      backgroundColor: "rgba(255,255,255,0.12)",
+      borderRadius: 12,
+      paddingHorizontal: 10,
+      paddingVertical: 3,
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.18)",
+    },
+    profileSkillChipText: {
+      fontFamily: "Inter_600SemiBold", fontSize: 11,
+      color: "rgba(255,255,255,0.85)",
     },
     memberBio: {
       fontFamily: "Inter_400Regular", fontSize: 13,
       color: "rgba(255,255,255,0.75)", lineHeight: 19, marginBottom: 8,
     },
-    memberSince: { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.55)", marginBottom: 2 },
+    memberSince: { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.55)", marginBottom: 16 },
+
+    /* Share My Card modal */
+    cardModalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.88)",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 16,
+    },
+    cardModalInner: {
+      width: "100%",
+      alignItems: "center",
+      gap: 10,
+    },
+    cardModalTitle: {
+      fontFamily: "Poppins_800ExtraBold",
+      fontSize: 20,
+      color: "#FFFFFF",
+    },
+    cardModalSub: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 13,
+      color: "rgba(255,255,255,0.5)",
+      marginBottom: 4,
+    },
+    cardModalCardWrap: {
+      shadowColor: "#FFD700",
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.5,
+      shadowRadius: 24,
+      elevation: 16,
+    },
+    cardModalActions: {
+      flexDirection: "row",
+      gap: 10,
+      marginTop: 16,
+    },
+    shareCardActionBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      backgroundColor: "#FFD700",
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 14,
+    },
+    shareCardActionBtnText: {
+      fontFamily: "Inter_700Bold",
+      fontSize: 15,
+      color: "#000",
+    },
+    cardModalCloseBtn: {
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      borderRadius: 14,
+      backgroundColor: "rgba(255,255,255,0.1)",
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.15)",
+    },
+    cardModalCloseBtnText: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 15,
+      color: "rgba(255,255,255,0.7)",
+    },
 
     /* XP Bar */
     xpSection: { marginTop: 4 },

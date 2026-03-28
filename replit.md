@@ -2,204 +2,59 @@
 
 ## Overview
 
-pnpm workspace monorepo for The Dodge Club — a mobile-first community dodgeball app built with Expo (React Native) and an Express API backend.
+The Dodge Club is a pnpm monorepo for a mobile-first community dodgeball application. It aims to provide a comprehensive platform for managing dodgeball events, community engagement, and member services. The project's vision is to enhance community interaction, streamline event participation, and offer exclusive benefits to members, ultimately growing the dodgeball community.
 
-## Stack
+## User Preferences
 
-- **Monorepo tool**: pnpm workspaces
-- **Node.js version**: 24
-- **Package manager**: pnpm
-- **TypeScript version**: 5.9
-- **Frontend**: Expo (React Native) with Expo Router, React Query, Linear Gradient
-- **API framework**: Express 5
-- **Database**: PostgreSQL + Drizzle ORM
-- **Validation**: Zod (`zod/v4`), `drizzle-zod`
-- **Auth**: bcryptjs password hashing, token via `x-auth-token` header
-- **API codegen**: Orval (from OpenAPI spec)
-- **Build**: esbuild (CJS bundle)
+I prefer concise and accurate responses. Please prioritize tasks that directly impact user experience or core functionality. When making changes, always consider the mobile-first approach and the implications for both the Expo app and the Express API. For any significant architectural decisions or changes to existing features, please ask for confirmation before proceeding.
 
-## Structure
+## System Architecture
 
-```text
-workspace/
-├── artifacts/
-│   ├── api-server/          # Express API server (port 8080)
-│   ├── mobile/              # Expo mobile app (port 18115)
-│   ├── admin/               # React/Vite admin dashboard
-│   ├── landing/             # Landing page
-│   └── scanner/             # Door staff QR scanner web app (/scanner/)
-├── lib/
-│   ├── api-spec/            # OpenAPI spec + Orval codegen config
-│   ├── api-client-react/    # Generated React Query hooks
-│   ├── api-zod/             # Generated Zod schemas from OpenAPI
-│   └── db/                  # Drizzle ORM schema + DB connection
-├── scripts/
-│   └── src/seed.ts          # Database seed script
-```
+The project is structured as a pnpm monorepo, utilizing Node.js 24 and TypeScript 5.9.
 
-## App Features
+**UI/UX Decisions:**
+- **Mobile App (Expo):** Built with React Native and Expo Router, featuring a mobile-first design. Key screens include Updates, Home, Tickets, Merch, Member Zone, and Who's Going. The app incorporates interactive elements like horizontal scroll carousels, bottom sheet modals for ticket selection, and QR code functionalities for check-in and member identification.
+- **Admin Dashboard & Scanner App:** React/Vite web applications. The Scanner app is specifically designed for door staff check-ins using QR codes.
+- **Branding:** Brand colors are configurable via `artifacts/mobile/constants/colors.ts` with defined slots for primary, secondary, background, and accent colors.
 
-### Mobile App (Expo)
-- **Updates tab** — Published videos (horizontal scroll carousel with thumbnails, tap to open URL) + posts/announcements
-- **Home** — Hero section, community stats, upcoming events (published only), latest updates, merch CTA
-- **Tickets** — My Tickets (QR codes for purchased tickets) + Buy Tickets (Stripe Checkout or free registration); pre-checkout buyer form with configurable fields + waiver agreement modal shown before purchase; **ticket type selector** (bottom sheet modal with type cards when an event has multiple tiers defined); **discount code field** in the type selector (validate against API, shows discounted price preview, passes to checkout)
-- **Merch** — Product grid with buy links (external URL, Shopify-ready)
-- **Updates** — Message board; guests see public posts, members see all; elite-only posts locked behind Elite paywall
-- **Member Zone** — Protected dashboard with player/supporter split; achievement progress bars with share button (player only); referral code card with copy/share (all users); event history (player only); XP progress (player only); supporter badge; "Refer a Friend" section
-- **Who's Going** — Event cards in Buy Tickets tab show avatars + count of confirmed attendees
-- **PIN Check-In** — When an event's check-in window is open (30 min before → 2 hrs after), a "Check In" button appears on event cards; member enters the event PIN set by admin; records attendance via API; button turns green "Checked In ✓" on success
-- **Member QR Code** — Collapsible card on the Member tab shows a QR code encoding `dodgeclub:member:{userId}`; door staff scan this with the Scanner app for instant check-in
-- **Gift a Ticket** — When you own a ticket, a gift button opens a modal to send a ticket to a friend's email
-- **Elite Membership** — £8.99/month Stripe subscription paywall (app/elite.tsx); benefits: early ticket access, tips & tricks, elite-only posts, discounted tickets, elite badge; Stripe Customer Portal for self-service management
+**Technical Implementations:**
+- **Frontend (Mobile):** Expo (React Native) with Expo Router, React Query, Linear Gradient.
+- **Backend (API):** Express 5, with PostgreSQL and Drizzle ORM for data persistence.
+- **Authentication:** Email and password registration/login, utilizing `bcryptjs` for password hashing and `x-auth-token` for session management. New users receive a unique referral code.
+- **Data Validation:** Zod (`zod/v4`) and `drizzle-zod` for schema validation.
+- **API Codegen:** Orval is used to generate API clients from an OpenAPI specification.
+- **Email Service:** Integration with Brevo for transactional emails, supporting per-event customizable templates and global sender settings.
+- **Ticketing System:** Supports multiple ticket types, discount codes, and integration with Stripe for payments. Free registration is also supported.
+- **Check-In System:** PIN-based check-in for members at events and QR code scanning for door staff.
+- **Elite Membership:** A Stripe subscription-based premium tier offering early access, discounts, and exclusive content. Managed via Stripe Checkout and Customer Portal, adhering to iOS App Store guidelines by directing payment flows to a web browser.
+- **Push Notifications & In-App Announcements:** Leverages `expo-notifications` for push notifications and an internal `announcements` table for in-app messaging, with features for broadcast and unread tracking.
+- **User Moderation:** Includes features for user reporting, blocking, and admin-level banning/unbanning.
+- **Legal Content Management:** Privacy Policy and Terms of Service content are managed in the database and displayed via in-app modals.
+- **Achievement System:** Tracks user achievements based on event attendance (e.g., First Timer, Regular, Veteran, Legend) and medals earned.
 
-### Ticket Confirmation Emails
-- Sent automatically after free ticket registration and paid Stripe checkout
-- Uses Brevo transactional email API (REST, no SDK) via `BREVO_API_KEY` secret
-- Email service: `artifacts/api-server/src/services/email.ts`
-- Template variables: `{{userName}}`, `{{eventName}}`, `{{eventDate}}`, `{{eventLocation}}`, `{{ticketCode}}`
-- **Per-event email templates**: Each event has 10 email fields (`emailSubject`, `emailHeaderImageUrl`, `emailBodyText`, `emailCtaText`, `emailCtaUrl` + gift equivalents); configured via the email icon button in the Events table → opens an EmailConfigModal with Ticket/Gift tabs; blank fields fall back to global settings
-- Global sender settings (from name/email) still editable in Admin → Settings
-- Template customisable from Admin → Settings (stored in `settings` table as `emailFromName`, `emailFromAddress`, `emailSubject`, `emailBodyHtml`)
-- Default branded HTML template used if no custom body is set
+**Core Data Models:**
+- `users`: Stores user details, authentication info, elite status, and referral data.
+- `events`: Contains event details, ticketing information, check-in PIN, and email template configurations.
+- `tickets`: Manages ticket purchases, status, and unique codes.
+- `attendance`: Records user attendance at events.
+- `posts`: Stores community posts with visibility settings (members-only, elite-only).
+- `merch`: Details for merchandise products.
+- `ticket_types`: Defines different tiers of tickets for events.
+- `discount_codes`: Manages discount codes for events.
+- `announcements`: Stores broadcast announcements.
+- `user_reports`: Records user reports.
+- `user_blocks`: Manages user blocking.
+- `settings`: Stores global application settings, including legal content.
 
-### Authentication & Registration
-- Email + password registration and login; 2-step onboarding (name/email/password → Player/Supporter role selection + optional referral code)
-- Token stored in AsyncStorage, sent via `x-auth-token` header
-- Protected routes in Member Zone
-- New users get a unique 6-char referral code at registration
+## External Dependencies
 
-### Data Models
-- `users` — id, email, passwordHash, name, isAdmin, avatarUrl, stripeCustomerId, **isElite**, **stripeSubscriptionId**, **eliteSince**, **accountType** (player|supporter), **referralCode**, **referredBy**, **isBanned** (boolean, login blocked when true)
-- `events` — id, title, description, date, location, ticketUrl, imageUrl, attendeeCount, ticketPrice, ticketCapacity, stripeProductId, stripePriceId, **eliteEarlyAccess**, **eliteDiscountPercent**, **checkInPin** (TEXT), **emailSubject**, **emailHeaderImageUrl**, **emailBodyText**, **emailCtaText**, **emailCtaUrl**, **giftEmailSubject**, **giftEmailHeaderImageUrl**, **giftEmailBodyText**, **giftEmailCtaText**, **giftEmailCtaUrl**
-- `tickets` — id, userId, eventId, stripeCheckoutSessionId, stripePaymentIntentId, status (pending/paid/free/cancelled), ticketCode (16-char hex), checkedIn, amountPaid
-- `attendance` — id, userId, eventId, earnedMedal, attendedAt
-- `posts` — id, title, content, imageUrl, isMembersOnly, **isEliteOnly**, authorId
-- `merch` — id, name, description, price, imageUrl, buyUrl, category, inStock
-
-### Scanner App (Door Staff — `/scanner/`)
-- React/Vite web app; admin login via same credentials as admin dashboard
-- Loads events currently within the check-in window (30 min before → 2 hrs after event start)
-- Shows the event's PIN in a bold chip on the event card (visible to door staff)
-- QR scanner using device camera (`@zxing/browser`); decodes `dodgeclub:member:{userId}` format
-- Manual member ID fallback input for when camera is unavailable
-- Instantly shows member name + Checked In / Already Checked In / Error feedback overlay
-- API: `GET /api/events/checkin-active` (admin) · `POST /api/events/:id/checkin-scan` (admin)
-
-### PIN Check-In System
-- Admin sets a short PIN (e.g. `DODGE7`) in the admin event edit form (Check-In PIN section)
-- Check-in window: 30 min before event start to 2 hrs after
-- Member PIN flow: `POST /api/events/:id/checkin` → validates window, validates PIN, records attendance (idempotent)
-- QR scan flow: `POST /api/events/:id/checkin-scan` → admin-only, accepts `userId`, records attendance
-- Both endpoints write to `attendance` table, which drives XP/events-attended stats
-
-### Elite Membership (£8.99/month Stripe subscription)
-- Route: `artifacts/api-server/src/routes/elite.ts` — registered at `/api/elite`
-- `GET /api/elite/status` — current user's elite status
-- `POST /api/elite/subscribe` — creates Stripe Checkout Session (subscription mode, £8.99/month)
-- `GET /api/elite/success` — verifies session after payment, grants elite status, redirects to mobile app
-- `GET /api/elite/manage` — creates Stripe Customer Portal session for self-service subscription management
-- Mobile paywall: `artifacts/mobile/app/elite.tsx` — navigate with `router.push('/elite')`
-  - **iOS App Store compliant**: "Join Elite" and "Manage Subscription" buttons open `EXPO_PUBLIC_WEBSITE_URL` (defaults to `https://thedodgeclub.co.uk/landing`) in the browser — no in-app Stripe payment
-  - `EXPO_PUBLIC_WEBSITE_URL` is set to `https://thedodgeclub.co.uk/landing` (custom domain)
-- Content gating: `isEliteOnly` on posts, `eliteEarlyAccess`/`eliteDiscountPercent` on events
-- Admin: elite badge on Members table; isEliteOnly checkbox on Posts form; Elite perks section on Events form
-
-### Stripe Ticket Purchasing + Ticket Types + Discount Codes
-- Admin manages tickets per event via "Ticket Management" modal (3 tabs: Ticket Types, Discount Codes, Base Pricing)
-- **Ticket Types** (`ticket_types` table): multiple tiers per event (name, price, quantity, sale window, active flag); each gets its own Stripe product+price created automatically; quantity sold tracked
-- **Discount Codes** (`discount_codes` table): percent or fixed-amount codes per event; max uses, expiry, active flag; uses count incremented atomically on checkout success
-- **Base Pricing** (legacy): event-level `ticketPrice` + `stripePriceId`; used when no ticket types defined
-- Mobile checkout flow: if event has active ticket types → show `TicketTypeModal` (bottom sheet) → user picks type + optional discount code → validated client-side preview + server-side validation → checkout or free registration
-- `GET /api/tickets/validate-code?eventId=&code=` — validates discount code (auth required); returns `discountType`, `discountAmount`
-- `POST /api/tickets/checkout` accepts `ticketTypeId`, `discountCode`; calculates final amount in pence, passes `unit_amount` to Stripe `price_data` override; increments `quantity_sold` + `uses_count` on success
-- `POST /api/tickets/free` accepts `ticketTypeId`; increments `quantity_sold`
-- Admin CRUD: `GET/POST /api/admin/events/:id/ticket-types`, `PUT/DELETE /api/admin/ticket-types/:id`, `GET/POST /api/admin/events/:id/discount-codes`, `PUT/DELETE /api/admin/discount-codes/:id`
-- Tickets stored with unique QR code, displayed in My Tickets tab
-- API routes: `GET /api/tickets/my`, `GET /api/tickets/event/:id`, `POST /api/tickets/checkout`, `POST /api/tickets/free`, `GET /api/tickets/validate-code`, `GET /api/tickets/success`, `POST /api/tickets/gift`, `GET /api/tickets/gift-success`
-- `GET /api/events/:id/attendees` — returns attendees (users with confirmed tickets) for an event
-- `POST /api/admin/notify-event-reminders` — sends 48h push notification reminders to ticket holders for events within the next 48 hours
-
-### Achievement System
-- First Timer (1 event)
-- Regular (5 events)
-- Veteran (10 events)
-- Legend (20 events)
-- Medal Winner (1 medal)
-- Champion (5 medals)
-
-## Seed Data / Test Accounts
-
-Run: `pnpm --filter @workspace/scripts run seed`
-
-- **Admin**: admin@dodgeclub.com / dodgeball123
-- **Member**: sam@example.com / dodgeball123
-
-## Brand Colours
-
-Edit `artifacts/mobile/constants/colors.ts` to swap in your exact hex codes.
-
-Placeholder slots:
-- `PRIMARY` — [INSERT BRAND PRIMARY] — buttons, highlights
-- `SECONDARY` — [INSERT BRAND SECONDARY] — accents, cards
-- `BACKGROUND` — [INSERT BRAND BACKGROUND] — main background
-- `ACCENT` — [INSERT BRAND ACCENT] — medals, badges, gold elements
-
-## API Endpoints
-
-All routes under `/api`:
-
-- `GET /api/healthz`
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `POST /api/auth/logout`
-- `GET /api/auth/me`
-- `GET /api/events` — all events
-- `GET /api/events/upcoming` — upcoming only
-- `GET /api/events/:id`
-- `POST /api/events` — admin: create event
-- `GET /api/users/:id/profile`
-- `GET /api/users/:id/attendance`
-- `GET /api/users/:id/achievements`
-- `GET /api/posts` — all posts
-- `POST /api/posts` — admin: create post
-- `GET /api/merch` — all merch
-- `GET /api/stats` — community stats
-
-## Push Notifications & In-App Announcements
-
-- `expo-notifications@0.32.x` installed in `artifacts/mobile`
-- DB columns: `push_token TEXT`, `notifications_enabled BOOLEAN DEFAULT false` on `users`
-- Hook: `artifacts/mobile/hooks/usePushNotifications.ts` — registers Expo push token, syncs status with API
-- Mobile Preferences section (member.tsx): toggle for notifications + dark/light mode in a unified card
-- API: `GET /users/me/notification-status`, `POST /users/me/push-token`, `PUT /users/me/notifications`
-- Admin broadcast: `POST /api/admin/notify` — sends to all opted-in members via Expo Push API (batches of 100); also saves to `announcements` DB table
-- Admin dashboard: "Push Notification Broadcast" card with title + body form and send result feedback; "Notification History" card shows all past broadcasts with recipient count
-
-### In-App Announcement System
-- DB table: `announcements` — stores every broadcast with `title`, `body`, `sent_count`, `sent_by`, `created_at`
-- API: `GET /api/announcements` (auth required) — returns recent announcements for the mobile app
-- API: `GET /api/admin/announcements` (admin only) — returns last 20 sent announcements for admin history
-- Hook: `artifacts/mobile/hooks/useAnnouncements.ts` — fetches announcements, tracks `lastSeenAnnouncementId` in AsyncStorage, computes `unreadCount`
-- Updates tab: Announcements section appears at the top of the screen with styled cards showing title, body, and time; badge count on the Updates tab icon when there are unread announcements; tabs open as "seen" via `useFocusEffect`
-- Member profile tab: Latest announcement shown as a notification banner between the hero section and the content body, visible for all users (players and supporters)
-
-### User Reporting & Blocking (Task #19)
-- **Schemas**: `user_reports` (id, reporterId, reportedId, reason, resolved, createdAt) + `user_blocks` (reporterId, blockedId, createdAt) — added via startup migration in `api-server/src/index.ts`
-- **User API**: `POST /api/users/:id/report`, `POST/DELETE /api/users/:id/block`, `GET /api/users/me/blocked`
-- **Ban enforcement**: Login (POST /api/auth/login) returns 403 with suspension message if `isBanned = true`
-- **Admin API**: `GET /api/admin/user-reports` (grouped by reported user with unresolved count), `POST /api/admin/user-reports/:id/resolve`, `POST /api/admin/members/:id/ban|unban` (updates `isBanned`), `POST /api/admin/members/:id/warn` (sends Brevo email)
-- **Mobile**: `reportUser/blockUser/unblockUser/getBlockedUsers` in `lib/api.ts`; `MemberProfileModal.tsx` has "⋯" overflow menu with Report/Block actions (own-profile guard); "Blocked Users" section in member.tsx settings with unblock button
-- **Admin dashboard**: Reports tab in Members page (expandable cards per reported user, unresolved badge count, ban/unban/warn/resolve-report actions); Moderation section in PlayerDetailSheet (warn email + suspend/lift suspension)
-
-### In-App Legal Content Management (Task #20)
-- **Storage**: `privacyPolicy` and `termsOfService` stored as key/value pairs in the existing `settings` table
-- **API**: Both keys included in the public `GET /api/settings` response; admin edit via `PUT /api/admin/settings`
-- **Admin**: "Legal Content" card in Admin → Settings with plain-text editors for Privacy Policy and Terms of Service
-- **Mobile**: `LegalContentModal` component in member.tsx (full-screen slide-up with scrollable text); Privacy Policy + Terms of Service links on both GuestView and authenticated profile bottom → open in-app modal instead of external browser; same for register screen Terms/Privacy links
-- **Fallback**: If no content saved in DB, modal shows message directing user to thedodgeclub.co.uk
-
-## Expanding Later
-
-- **Ticketing**: Replace external URLs with internal Stripe checkout
-- **Merch**: Connect Shopify storefront API or Stripe
-- **Event Attendance**: Admin endpoint to mark users as attended
+- **Database:** PostgreSQL
+- **ORM:** Drizzle ORM
+- **Authentication:** bcryptjs
+- **Payment Processing:** Stripe (Checkout, Customer Portal API)
+- **Email Service:** Brevo (transactional email API)
+- **Mobile Push Notifications:** Expo Notifications API
+- **QR Code Scanning:** `@zxing/browser`
+- **Frontend Utilities:** React Query, Linear Gradient
+- **Validation:** Zod
+- **API Generation:** Orval

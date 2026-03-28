@@ -61,7 +61,9 @@
     "expo-clipboard": "~8.0.8",
     "expo-crypto": "^15.0.8",
     "expo-notifications": "^0.32.16",
+    "expo-sharing": "14.0.8",
     "expo-video": "^3.0.16",
-    "react-native-qrcode-svg": "^6.3.21"
+    "react-native-qrcode-svg": "^6.3.21",
+    "react-native-view-shot": "^4.0.3"
   }
 }
