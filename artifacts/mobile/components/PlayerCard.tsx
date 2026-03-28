@@ -1,6 +1,7 @@
 import React, { forwardRef } from "react";
 import { View, Text, Image, StyleSheet, Platform } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { resolveImageUrl } from "@/constants/api";
 
 const CARD_W = 340;
 const CARD_H = 560;
@@ -30,11 +31,12 @@ const PlayerCard = forwardRef<View, Props>(function PlayerCard(
   { name, username, avatarUrl, level, xp, medalsEarned, ringsEarned, skills },
   ref
 ) {
-  const tierName = LEVEL_NAMES[Math.min(level - 1, LEVEL_NAMES.length - 1)] ?? "Player";
+  const levelName = LEVEL_NAMES[Math.min(level - 1, LEVEL_NAMES.length - 1)] ?? "Player";
   const skillList = skills
     ? skills.split(",").filter(Boolean).map(s => s.trim()).slice(0, 3)
     : [];
   const initial = name.charAt(0).toUpperCase();
+  const resolvedAvatar = resolveImageUrl(avatarUrl);
 
   return (
     <View
@@ -78,14 +80,12 @@ const PlayerCard = forwardRef<View, Props>(function PlayerCard(
 
         {/* Avatar area */}
         <View style={styles.avatarArea}>
-          {/* Glow rings — cheaper than boxShadow */}
           <View style={styles.glowRing3} />
           <View style={styles.glowRing2} />
           <View style={styles.glowRing1} />
-          {/* Avatar */}
           <View style={styles.avatarRing}>
-            {avatarUrl ? (
-              <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+            {resolvedAvatar ? (
+              <Image source={{ uri: resolvedAvatar }} style={styles.avatar} />
             ) : (
               <View style={styles.avatarFallback}>
                 <Text style={styles.avatarInitial}>{initial}</Text>
@@ -102,14 +102,11 @@ const PlayerCard = forwardRef<View, Props>(function PlayerCard(
           ) : null}
         </View>
 
-        {/* Tier + XP row */}
-        <View style={styles.tierXpRow}>
-          <View style={styles.tierChip}>
-            <Text style={styles.tierText}>{tierName.toUpperCase()}</Text>
-          </View>
-          <View style={styles.xpChip}>
-            <Text style={styles.xpText}>{xp.toLocaleString()} XP</Text>
-          </View>
+        {/* Level name + XP — combined, prominent */}
+        <View style={styles.xpBand}>
+          <Text style={styles.xpLevelName}>{levelName}</Text>
+          <Text style={styles.xpDot}>·</Text>
+          <Text style={styles.xpValue}>{xp.toLocaleString()} XP</Text>
         </View>
 
         {/* Stats row */}
@@ -128,6 +125,7 @@ const PlayerCard = forwardRef<View, Props>(function PlayerCard(
         {/* Skills */}
         {skillList.length > 0 && (
           <View style={styles.skillsSection}>
+            <Text style={styles.skillsHeading}>TOP SKILLS</Text>
             <View style={styles.skillsRow}>
               {skillList.map(skill => (
                 <View key={skill} style={styles.skillChip}>
@@ -169,7 +167,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     paddingHorizontal: 18,
-    paddingTop: 16,
+    paddingTop: 14,
     paddingBottom: 14,
   },
 
@@ -195,16 +193,16 @@ const styles = StyleSheet.create({
   cBR:  { bottom: 10, right: 10 },
   cBRH: { bottom: 10, right: 10 },
 
-  /* Top row */
+  /* Top row — logo bigger and more prominent */
   topRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     width: "100%",
-    marginBottom: 10,
+    marginBottom: 8,
     paddingHorizontal: 4,
   },
-  logo: { width: 42, height: 42 },
+  logo: { width: 62, height: 62 },
   levelPill: {
     alignItems: "center",
     backgroundColor: GOLD,
@@ -227,39 +225,39 @@ const styles = StyleSheet.create({
     lineHeight: 9,
   },
 
-  /* Avatar area — glow via translucent rings, no expensive shadow */
+  /* Avatar area */
   avatarArea: {
     alignItems: "center",
     justifyContent: "center",
-    width: 200,
-    height: 200,
+    width: 196,
+    height: 196,
     position: "relative",
   },
   glowRing3: {
     position: "absolute",
-    width: 200,
-    height: 200,
-    borderRadius: 100,
+    width: 196,
+    height: 196,
+    borderRadius: 98,
     backgroundColor: "rgba(57,255,20,0.06)",
   } as any,
   glowRing2: {
     position: "absolute",
-    width: 196,
-    height: 196,
-    borderRadius: 98,
+    width: 192,
+    height: 192,
+    borderRadius: 96,
     backgroundColor: "rgba(57,255,20,0.08)",
   } as any,
   glowRing1: {
     position: "absolute",
-    width: 188,
-    height: 188,
-    borderRadius: 94,
+    width: 186,
+    height: 186,
+    borderRadius: 93,
     backgroundColor: "rgba(57,255,20,0.10)",
   } as any,
   avatarRing: {
-    width: 180,
-    height: 180,
-    borderRadius: 90,
+    width: 178,
+    height: 178,
+    borderRadius: 89,
     borderWidth: 3,
     borderColor: GOLD,
     overflow: "hidden",
@@ -274,9 +272,9 @@ const styles = StyleSheet.create({
   },
   avatarInitial: {
     fontFamily: "Poppins_800ExtraBold",
-    fontSize: 72,
+    fontSize: 68,
     color: GOLD,
-    lineHeight: 80,
+    lineHeight: 76,
   },
 
   /* Name banner */
@@ -287,12 +285,12 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderBottomWidth: 1,
     borderColor: GOLD_DIM,
-    paddingVertical: 6,
-    marginTop: 10,
+    paddingVertical: 5,
+    marginTop: 8,
   },
   playerName: {
     fontFamily: "Poppins_800ExtraBold",
-    fontSize: 19,
+    fontSize: 18,
     color: "#FFFFFF",
     letterSpacing: 1.5,
     textAlign: "center",
@@ -305,41 +303,37 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
 
-  /* Tier + XP */
-  tierXpRow: {
+  /* Level name + XP combined band */
+  xpBand: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    justifyContent: "center",
+    gap: 6,
     marginTop: 8,
-    marginBottom: 2,
-  },
-  tierChip: {
-    backgroundColor: "rgba(57,255,20,0.10)",
-    borderWidth: 1,
-    borderColor: NEON_DIM,
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-  },
-  tierText: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 9,
-    color: NEON,
-    letterSpacing: 1.6,
-  },
-  xpChip: {
-    backgroundColor: "rgba(255,215,0,0.10)",
+    width: CARD_W - 36,
+    backgroundColor: "rgba(255,215,0,0.07)",
     borderWidth: 1,
     borderColor: GOLD_DIM,
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
+    borderRadius: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
   },
-  xpText: {
+  xpLevelName: {
     fontFamily: "Inter_700Bold",
-    fontSize: 9,
+    fontSize: 13,
     color: GOLD,
-    letterSpacing: 1.2,
+    letterSpacing: 0.8,
+  },
+  xpDot: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 13,
+    color: "rgba(255,215,0,0.4)",
+  },
+  xpValue: {
+    fontFamily: "Poppins_800ExtraBold",
+    fontSize: 15,
+    color: GOLD,
+    letterSpacing: 0.5,
   },
 
   /* Stats band */
@@ -347,36 +341,44 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     width: CARD_W - 36,
-    backgroundColor: "rgba(255,215,0,0.05)",
+    backgroundColor: "rgba(255,255,255,0.04)",
     borderWidth: 1,
-    borderColor: GOLD_DIM,
+    borderColor: "rgba(255,255,255,0.10)",
     borderRadius: 12,
-    marginTop: 10,
-    paddingVertical: 10,
+    marginTop: 8,
+    paddingVertical: 9,
     justifyContent: "space-around",
   },
   stat: { alignItems: "center", flex: 1 },
   statValue: {
     fontFamily: "Poppins_800ExtraBold",
-    fontSize: 28,
+    fontSize: 26,
     color: "#FFFFFF",
-    lineHeight: 30,
+    lineHeight: 28,
   },
   statLabel: {
     fontFamily: "Inter_700Bold",
     fontSize: 8,
-    color: GOLD,
+    color: "rgba(255,255,255,0.5)",
     letterSpacing: 1.5,
-    marginTop: 3,
+    marginTop: 2,
   },
   statSep: {
     width: 1,
-    height: 36,
-    backgroundColor: GOLD_DIM,
+    height: 32,
+    backgroundColor: "rgba(255,255,255,0.12)",
   },
 
   /* Skills */
   skillsSection: { alignItems: "center", marginTop: 10 },
+  skillsHeading: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 9,
+    color: NEON,
+    letterSpacing: 2,
+    marginBottom: 6,
+    opacity: 0.85,
+  },
   skillsRow: { flexDirection: "row", gap: 6, flexWrap: "wrap", justifyContent: "center" },
   skillChip: {
     borderWidth: 1,
@@ -384,16 +386,16 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 3,
-    backgroundColor: "rgba(255,255,255,0.04)",
+    backgroundColor: "rgba(255,255,255,0.05)",
   },
   skillChipText: {
     fontFamily: "Inter_600SemiBold",
     fontSize: 10,
-    color: "rgba(255,255,255,0.75)",
+    color: "rgba(255,255,255,0.80)",
   },
 
   /* Footer */
-  footer: { position: "absolute", bottom: 14, alignItems: "center", width: "100%" },
+  footer: { position: "absolute", bottom: 12, alignItems: "center", width: "100%" },
   footerText: {
     fontFamily: "Inter_400Regular",
     fontSize: 9,
