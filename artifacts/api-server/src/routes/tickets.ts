@@ -606,6 +606,19 @@ router.post("/payment-intent", requireAuth, async (req: any, res) => {
   let resolvedTicketTypeId: number | null = null;
   let resolvedTicketTypeName: string | null = null;
 
+  // Fallback: if no local price but there is a Stripe price ID, fetch the amount from Stripe
+  if (baseAmountPence === 0 && !ticketTypeId && event.stripePriceId) {
+    try {
+      const stripe = await getUncachableStripeClient();
+      const stripePrice = await stripe.prices.retrieve(event.stripePriceId);
+      if (stripePrice.unit_amount && stripePrice.unit_amount > 0) {
+        baseAmountPence = stripePrice.unit_amount;
+      }
+    } catch {
+      // If Stripe price fetch fails, leave baseAmountPence as 0 (will be treated as free)
+    }
+  }
+
   if (ticketTypeId) {
     const [tt] = await db.select().from(ticketTypesTable).where(eq(ticketTypesTable.id, Number(ticketTypeId))).limit(1);
     if (!tt || tt.eventId !== eventId) { res.status(400).json({ error: "Invalid ticket type" }); return; }
