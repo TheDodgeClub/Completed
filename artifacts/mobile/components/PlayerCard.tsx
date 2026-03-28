@@ -1,5 +1,5 @@
 import React, { forwardRef } from "react";
-import { View, Text, Image, StyleSheet } from "react-native";
+import { View, Text, Image, StyleSheet, Platform } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
 const CARD_W = 340;
@@ -37,110 +37,112 @@ const PlayerCard = forwardRef<View, Props>(function PlayerCard(
   const initial = name.charAt(0).toUpperCase();
 
   return (
-    <View ref={ref} style={styles.outerGlow}>
-      <View style={styles.wrapper}>
-        <LinearGradient
-          colors={["#071E0F", "#031008", "#000000"]}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-          style={styles.card}
-        >
-          {/* Neon border overlay */}
-          <View style={styles.neonBorder} pointerEvents="none" />
+    <View
+      ref={ref}
+      style={styles.wrapper}
+      renderToHardwareTextureAndroid
+      shouldRasterizeIOS
+    >
+      <LinearGradient
+        colors={["#071E0F", "#031008", "#000000"]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={styles.card}
+      >
+        {/* Neon border overlay */}
+        <View style={styles.neonBorder} />
 
-          {/* Corner accent lines — top-left */}
-          <View style={[styles.cornerAccent, styles.cornerTL]} />
-          <View style={[styles.cornerAccentH, styles.cornerTLH]} />
-          {/* Corner accent lines — top-right */}
-          <View style={[styles.cornerAccent, styles.cornerTR]} />
-          <View style={[styles.cornerAccentH, styles.cornerTRH]} />
-          {/* Corner accent lines — bottom-left */}
-          <View style={[styles.cornerAccent, styles.cornerBL]} />
-          <View style={[styles.cornerAccentH, styles.cornerBLH]} />
-          {/* Corner accent lines — bottom-right */}
-          <View style={[styles.cornerAccent, styles.cornerBR]} />
-          <View style={[styles.cornerAccentH, styles.cornerBRH]} />
+        {/* Corner bracket accents */}
+        <View style={[styles.cornerV, styles.cTL]} />
+        <View style={[styles.cornerH, styles.cTLH]} />
+        <View style={[styles.cornerV, styles.cTR]} />
+        <View style={[styles.cornerH, styles.cTRH]} />
+        <View style={[styles.cornerV, styles.cBL]} />
+        <View style={[styles.cornerH, styles.cBLH]} />
+        <View style={[styles.cornerV, styles.cBR]} />
+        <View style={[styles.cornerH, styles.cBRH]} />
 
-          {/* Top row: logo | spacer | LV pill */}
-          <View style={styles.topRow}>
-            <Image
-              source={require("@/assets/images/tdc-logo.png")}
-              style={styles.logo}
-              resizeMode="contain"
-              tintColor="#FFFFFF"
-            />
-            <View style={styles.levelPill}>
-              <Text style={styles.levelNum}>{level}</Text>
-              <Text style={styles.levelLabel}>LV</Text>
-            </View>
+        {/* Top row: logo | spacer | LV pill */}
+        <View style={styles.topRow}>
+          <Image
+            source={require("@/assets/images/tdc-logo.png")}
+            style={styles.logo}
+            resizeMode="contain"
+            tintColor="#FFFFFF"
+          />
+          <View style={styles.levelPill}>
+            <Text style={styles.levelNum}>{level}</Text>
+            <Text style={styles.levelLabel}>LV</Text>
           </View>
+        </View>
 
-          {/* Avatar area with glow behind it */}
-          <View style={styles.avatarArea}>
-            {/* Radial glow disc behind avatar */}
-            <View style={styles.glowDisc} />
-            {/* Avatar ring */}
-            <View style={styles.avatarRing}>
-              {avatarUrl ? (
-                <Image source={{ uri: avatarUrl }} style={styles.avatar} />
-              ) : (
-                <View style={styles.avatarFallback}>
-                  <Text style={styles.avatarInitial}>{initial}</Text>
-                </View>
-              )}
-            </View>
-          </View>
-
-          {/* Name banner */}
-          <View style={styles.nameBanner}>
-            <Text style={styles.playerName} numberOfLines={1}>{name.toUpperCase()}</Text>
-            {username ? (
-              <Text style={styles.playerUsername}>@{username}</Text>
-            ) : null}
-          </View>
-
-          {/* Tier + XP row */}
-          <View style={styles.tierXpRow}>
-            <View style={styles.tierChip}>
-              <Text style={styles.tierText}>{tierName.toUpperCase()}</Text>
-            </View>
-            <View style={styles.xpChip}>
-              <Text style={styles.xpText}>{xp.toLocaleString()} XP</Text>
-            </View>
-          </View>
-
-          {/* Stats row */}
-          <View style={styles.statsBand}>
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>{medalsEarned}</Text>
-              <Text style={styles.statLabel}>MEDALS</Text>
-            </View>
-            <View style={styles.statSep} />
-            <View style={styles.stat}>
-              <Text style={styles.statValue}>{ringsEarned}</Text>
-              <Text style={styles.statLabel}>RINGS</Text>
-            </View>
-          </View>
-
-          {/* Skills */}
-          {skillList.length > 0 && (
-            <View style={styles.skillsSection}>
-              <View style={styles.skillsRow}>
-                {skillList.map(skill => (
-                  <View key={skill} style={styles.skillChip}>
-                    <Text style={styles.skillChipText}>{skill}</Text>
-                  </View>
-                ))}
+        {/* Avatar area */}
+        <View style={styles.avatarArea}>
+          {/* Glow rings — cheaper than boxShadow */}
+          <View style={styles.glowRing3} />
+          <View style={styles.glowRing2} />
+          <View style={styles.glowRing1} />
+          {/* Avatar */}
+          <View style={styles.avatarRing}>
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+            ) : (
+              <View style={styles.avatarFallback}>
+                <Text style={styles.avatarInitial}>{initial}</Text>
               </View>
-            </View>
-          )}
-
-          {/* Footer */}
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>thedodgeclub.co.uk</Text>
+            )}
           </View>
-        </LinearGradient>
-      </View>
+        </View>
+
+        {/* Name banner */}
+        <View style={styles.nameBanner}>
+          <Text style={styles.playerName} numberOfLines={1}>{name.toUpperCase()}</Text>
+          {username ? (
+            <Text style={styles.playerUsername}>@{username}</Text>
+          ) : null}
+        </View>
+
+        {/* Tier + XP row */}
+        <View style={styles.tierXpRow}>
+          <View style={styles.tierChip}>
+            <Text style={styles.tierText}>{tierName.toUpperCase()}</Text>
+          </View>
+          <View style={styles.xpChip}>
+            <Text style={styles.xpText}>{xp.toLocaleString()} XP</Text>
+          </View>
+        </View>
+
+        {/* Stats row */}
+        <View style={styles.statsBand}>
+          <View style={styles.stat}>
+            <Text style={styles.statValue}>{medalsEarned}</Text>
+            <Text style={styles.statLabel}>MEDALS</Text>
+          </View>
+          <View style={styles.statSep} />
+          <View style={styles.stat}>
+            <Text style={styles.statValue}>{ringsEarned}</Text>
+            <Text style={styles.statLabel}>RINGS</Text>
+          </View>
+        </View>
+
+        {/* Skills */}
+        {skillList.length > 0 && (
+          <View style={styles.skillsSection}>
+            <View style={styles.skillsRow}>
+              {skillList.map(skill => (
+                <View key={skill} style={styles.skillChip}>
+                  <Text style={styles.skillChipText}>{skill}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>thedodgeclub.co.uk</Text>
+        </View>
+      </LinearGradient>
     </View>
   );
 });
@@ -148,25 +150,20 @@ const PlayerCard = forwardRef<View, Props>(function PlayerCard(
 export default PlayerCard;
 
 const styles = StyleSheet.create({
-  outerGlow: {
-    width: CARD_W,
-    height: CARD_H,
-    borderRadius: 20,
-    shadowColor: NEON,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.7,
-    shadowRadius: 28,
-    elevation: 20,
-  },
   wrapper: {
     width: CARD_W,
     height: CARD_H,
     borderRadius: 20,
     overflow: "hidden",
-    shadowColor: GOLD,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
+    ...Platform.select({
+      ios: {
+        shadowColor: NEON,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.55,
+        shadowRadius: 20,
+      },
+      android: { elevation: 16 },
+    }),
   },
   card: {
     flex: 1,
@@ -183,31 +180,20 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 2,
     borderColor: NEON_DIM,
+    pointerEvents: "none",
   } as any,
 
-  /* Corner accent brackets */
-  cornerAccent: {
-    position: "absolute",
-    width: 2,
-    height: 22,
-    backgroundColor: NEON,
-    opacity: 0.9,
-  } as any,
-  cornerAccentH: {
-    position: "absolute",
-    height: 2,
-    width: 22,
-    backgroundColor: NEON,
-    opacity: 0.9,
-  } as any,
-  cornerTL:  { top: 10, left: 10 },
-  cornerTLH: { top: 10, left: 10 },
-  cornerTR:  { top: 10, right: 10 },
-  cornerTRH: { top: 10, right: 10 },
-  cornerBL:  { bottom: 10, left: 10 },
-  cornerBLH: { bottom: 10, left: 10 },
-  cornerBR:  { bottom: 10, right: 10 },
-  cornerBRH: { bottom: 10, right: 10 },
+  /* Corner brackets */
+  cornerV: { position: "absolute", width: 2, height: 20, backgroundColor: NEON, opacity: 0.85 } as any,
+  cornerH: { position: "absolute", height: 2, width: 20, backgroundColor: NEON, opacity: 0.85 } as any,
+  cTL:  { top: 10, left: 10 },
+  cTLH: { top: 10, left: 10 },
+  cTR:  { top: 10, right: 10 },
+  cTRH: { top: 10, right: 10 },
+  cBL:  { bottom: 10, left: 10 },
+  cBLH: { bottom: 10, left: 10 },
+  cBR:  { bottom: 10, right: 10 },
+  cBRH: { bottom: 10, right: 10 },
 
   /* Top row */
   topRow: {
@@ -241,27 +227,35 @@ const styles = StyleSheet.create({
     lineHeight: 9,
   },
 
-  /* Avatar area */
+  /* Avatar area — glow via translucent rings, no expensive shadow */
   avatarArea: {
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 0,
-    position: "relative",
     width: 200,
     height: 200,
+    position: "relative",
   },
-  glowDisc: {
+  glowRing3: {
     position: "absolute",
     width: 200,
     height: 200,
     borderRadius: 100,
-    backgroundColor: "transparent",
-    shadowColor: "#39FF14",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
-    shadowRadius: 40,
-    elevation: 0,
-  },
+    backgroundColor: "rgba(57,255,20,0.06)",
+  } as any,
+  glowRing2: {
+    position: "absolute",
+    width: 196,
+    height: 196,
+    borderRadius: 98,
+    backgroundColor: "rgba(57,255,20,0.08)",
+  } as any,
+  glowRing1: {
+    position: "absolute",
+    width: 188,
+    height: 188,
+    borderRadius: 94,
+    backgroundColor: "rgba(57,255,20,0.10)",
+  } as any,
   avatarRing: {
     width: 180,
     height: 180,
@@ -270,11 +264,6 @@ const styles = StyleSheet.create({
     borderColor: GOLD,
     overflow: "hidden",
     backgroundColor: "#0B2E17",
-    shadowColor: GOLD,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 12,
-    elevation: 8,
   },
   avatar: { width: "100%", height: "100%" },
   avatarFallback: {
