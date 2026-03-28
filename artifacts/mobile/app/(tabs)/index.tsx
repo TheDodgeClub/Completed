@@ -509,6 +509,21 @@ export default function HomeScreen() {
             ) : null}
           </View>
 
+          {/* Legal footer */}
+          <View style={styles.legalFooter}>
+            <Pressable onPress={() => router.push("/legal/privacy")} style={styles.legalLink}>
+              <Text style={styles.legalLinkText}>Privacy Policy</Text>
+            </Pressable>
+            <Text style={styles.legalSep}>·</Text>
+            <Pressable onPress={() => router.push("/legal/terms")} style={styles.legalLink}>
+              <Text style={styles.legalLinkText}>Terms of Use</Text>
+            </Pressable>
+            <Text style={styles.legalSep}>·</Text>
+            <Pressable onPress={() => router.push("/legal/guidelines")} style={styles.legalLink}>
+              <Text style={styles.legalLinkText}>Community Guidelines</Text>
+            </Pressable>
+          </View>
+
         </View>
       </ScrollView>
 
@@ -925,6 +940,34 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       fontFamily: "Inter_400Regular",
       fontSize: 14,
       color: Colors.textMuted,
+    },
+
+    /* ── Legal Footer ── */
+    legalFooter: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: "center",
+      alignItems: "center",
+      paddingHorizontal: 24,
+      paddingTop: 24,
+      paddingBottom: 32,
+      gap: 4,
+    },
+    legalLink: {
+      paddingVertical: 4,
+      paddingHorizontal: 2,
+    },
+    legalLinkText: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 12,
+      color: Colors.textMuted,
+      textDecorationLine: "underline",
+    },
+    legalSep: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 12,
+      color: Colors.textMuted,
+      opacity: 0.4,
     },
 
     /* ── Featured Video Card ── */
