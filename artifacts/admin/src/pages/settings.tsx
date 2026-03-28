@@ -6,11 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Video, Mail, FileText, Shield, CheckCircle2, Loader2, Settings2, Globe, Image as ImageIcon } from "lucide-react";
-import { Link } from "wouter";
+import { Mail, Shield, CheckCircle2, Loader2, Settings2, Globe } from "lucide-react";
 import { fetchApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import { ImageUploader } from "@/components/image-uploader";
 
 const DEFAULT_FROM_NAME = "The Dodge Club";
 const DEFAULT_FROM_EMAIL = "info@thedodgeclub.co.uk";
@@ -97,9 +95,6 @@ export default function SettingsPage() {
   const [privacyPolicyContent, setPrivacyPolicyContent] = useState("");
   const [termsOfService, setTermsOfService] = useState("");
 
-  const [heroImageUrl, setHeroImageUrl] = useState<string>("");
-  const [heroImageSaving, setHeroImageSaving] = useState(false);
-
   const [guidelinesSaving, setGuidelinesSaving] = useState(false);
   const [privacySaving, setPrivacySaving] = useState(false);
   const [termsSaving, setTermsSaving] = useState(false);
@@ -109,7 +104,6 @@ export default function SettingsPage() {
       const data = await fetchApi<Record<string, string>>("/api/settings/admin");
       setFromName(data.emailFromName ?? DEFAULT_FROM_NAME);
       setFromEmail(data.emailFromAddress ?? DEFAULT_FROM_EMAIL);
-      setHeroImageUrl(data.homeHeroImageUrl ?? "");
       setCommunityGuidelines(data.communityGuidelines ?? "");
       setPrivacyPolicyContent(data.privacyPolicyContent ?? "");
       setTermsOfService(data.termsOfService ?? "");
@@ -137,21 +131,6 @@ export default function SettingsPage() {
       toast({ title: "Save failed", description: err.message, variant: "destructive" });
     } finally {
       setSaving(false);
-    }
-  }
-
-  async function handleHeroImageSave() {
-    setHeroImageSaving(true);
-    try {
-      await fetchApi("/api/settings/admin", {
-        method: "PUT",
-        body: JSON.stringify({ homeHeroImageUrl: heroImageUrl || null }),
-      });
-      toast({ title: "Hero image saved", description: "The home screen background image has been updated." });
-    } catch (err: any) {
-      toast({ title: "Save failed", description: err.message, variant: "destructive" });
-    } finally {
-      setHeroImageSaving(false);
     }
   }
 
@@ -225,62 +204,6 @@ export default function SettingsPage() {
 
         {/* ── General ── */}
         <TabsContent value="general" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <ImageIcon className="w-5 h-5 text-primary" />
-                <CardTitle>Home Screen Hero Image</CardTitle>
-              </div>
-              <CardDescription>
-                Upload a background image for the hero section at the top of the mobile home screen. When set, this replaces the default green gradient. Leave blank to use the gradient.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="flex items-center gap-2 text-muted-foreground text-sm py-6">
-                  <Loader2 className="w-4 h-4 animate-spin" /> Loading…
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <ImageUploader
-                    value={heroImageUrl || undefined}
-                    onChange={(url) => setHeroImageUrl(url)}
-                    label="Hero Background Image"
-                  />
-                  <Button
-                    onClick={handleHeroImageSave}
-                    disabled={heroImageSaving}
-                    className="rounded-xl bg-primary hover:bg-primary/90 text-white gap-2"
-                  >
-                    {heroImageSaving
-                      ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</>
-                      : <><CheckCircle2 className="w-4 h-4" /> Save Hero Image</>}
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Video className="w-5 h-5 text-primary" />
-                <CardTitle>Home Screen Hero Video</CardTitle>
-              </div>
-              <CardDescription>
-                The hero video that plays at the top of the mobile home screen is managed from the{" "}
-                <Link href="/videos" className="text-primary underline underline-offset-4">Videos tab</Link>.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Link href="/videos">
-                <span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline cursor-pointer">
-                  Go to Videos →
-                </span>
-              </Link>
-            </CardContent>
-          </Card>
-
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">

@@ -12,6 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit2, Trash2, Globe, EyeOff, Video as VideoIcon, ExternalLink, Upload, X, Link, Save, Loader2, Camera, Image as ImageIcon, Star } from "lucide-react";
+import { ImageUploader } from "@/components/image-uploader";
 import { useForm } from "react-hook-form";
 import { cn } from "@/lib/utils";
 
@@ -37,50 +38,22 @@ async function uploadToGcs(file: File, uploadURL: string): Promise<void> {
   if (!res.ok) throw new Error("Upload to storage failed");
 }
 
-function HeroVideoSection() {
+function HeroImageSection() {
   const { data: settings, isLoading } = useSettings();
   const { mutate: updateSettings, isPending } = useUpdateSettings();
   const { toast } = useToast();
 
-  const [heroUrl, setHeroUrl] = useState("");
-  const [mode, setMode] = useState<"upload" | "url">("upload");
-  const [isUploading, setIsUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [heroImageUrl, setHeroImageUrl] = useState("");
 
   useEffect(() => {
-    if (settings) setHeroUrl(settings.homeVideoUrl ?? "");
+    if (settings) setHeroImageUrl(settings.homeHeroImageUrl ?? "");
   }, [settings]);
-
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setIsUploading(true);
-    setUploadError(null);
-    setProgress(10);
-    try {
-      const { uploadURL, objectPath } = await requestUploadUrl(file);
-      setProgress(40);
-      await uploadToGcs(file, uploadURL);
-      setProgress(90);
-      const serveUrl = `/api/storage${objectPath}`;
-      setHeroUrl(serveUrl);
-      setProgress(100);
-      toast({ title: "Video uploaded", description: "Click Save to apply it to the home screen." });
-    } catch (err) {
-      setUploadError(err instanceof Error ? err.message : "Upload failed");
-    } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  }
 
   function handleSave() {
     updateSettings(
-      { homeVideoUrl: heroUrl.trim() || null },
+      { homeHeroImageUrl: heroImageUrl.trim() || null },
       {
-        onSuccess: () => toast({ title: "Saved", description: "Home screen hero video updated." }),
+        onSuccess: () => toast({ title: "Saved", description: "Home screen hero image updated." }),
         onError: () => toast({ title: "Error", description: "Failed to save.", variant: "destructive" }),
       }
     );
@@ -92,85 +65,22 @@ function HeroVideoSection() {
     <Card className="border-primary/20 bg-primary/5">
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
-          <VideoIcon className="w-5 h-5 text-primary" />
-          <CardTitle className="text-base">Home Screen Hero Video</CardTitle>
+          <ImageIcon className="w-5 h-5 text-primary" />
+          <CardTitle className="text-base">Home Screen Hero Image</CardTitle>
         </div>
         <CardDescription>
-          This video auto-plays (muted &amp; looped) at the top of the mobile app home screen. Members can tap to unmute.
+          Upload a background image for the hero section at the top of the mobile app home screen. When set, this replaces the default green gradient. Leave blank to use the gradient.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {heroUrl ? (
-          <div className="space-y-2">
-            <div className="relative rounded-xl border border-border/50 bg-black overflow-hidden">
-              <video src={heroUrl} className="w-full h-36 object-cover" muted playsInline />
-              <div className="absolute inset-0 bg-black/50 flex items-center justify-center gap-2 opacity-0 hover:opacity-100 transition-opacity">
-                <Button type="button" size="sm" variant="outline" className="bg-background/80 h-8 text-xs"
-                  onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
-                  <Upload className="w-3 h-3 mr-1" /> Replace
-                </Button>
-                <Button type="button" size="sm" variant="outline"
-                  className="bg-background/80 h-8 text-xs text-destructive border-destructive/50"
-                  onClick={() => setHeroUrl("")}>
-                  <X className="w-3 h-3 mr-1" /> Remove
-                </Button>
-              </div>
-              {isUploading && (
-                <div className="absolute bottom-0 left-0 h-1 bg-primary transition-all duration-300" style={{ width: `${progress}%` }} />
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <div className="flex rounded-xl border border-border/50 overflow-hidden">
-              <button type="button" onClick={() => setMode("upload")}
-                className={cn("flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors border-r border-border/50",
-                  mode === "upload" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground")}>
-                <Upload className="w-3 h-3" /> Upload File
-              </button>
-              <button type="button" onClick={() => setMode("url")}
-                className={cn("flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium transition-colors",
-                  mode === "url" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground")}>
-                <Link className="w-3 h-3" /> Paste URL
-              </button>
-            </div>
-            {mode === "upload" ? (
-              <div>
-                <div onClick={() => !isUploading && fileInputRef.current?.click()}
-                  className={cn("border-2 border-dashed border-border/50 rounded-xl p-6 text-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-colors",
-                    isUploading && "pointer-events-none opacity-70")}>
-                  {isUploading ? (
-                    <>
-                      <Loader2 className="w-6 h-6 mx-auto mb-1.5 text-primary animate-spin" />
-                      <p className="text-xs text-muted-foreground">Uploading… {progress}%</p>
-                      <div className="mt-2 h-1 bg-muted rounded-full overflow-hidden w-32 mx-auto">
-                        <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${progress}%` }} />
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <VideoIcon className="w-6 h-6 mx-auto mb-1.5 text-muted-foreground" />
-                      <p className="text-xs font-medium">Click to upload</p>
-                      <p className="text-xs text-muted-foreground">MP4, MOV, or WebM</p>
-                    </>
-                  )}
-                </div>
-                {uploadError && <p className="text-xs text-destructive mt-1">{uploadError}</p>}
-              </div>
-            ) : (
-              <Input type="url" placeholder="https://example.com/promo.mp4" value={heroUrl}
-                onChange={(e) => setHeroUrl(e.target.value)}
-                className="bg-background border-border/50 rounded-xl text-sm" />
-            )}
-          </div>
-        )}
-
-        <input ref={fileInputRef} type="file" accept="video/mp4,video/mov,video/quicktime,video/webm,video/*"
-          className="hidden" onChange={handleFileChange} />
-
-        <Button onClick={handleSave} disabled={isPending || isUploading} size="sm" className="w-full sm:w-auto">
+      <CardContent className="space-y-4">
+        <ImageUploader
+          value={heroImageUrl || undefined}
+          onChange={(url) => setHeroImageUrl(url)}
+          label="Hero Background Image"
+        />
+        <Button onClick={handleSave} disabled={isPending} size="sm" className="w-full sm:w-auto">
           {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Save className="w-3.5 h-3.5 mr-1.5" />}
-          Save Hero Video
+          Save Hero Image
         </Button>
       </CardContent>
     </Card>
@@ -313,7 +223,7 @@ export default function Videos() {
   const [editingVideo, setEditingVideo] = useState<Video | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<"hero" | "updates" | "featured">("hero");
+  const [activeTab, setActiveTab] = useState<"image" | "updates" | "featured">("image");
 
   const { mutate: publish } = usePublishVideo();
   const { toast } = useToast();
@@ -334,8 +244,8 @@ export default function Videos() {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold text-foreground">Videos</h1>
-          <p className="text-muted-foreground mt-1">Manage video content for the mobile app.</p>
+          <h1 className="text-3xl font-display font-bold text-foreground">Media</h1>
+          <p className="text-muted-foreground mt-1">Manage media content for the mobile app.</p>
         </div>
         {activeTab === "updates" && (
           <Button onClick={() => setIsCreateOpen(true)} className="bg-primary hover:bg-primary/90 text-white rounded-xl shadow-lg shadow-primary/20">
@@ -346,8 +256,8 @@ export default function Videos() {
 
       {/* Tab bar */}
       <div className="flex rounded-xl border border-border/50 overflow-hidden bg-secondary/30 p-1 gap-1">
-        {(["hero", "updates", "featured"] as const).map((tab) => {
-          const labels: Record<typeof tab, string> = { hero: "Hero Video", updates: "Updates Videos", featured: "Featured in Updates" };
+        {(["image", "updates", "featured"] as const).map((tab) => {
+          const labels: Record<typeof tab, string> = { image: "Hero Image", updates: "Updates Videos", featured: "Featured in Updates" };
           return (
             <button
               key={tab}
@@ -366,8 +276,8 @@ export default function Videos() {
         })}
       </div>
 
-      {/* Hero Video tab */}
-      {activeTab === "hero" && <HeroVideoSection />}
+      {/* Hero Image tab */}
+      {activeTab === "image" && <HeroImageSection />}
 
       {/* Updates Videos tab */}
       {activeTab === "updates" && (
