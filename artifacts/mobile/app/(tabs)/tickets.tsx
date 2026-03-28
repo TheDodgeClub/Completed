@@ -138,7 +138,7 @@ export default function TicketsScreen() {
         // If server already issued a free ticket (after discount)
         if (result.free && result.ticket) {
           await refetchTickets();
-          setSelectedTicket(result.ticket as any);
+          setSelectedTicket(result.ticket);
           setActiveTab("my");
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           return;
@@ -169,7 +169,7 @@ export default function TicketsScreen() {
         // Payment succeeded — confirm ticket on server
         const { ticket } = await confirmPaymentIntentTicket(result.paymentIntentId);
         await refetchTickets();
-        setSelectedTicket(ticket as any);
+        setSelectedTicket(ticket);
         setActiveTab("my");
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
