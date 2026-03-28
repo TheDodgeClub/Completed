@@ -628,7 +628,7 @@ router.post("/:id/report", async (req, res) => {
   res.json({ ok: true });
 });
 
-/* POST /api/users/:id/block — block a user */
+/* POST /api/users/:id/block — block a user (idempotent) */
 router.post("/:id/block", async (req, res) => {
   const userId = req.session?.userId;
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
@@ -636,11 +636,7 @@ router.post("/:id/block", async (req, res) => {
   const targetId = Number(req.params.id);
   if (targetId === userId) { res.status(400).json({ error: "Cannot block yourself" }); return; }
 
-  try {
-    await db.insert(userBlocksTable).values({ blockerId: userId, blockedId: targetId });
-  } catch {
-    // already blocked — ignore
-  }
+  await db.insert(userBlocksTable).values({ blockerId: userId, blockedId: targetId }).onConflictDoNothing();
   res.json({ ok: true });
 });
 

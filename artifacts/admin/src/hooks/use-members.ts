@@ -171,7 +171,10 @@ export function useBanMember() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => fetchApi(`/api/admin/members/${id}/ban`, { method: "POST" }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["members"] }); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["members"] });
+      queryClient.invalidateQueries({ queryKey: ["user-reports"] });
+    },
   });
 }
 
@@ -179,7 +182,10 @@ export function useUnbanMember() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => fetchApi(`/api/admin/members/${id}/unban`, { method: "POST" }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["members"] }); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["members"] });
+      queryClient.invalidateQueries({ queryKey: ["user-reports"] });
+    },
   });
 }
 

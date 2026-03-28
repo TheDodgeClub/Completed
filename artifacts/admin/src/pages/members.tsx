@@ -497,10 +497,13 @@ function PlayerDetailSheet({ member, onClose, toast }: { member: AdminMember | n
                     size="sm"
                     className="w-full rounded-xl bg-yellow-600 hover:bg-yellow-700 text-white gap-2"
                     disabled={warning}
-                    onClick={() => warnMember({ id: member.id, reason: warnReason || undefined }, {
-                      onSuccess: () => { toast({ title: "Warning email sent" }); setWarnReason(""); },
-                      onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
-                    })}
+                    onClick={() => {
+                      if (!window.confirm(`Send a warning email to ${member.name}?`)) return;
+                      warnMember({ id: member.id, reason: warnReason || undefined }, {
+                        onSuccess: () => { toast({ title: "Warning email sent" }); setWarnReason(""); },
+                        onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+                      });
+                    }}
                   >
                     {warning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
                     Send Warning
@@ -519,10 +522,13 @@ function PlayerDetailSheet({ member, onClose, toast }: { member: AdminMember | n
                       <Button
                         size="sm" className="w-full rounded-xl bg-green-700 hover:bg-green-800 text-white gap-2"
                         disabled={unbanning}
-                        onClick={() => unbanMember(member.id, {
-                          onSuccess: () => toast({ title: `${member.name} unsuspended` }),
-                          onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
-                        })}
+                        onClick={() => {
+                          if (!window.confirm(`Lift suspension for ${member.name}? They will be able to log in again.`)) return;
+                          unbanMember(member.id, {
+                            onSuccess: () => toast({ title: `${member.name} unsuspended` }),
+                            onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+                          });
+                        }}
                       >
                         {unbanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                         Lift Suspension
@@ -539,10 +545,13 @@ function PlayerDetailSheet({ member, onClose, toast }: { member: AdminMember | n
                         size="sm" variant="outline"
                         className="w-full rounded-xl border-orange-500/40 text-orange-500 hover:bg-orange-500 hover:text-white gap-2"
                         disabled={banning}
-                        onClick={() => banMember(member.id, {
-                          onSuccess: () => toast({ title: `${member.name} suspended` }),
-                          onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
-                        })}
+                        onClick={() => {
+                          if (!window.confirm(`Suspend ${member.name}? They will be unable to log in until the suspension is lifted.`)) return;
+                          banMember(member.id, {
+                            onSuccess: () => toast({ title: `${member.name} suspended` }),
+                            onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+                          });
+                        }}
                       >
                         {banning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ban className="w-4 h-4" />}
                         Suspend Account
@@ -636,10 +645,13 @@ function UserReportsTab({ toast }: { toast: any }) {
                     size="sm" variant="outline"
                     className="gap-1.5 text-xs border-yellow-500/40 text-yellow-500 hover:bg-yellow-500 hover:text-white"
                     disabled={warning}
-                    onClick={() => warnMember({ id: group.userId }, {
-                      onSuccess: () => toast({ title: "Warning email sent" }),
-                      onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
-                    })}
+                    onClick={() => {
+                      if (!window.confirm(`Send a warning email to ${group.name}?`)) return;
+                      warnMember({ id: group.userId }, {
+                        onSuccess: () => toast({ title: "Warning email sent" }),
+                        onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+                      });
+                    }}
                   >
                     {warning ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
                     Send Warning
@@ -650,10 +662,13 @@ function UserReportsTab({ toast }: { toast: any }) {
                       size="sm" variant="outline"
                       className="gap-1.5 text-xs border-green-500/40 text-green-500 hover:bg-green-500 hover:text-white"
                       disabled={unbanning}
-                      onClick={() => unbanMember(group.userId, {
-                        onSuccess: () => toast({ title: `${group.name} unsuspended` }),
-                        onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
-                      })}
+                      onClick={() => {
+                        if (!window.confirm(`Lift suspension for ${group.name}? They will be able to log in again.`)) return;
+                        unbanMember(group.userId, {
+                          onSuccess: () => toast({ title: `${group.name} unsuspended` }),
+                          onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+                        });
+                      }}
                     >
                       {unbanning ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
                       Lift Suspension
@@ -663,10 +678,13 @@ function UserReportsTab({ toast }: { toast: any }) {
                       size="sm" variant="outline"
                       className="gap-1.5 text-xs border-red-500/40 text-red-500 hover:bg-red-500 hover:text-white"
                       disabled={banning}
-                      onClick={() => banMember(group.userId, {
-                        onSuccess: () => toast({ title: `${group.name} suspended` }),
-                        onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
-                      })}
+                      onClick={() => {
+                        if (!window.confirm(`Suspend ${group.name}? They will be unable to log in until the suspension is lifted.`)) return;
+                        banMember(group.userId, {
+                          onSuccess: () => toast({ title: `${group.name} suspended` }),
+                          onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+                        });
+                      }}
                     >
                       {banning ? <Loader2 className="w-3 h-3 animate-spin" /> : <Ban className="w-3.5 h-3.5" />}
                       Suspend
