@@ -406,9 +406,9 @@ const styles = StyleSheet.create({
   /* Footer */
   footer: { position: "absolute", bottom: 12, alignItems: "center", width: "100%" },
   footerText: {
-    fontFamily: "Inter_400Regular",
+    fontFamily: "Inter_700Bold",
     fontSize: 9,
-    color: "rgba(255,255,255,0.55)",
+    color: "rgba(255,255,255,0.75)",
     letterSpacing: 1.2,
   },
 });
