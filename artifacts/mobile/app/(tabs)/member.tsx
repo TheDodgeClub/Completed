@@ -784,19 +784,20 @@ export default function MemberScreen() {
         <Text style={styles.memberName}>{user.name}</Text>
         {user.username && <Text style={styles.memberUsername}>@{user.username}</Text>}
 
-        <View style={styles.badgeRow}>
-          {user.accountType === "supporter" ? (
+        {user.accountType === "supporter" && (
+          <View style={styles.badgeRow}>
             <View style={styles.supporterBadge}>
               <Feather name="heart" size={12} color="#fff" />
               <Text style={styles.supporterBadgeText}>SUPPORTER</Text>
             </View>
-          ) : (
-            <>
-              <LevelBadge level={level} />
-              <Text style={styles.levelNameText}>{levelName}</Text>
-            </>
-          )}
-        </View>
+          </View>
+        )}
+
+        {user.bio && <Text style={styles.memberBio}>{user.bio}</Text>}
+
+        <Text style={styles.memberSince}>
+          Member since {new Date(user.memberSince).toLocaleDateString("en-GB", { month: "long", year: "numeric" })}
+        </Text>
 
         {user.accountType !== "supporter" && user.skills && (() => {
           const skills = user.skills!.split(",").filter(Boolean).map(s => s.trim()).slice(0, 3);
@@ -813,12 +814,6 @@ export default function MemberScreen() {
             </View>
           ) : null;
         })()}
-
-        {user.bio && <Text style={styles.memberBio}>{user.bio}</Text>}
-
-        <Text style={styles.memberSince}>
-          Member since {new Date(user.memberSince).toLocaleDateString("en-GB", { month: "long", year: "numeric" })}
-        </Text>
 
         {/* XP Progress — players / supporter-specific tier bar */}
         {user.accountType === "supporter" ? (() => {
@@ -857,6 +852,9 @@ export default function MemberScreen() {
               <Text style={styles.xpLabel}>{xp.toLocaleString()} XP</Text>
             </View>
             <View style={styles.xpLevelNameRow}>
+              <View style={styles.xpLevelBadgeInline}>
+                <Text style={styles.xpLevelBadgeInlineText}>LV {level}</Text>
+              </View>
               <Text style={styles.xpLevelNameDisplay}>{levelName}</Text>
             </View>
             <View style={styles.xpTrack}>
@@ -1517,7 +1515,14 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     xpLabelRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 2 },
     xpProgressLabel: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 0.7 },
     xpLabel: { fontFamily: "Inter_700Bold", fontSize: 12, color: "rgba(255,255,255,0.9)" },
-    xpLevelNameRow: { marginBottom: 6 },
+    xpLevelNameRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 },
+    xpLevelBadgeInline: {
+      backgroundColor: "#FFD700",
+      borderRadius: 6,
+      paddingHorizontal: 7,
+      paddingVertical: 2,
+    },
+    xpLevelBadgeInlineText: { fontFamily: "Inter_700Bold", fontSize: 11, color: "#000" },
     xpLevelNameDisplay: { fontFamily: "Poppins_800ExtraBold", fontSize: 14, color: "#FFC107", lineHeight: 20 },
     xpTrack: { height: 6, backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 3, overflow: "hidden" },
     xpFill: { height: "100%", backgroundColor: Colors.accent, borderRadius: 3 },
