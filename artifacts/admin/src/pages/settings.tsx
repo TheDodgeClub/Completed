@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Mail, Shield, CheckCircle2, Loader2, Settings2, Globe } from "lucide-react";
+import { Mail, FileText, Shield, CheckCircle2, Loader2, Settings2, Globe } from "lucide-react";
 import { fetchApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 

@@ -61,6 +61,7 @@ router.get("/", async (_req, res) => {
     }
   }
 
+  res.set("Cache-Control", "no-store");
   res.json({ homeVideoUrl, homeHeroImageUrl, clubName, clubTagline, featuredVideo, communityGuidelines, privacyPolicyContent: privacyPolicy, termsOfService });
 });
 

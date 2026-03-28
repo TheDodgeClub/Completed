@@ -218,11 +218,12 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       refreshUser();
+      refetchSettings();
       if (user?.accountType === "supporter") {
         supporterBarAnim.setValue(0);
         Animated.timing(supporterBarAnim, { toValue: supporterTargetRef.current, duration: 1200, useNativeDriver: false }).start();
       }
-    }, [supporterBarAnim, refreshUser, user?.accountType])
+    }, [supporterBarAnim, refreshUser, refetchSettings, user?.accountType])
   );
 
   const nextEvent = events?.[0] ?? null;
