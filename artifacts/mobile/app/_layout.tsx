@@ -68,7 +68,7 @@ export default function RootLayout() {
       <View style={{ flex: 1, backgroundColor: "#000000", alignItems: "center", justifyContent: "center" }}>
         <Image
           source={require("@/assets/images/tdc-logo.png")}
-          style={{ width: 160, height: 160, tintColor: "#0B5E2F" }}
+          style={{ width: 160, height: 160, tintColor: "#FFFFFF" }}
           resizeMode="contain"
         />
       </View>
