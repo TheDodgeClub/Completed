@@ -782,14 +782,6 @@ function UnifiedCheckoutSheet({
   const isFreeEvent = !hasActiveTypes && (event.ticketPrice === 0 || (!event.stripePriceId && event.ticketPrice == null));
 
   const nonSoldOutTypes = activeTypes.filter(t => !t.isSoldOut);
-  const stepperMax = (() => {
-    if (!hasActiveTypes) return 10;
-    if (nonSoldOutTypes.length === 0) return 1;
-    return nonSoldOutTypes.reduce<number>((min, t) => {
-      const cap = t.maxPerOrder !== null ? t.maxPerOrder : (t.available !== null ? t.available : 10);
-      return Math.min(min, cap);
-    }, 10);
-  })();
 
   const [quantity, setQuantity] = useState(1);
   const [selectedTypeId, setSelectedTypeId] = useState<number | null>(
@@ -801,6 +793,19 @@ function UnifiedCheckoutSheet({
   const [codeError, setCodeError] = useState("");
 
   const selectedType = activeTypes.find(t => t.id === selectedTypeId) ?? null;
+
+  const stepperMax = (() => {
+    if (!hasActiveTypes) return 10;
+    if (selectedType && !selectedType.isSoldOut) {
+      const cap = selectedType.maxPerOrder !== null ? selectedType.maxPerOrder : (selectedType.available !== null ? selectedType.available : 10);
+      return Math.max(1, cap);
+    }
+    if (nonSoldOutTypes.length === 0) return 1;
+    return nonSoldOutTypes.reduce<number>((min, t) => {
+      const cap = t.maxPerOrder !== null ? t.maxPerOrder : (t.available !== null ? t.available : 10);
+      return Math.min(min, cap);
+    }, 10);
+  })();
   const discountedPrice = appliedCode && selectedType
     ? (appliedCode.discountType === "percent"
         ? Math.max(0, Math.round(selectedType.price * (1 - appliedCode.discountAmount / 100)))
@@ -1138,6 +1143,8 @@ function UnifiedCheckoutSheet({
                         onPress={() => {
                           if (!type.isSoldOut) {
                             setSelectedTypeId(type.id);
+                            const newCap = type.maxPerOrder !== null ? type.maxPerOrder : (type.available !== null ? type.available : 10);
+                            setQuantity(q => Math.min(q, Math.max(1, newCap)));
                             setAppliedCode(null);
                             setCodeError("");
                             setDiscountInput("");
