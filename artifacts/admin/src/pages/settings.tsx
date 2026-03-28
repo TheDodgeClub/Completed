@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Mail, FileText, Shield, CheckCircle2, Loader2, Settings2, Globe } from "lucide-react";
+import { Link } from "wouter";
 import { fetchApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
