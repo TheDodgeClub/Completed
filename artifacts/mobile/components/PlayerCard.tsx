@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     paddingHorizontal: 4,
   },
-  logo: { width: 82, height: 82 },
+  logo: { width: CARD_W - 72, height: 52 },
   officialLabel: {
     fontFamily: "Inter_700Bold",
     fontSize: 8,
