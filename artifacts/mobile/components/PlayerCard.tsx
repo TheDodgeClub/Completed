@@ -61,14 +61,15 @@ const PlayerCard = forwardRef<View, Props>(function PlayerCard(
         <View style={[styles.cornerV, styles.cBR]} />
         <View style={[styles.cornerH, styles.cBRH]} />
 
-        {/* Top row: logo | spacer | LV pill */}
-        <View style={styles.topRow}>
+        {/* Top section: centred logo + subtitle, LV pill pinned top-right */}
+        <View style={styles.topSection}>
           <Image
             source={require("@/assets/images/tdc-logo.png")}
             style={styles.logo}
             resizeMode="contain"
             tintColor="#FFFFFF"
           />
+          <Text style={styles.officialLabel}>OFFICIAL PLAYER CARD</Text>
           <View style={styles.levelPill}>
             <Text style={styles.levelNum}>{level}</Text>
             <Text style={styles.levelLabel}>LV</Text>
@@ -190,24 +191,33 @@ const styles = StyleSheet.create({
   cBR:  { bottom: 10, right: 10 },
   cBRH: { bottom: 10, right: 10 },
 
-  /* Top row — logo bigger and more prominent */
-  topRow: {
-    flexDirection: "row",
+  /* Top section — logo centred, LV pill pinned absolute top-right */
+  topSection: {
     alignItems: "center",
-    justifyContent: "space-between",
     width: "100%",
     marginBottom: 8,
     paddingHorizontal: 4,
   },
-  logo: { width: 62, height: 62 },
+  logo: { width: 82, height: 82 },
+  officialLabel: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 8,
+    color: "rgba(255,215,0,0.55)",
+    letterSpacing: 2.5,
+    marginTop: 3,
+    marginBottom: 2,
+  },
   levelPill: {
+    position: "absolute",
+    top: 0,
+    right: 4,
     alignItems: "center",
     backgroundColor: GOLD,
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 4,
     minWidth: 48,
-  },
+  } as any,
   levelNum: {
     fontFamily: "Poppins_800ExtraBold",
     fontSize: 20,
