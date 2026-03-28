@@ -65,10 +65,10 @@ export default function RootLayout() {
 
   if (!fontsLoaded && !fontError) {
     return (
-      <View style={{ flex: 1, backgroundColor: "#0B5E2F", alignItems: "center", justifyContent: "center" }}>
+      <View style={{ flex: 1, backgroundColor: "#000000", alignItems: "center", justifyContent: "center" }}>
         <Image
           source={require("@/assets/images/tdc-logo.png")}
-          style={{ width: 160, height: 160 }}
+          style={{ width: 160, height: 160, tintColor: "#0B5E2F" }}
           resizeMode="contain"
         />
       </View>

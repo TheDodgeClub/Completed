@@ -159,7 +159,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     logoImg: {
       width: 180,
       height: 54,
-      tintColor: "#0B5E2F",
+      tintColor: "#000000",
     },
     title: {
       fontFamily: "Poppins_800ExtraBold",

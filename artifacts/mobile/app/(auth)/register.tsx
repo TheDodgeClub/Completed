@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as WebBrowser from "expo-web-browser";
-import { useColors } from "@/context/ThemeContext";
+import { useColors, useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 
 type AccountType = "player" | "supporter";
@@ -55,6 +55,7 @@ const ROLE_OPTIONS: {
 export default function RegisterScreen() {
   const insets = useSafeAreaInsets();
   const Colors = useColors();
+  const { isDark, toggleTheme } = useTheme();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const { register } = useAuth();
 
@@ -107,14 +108,21 @@ export default function RegisterScreen() {
     }
   };
 
+  const handleThemeSelect = (dark: boolean) => {
+    if (dark !== isDark) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      toggleTheme();
+    }
+  };
+
   if (step === 2) {
     return (
       <KeyboardAvoidingView
-        style={{ flex: 1, backgroundColor: "#FFFFFF" }}
+        style={{ flex: 1, backgroundColor: Colors.background }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
-          contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + 32 }]}
+          contentContainerStyle={[styles.container2, { paddingBottom: insets.bottom + 32 }]}
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.logoRow}>
@@ -154,7 +162,7 @@ export default function RegisterScreen() {
                   <View style={styles.benefitsList}>
                     {opt.benefits.map(b => (
                       <View key={b} style={styles.benefitRow}>
-                        <Feather name="check-circle" size={12} color={selected ? Colors.primary : "#AAAAAA"} style={{ marginTop: 1 }} />
+                        <Feather name="check-circle" size={12} color={selected ? Colors.primary : Colors.textMuted} style={{ marginTop: 1 }} />
                         <Text style={[styles.benefitText, selected && styles.benefitTextSelected]}>{b}</Text>
                       </View>
                     ))}
@@ -169,14 +177,45 @@ export default function RegisterScreen() {
             })}
           </View>
 
+          <View style={styles.themeSection}>
+            <Text style={styles.themeSectionLabel}>Choose your look</Text>
+            <View style={styles.themeToggleRow}>
+              <Pressable
+                style={[styles.themeOption, !isDark && styles.themeOptionSelected]}
+                onPress={() => handleThemeSelect(false)}
+              >
+                <Feather name="sun" size={20} color={!isDark ? Colors.primary : Colors.textSecondary} />
+                <Text style={[styles.themeOptionText, !isDark && styles.themeOptionTextSelected]}>Light</Text>
+                {!isDark && (
+                  <View style={styles.themeCheck}>
+                    <Feather name="check" size={11} color="#fff" />
+                  </View>
+                )}
+              </Pressable>
+
+              <Pressable
+                style={[styles.themeOption, isDark && styles.themeOptionSelected]}
+                onPress={() => handleThemeSelect(true)}
+              >
+                <Feather name="moon" size={20} color={isDark ? Colors.primary : Colors.textSecondary} />
+                <Text style={[styles.themeOptionText, isDark && styles.themeOptionTextSelected]}>Dark</Text>
+                {isDark && (
+                  <View style={styles.themeCheck}>
+                    <Feather name="check" size={11} color="#fff" />
+                  </View>
+                )}
+              </Pressable>
+            </View>
+          </View>
+
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Referral Code (optional)</Text>
             <View style={styles.inputWrap}>
-              <Feather name="gift" size={18} color="#999999" style={styles.inputIcon} />
+              <Feather name="gift" size={18} color={Colors.textMuted} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder="e.g. JOHN0042"
-                placeholderTextColor="#999999"
+                placeholderTextColor={Colors.textMuted}
                 value={referralCode}
                 onChangeText={setReferralCode}
                 autoCapitalize="characters"
@@ -230,8 +269,8 @@ export default function RegisterScreen() {
           />
         </View>
 
-        <Text style={styles.title}>Join the Club</Text>
-        <Text style={styles.subtitle}>Create your free account and enter the Member Zone</Text>
+        <Text style={styles.titleDark}>Join the Club</Text>
+        <Text style={styles.subtitleDark}>Create your free account and enter the Member Zone</Text>
 
         <View style={styles.stepIndicator}>
           <View style={[styles.stepDot, styles.stepDotActive]} />
@@ -240,11 +279,11 @@ export default function RegisterScreen() {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Full Name</Text>
-          <View style={styles.inputWrap}>
+          <Text style={styles.labelDark}>Full Name</Text>
+          <View style={styles.inputWrapLight}>
             <Feather name="user" size={18} color="#999999" style={styles.inputIcon} />
             <TextInput
-              style={styles.input}
+              style={styles.inputLight}
               placeholder="Your name"
               placeholderTextColor="#999999"
               value={name}
@@ -255,11 +294,11 @@ export default function RegisterScreen() {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Email</Text>
-          <View style={styles.inputWrap}>
+          <Text style={styles.labelDark}>Email</Text>
+          <View style={styles.inputWrapLight}>
             <Feather name="mail" size={18} color="#999999" style={styles.inputIcon} />
             <TextInput
-              style={styles.input}
+              style={styles.inputLight}
               placeholder="your@email.com"
               placeholderTextColor="#999999"
               value={email}
@@ -272,11 +311,11 @@ export default function RegisterScreen() {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Password</Text>
-          <View style={styles.inputWrap}>
+          <Text style={styles.labelDark}>Password</Text>
+          <View style={styles.inputWrapLight}>
             <Feather name="lock" size={18} color="#999999" style={styles.inputIcon} />
             <TextInput
-              style={[styles.input, { flex: 1 }]}
+              style={[styles.inputLight, { flex: 1 }]}
               placeholder="Min. 6 characters"
               placeholderTextColor="#999999"
               value={password}
@@ -316,7 +355,7 @@ export default function RegisterScreen() {
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Already a member? </Text>
+          <Text style={styles.footerTextDark}>Already a member? </Text>
           <Pressable onPress={() => router.replace("/(auth)/login")}>
             <Text style={styles.link}>Sign in</Text>
           </Pressable>
@@ -335,6 +374,13 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       backgroundColor: "#FFFFFF",
       flexGrow: 1,
     },
+    container2: {
+      paddingTop: 100,
+      paddingHorizontal: 24,
+      paddingBottom: 24,
+      backgroundColor: Colors.background,
+      flexGrow: 1,
+    },
     logoRow: {
       flexDirection: "row",
       alignItems: "center",
@@ -345,19 +391,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     logoImg: {
       width: 180,
       height: 54,
-      tintColor: "#0B5E2F",
-    },
-    title: {
-      fontFamily: "Poppins_800ExtraBold",
-      fontSize: 28,
-      color: "#111111",
-      marginBottom: 6,
-    },
-    subtitle: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 15,
-      color: "#666666",
-      marginBottom: 24,
+      tintColor: Colors.primary,
     },
     stepIndicator: {
       flexDirection: "row",
@@ -382,8 +416,40 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       backgroundColor: "#E0E0E0",
       borderRadius: 1,
     },
+    title: {
+      fontFamily: "Poppins_800ExtraBold",
+      fontSize: 28,
+      color: Colors.text,
+      marginBottom: 6,
+    },
+    titleDark: {
+      fontFamily: "Poppins_800ExtraBold",
+      fontSize: 28,
+      color: "#111111",
+      marginBottom: 6,
+    },
+    subtitle: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 15,
+      color: Colors.textSecondary,
+      marginBottom: 24,
+    },
+    subtitleDark: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 15,
+      color: "#666666",
+      marginBottom: 24,
+    },
     inputGroup: { marginBottom: 18 },
     label: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 13,
+      color: Colors.textSecondary,
+      marginBottom: 8,
+      letterSpacing: 0.5,
+      textTransform: "uppercase",
+    },
+    labelDark: {
       fontFamily: "Inter_600SemiBold",
       fontSize: 13,
       color: "#666666",
@@ -394,10 +460,19 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     hintText: {
       fontFamily: "Inter_400Regular",
       fontSize: 12,
-      color: "#999",
+      color: Colors.textMuted,
       marginTop: 6,
     },
     inputWrap: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: Colors.surface2,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: Colors.border,
+      paddingHorizontal: 14,
+    },
+    inputWrapLight: {
       flexDirection: "row",
       alignItems: "center",
       backgroundColor: "#F5F5F5",
@@ -408,6 +483,13 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     },
     inputIcon: { marginRight: 10 },
     input: {
+      flex: 1,
+      fontFamily: "Inter_400Regular",
+      fontSize: 16,
+      color: Colors.text,
+      paddingVertical: 16,
+    },
+    inputLight: {
       flex: 1,
       fontFamily: "Inter_400Regular",
       fontSize: 16,
@@ -481,6 +563,11 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     footerText: {
       fontFamily: "Inter_400Regular",
       fontSize: 14,
+      color: Colors.textSecondary,
+    },
+    footerTextDark: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 14,
       color: "#666666",
     },
     link: {
@@ -497,8 +584,8 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       flex: 1,
       borderRadius: 16,
       borderWidth: 2,
-      borderColor: "#E8E8E8",
-      backgroundColor: "#F9F9F9",
+      borderColor: Colors.border,
+      backgroundColor: Colors.surface,
       padding: 16,
       alignItems: "center",
       gap: 8,
@@ -506,7 +593,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     },
     roleCardSelected: {
       borderColor: Colors.primary,
-      backgroundColor: `${Colors.primary}08`,
+      backgroundColor: `${Colors.primary}12`,
     },
     roleIconWrap: {
       width: 52,
@@ -522,7 +609,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     roleLabel: {
       fontFamily: "Inter_700Bold",
       fontSize: 16,
-      color: "#111",
+      color: Colors.text,
     },
     roleLabelSelected: {
       color: Colors.primary,
@@ -530,12 +617,12 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     roleTagline: {
       fontFamily: "Inter_400Regular",
       fontSize: 11,
-      color: "#999",
+      color: Colors.textMuted,
       textAlign: "center",
       lineHeight: 15,
     },
     roleTaglineSelected: {
-      color: "#666",
+      color: Colors.textSecondary,
     },
     benefitsList: {
       width: "100%",
@@ -550,12 +637,12 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     benefitText: {
       fontFamily: "Inter_400Regular",
       fontSize: 11,
-      color: "#AAAAAA",
+      color: Colors.textMuted,
       flex: 1,
       lineHeight: 15,
     },
     benefitTextSelected: {
-      color: "#555555",
+      color: Colors.textSecondary,
     },
     roleCheck: {
       position: "absolute",
@@ -564,6 +651,57 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       width: 22,
       height: 22,
       borderRadius: 11,
+      backgroundColor: Colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    themeSection: {
+      marginBottom: 24,
+    },
+    themeSectionLabel: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 13,
+      color: Colors.textSecondary,
+      marginBottom: 10,
+      letterSpacing: 0.5,
+      textTransform: "uppercase",
+    },
+    themeToggleRow: {
+      flexDirection: "row",
+      gap: 12,
+    },
+    themeOption: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      paddingVertical: 14,
+      borderRadius: 14,
+      borderWidth: 2,
+      borderColor: Colors.border,
+      backgroundColor: Colors.surface,
+      position: "relative",
+    },
+    themeOptionSelected: {
+      borderColor: Colors.primary,
+      backgroundColor: `${Colors.primary}12`,
+    },
+    themeOptionText: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 15,
+      color: Colors.textSecondary,
+    },
+    themeOptionTextSelected: {
+      color: Colors.primary,
+    },
+    themeCheck: {
+      position: "absolute",
+      top: 8,
+      right: 8,
+      width: 18,
+      height: 18,
+      borderRadius: 9,
       backgroundColor: Colors.primary,
       alignItems: "center",
       justifyContent: "center",
