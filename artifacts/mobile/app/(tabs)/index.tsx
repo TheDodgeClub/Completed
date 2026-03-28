@@ -189,6 +189,8 @@ export default function HomeScreen() {
   const { data: appSettings, refetch: refetchSettings } = useQuery({
     queryKey: ["app-settings"],
     queryFn: getAppSettings,
+    staleTime: 0,
+    refetchInterval: 30_000,
   });
 
   const featuredVideo: FeaturedVideo | null = appSettings?.featuredVideo ?? null;
