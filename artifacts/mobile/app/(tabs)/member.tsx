@@ -768,19 +768,16 @@ export default function MemberScreen() {
 
         {user.bio && <Text style={styles.memberBio}>{user.bio}</Text>}
 
-        {user.accountType !== "supporter" && user.skills && (
-          <View style={styles.skillsRow}>
-            {user.skills.split(",").filter(Boolean).map(skill => (
-              <View key={skill} style={styles.skillChip}>
-                <Text style={styles.skillChipText}>{skill.trim()}</Text>
-              </View>
-            ))}
-          </View>
-        )}
-
         <Text style={styles.memberSince}>
           Member since {new Date(user.memberSince).toLocaleDateString("en-GB", { month: "long", year: "numeric" })}
         </Text>
+
+        {user.accountType !== "supporter" && user.skills && (() => {
+          const skills = user.skills!.split(",").filter(Boolean).map(s => s.trim());
+          return skills.length > 0 ? (
+            <Text style={styles.skillsInline}>⚡ {skills.join(" · ")}</Text>
+          ) : null;
+        })()}
 
         {/* XP Progress — players / supporter-specific tier bar */}
         {user.accountType === "supporter" ? (() => {
@@ -1336,31 +1333,12 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       borderRadius: 8, borderWidth: 1, borderColor: `${Colors.accent}40`,
     },
     roleBadgeText: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: Colors.accent },
-    skillsRow: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: 6,
-      marginBottom: 10,
-      justifyContent: "center",
-    },
-    skillChip: {
-      backgroundColor: "rgba(255,255,255,0.12)",
-      borderRadius: 20,
-      paddingHorizontal: 12,
-      paddingVertical: 5,
-      borderWidth: 1,
-      borderColor: "rgba(255,255,255,0.2)",
-    },
-    skillChipText: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 12,
-      color: "rgba(255,255,255,0.85)",
-    },
     memberBio: {
       fontFamily: "Inter_400Regular", fontSize: 13,
       color: "rgba(255,255,255,0.75)", lineHeight: 19, marginBottom: 8,
     },
-    memberSince: { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.55)", marginBottom: 16 },
+    memberSince: { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.55)", marginBottom: 3 },
+    skillsInline: { fontFamily: "Inter_400Regular", fontSize: 11, color: "rgba(255,255,255,0.55)", marginBottom: 16 },
 
     /* XP Bar */
     xpSection: { marginTop: 4 },
