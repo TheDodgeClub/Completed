@@ -187,10 +187,30 @@ export function MemberProfileModal({ member, onClose }: {
             <ActivityIndicator color={Colors.primary} style={{ marginTop: 32 }} />
           ) : profile ? (
             <View style={styles.profileBody}>
-              {profile.bio ? (
+              {(profile.bio || profile.preferredRole || profile.memberSince) ? (
                 <View style={styles.bioSection}>
-                  <Text style={styles.sectionTitle}>About</Text>
-                  <Text style={styles.bioText}>{profile.bio}</Text>
+                  {profile.bio ? (
+                    <>
+                      <Text style={styles.sectionTitle}>About</Text>
+                      <Text style={[styles.bioText, { marginBottom: 10 }]}>{profile.bio}</Text>
+                    </>
+                  ) : null}
+                  <View style={{ gap: 6 }}>
+                    {!isSupporter && profile.preferredRole ? (
+                      <View style={styles.roleRow}>
+                        <Feather name="user" size={13} color={Colors.textMuted} />
+                        <Text style={styles.memberSinceText}>Plays as {profile.preferredRole}</Text>
+                      </View>
+                    ) : null}
+                    {profile.memberSince ? (
+                      <View style={styles.roleRow}>
+                        <Feather name="calendar" size={13} color={Colors.textMuted} />
+                        <Text style={styles.memberSinceText}>
+                          Member since {new Date(profile.memberSince).toLocaleDateString("en-GB", { month: "long", year: "numeric" })}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
                 </View>
               ) : null}
 
@@ -278,20 +298,6 @@ export function MemberProfileModal({ member, onClose }: {
                   </View>
                 </View>
               )}
-
-              {!isSupporter && profile.preferredRole ? (
-                <View style={styles.roleRow}>
-                  <Feather name="user" size={14} color={Colors.textMuted} />
-                  <Text style={styles.memberSinceText}>Plays as {profile.preferredRole}</Text>
-                </View>
-              ) : null}
-
-              <View style={styles.roleRow}>
-                <Feather name="calendar" size={14} color={Colors.textMuted} />
-                <Text style={styles.memberSinceText}>
-                  Member since {new Date(profile.memberSince).toLocaleDateString("en-GB", { month: "long", year: "numeric" })}
-                </Text>
-              </View>
 
             </View>
           ) : null}
