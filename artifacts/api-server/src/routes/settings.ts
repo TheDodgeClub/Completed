@@ -70,6 +70,9 @@ router.get("/admin", requireAdmin, async (_req, res) => {
   for (const row of rows) {
     settings[row.key] = row.value;
   }
+  if (!settings["privacyPolicyContent"] && settings["privacyPolicy"]) {
+    settings["privacyPolicyContent"] = settings["privacyPolicy"];
+  }
   res.json(settings);
 });
 
