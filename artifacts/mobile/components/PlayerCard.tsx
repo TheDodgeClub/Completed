@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
   /* Top section — absolutely pinned to card top, logo centred */
   topSection: {
     position: "absolute",
-    top: 14,
+    top: 42,
     left: 16,
     right: 16,
     alignItems: "center",
