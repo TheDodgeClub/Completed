@@ -126,33 +126,45 @@ export async function sendStreakNotificationsForEvent(
   const eligible = await getEligibleStreakMembers(event.id);
   if (eligible.length === 0) return 0;
 
-  const messages = eligible.map((m) => ({
-    to: m.pushToken,
-    title: "🔥 Keep your streak alive!",
-    body: `Your ${m.currentStreak}-event streak is on the line — don't miss ${event.title}!`,
-    data: { eventId: event.id, type: "streak_reminder" },
-    sound: "default" as const,
-    priority: "high" as const,
-  }));
+  // Track successfully sent members (not a count — the actual recipients)
+  const sentMembers: EligibleMember[] = [];
 
-  let sent = 0;
-  for (let i = 0; i < messages.length; i += PUSH_BATCH_SIZE) {
-    const batch = messages.slice(i, i + PUSH_BATCH_SIZE);
+  for (let i = 0; i < eligible.length; i += PUSH_BATCH_SIZE) {
+    const batchMembers = eligible.slice(i, i + PUSH_BATCH_SIZE);
+    const messages = batchMembers.map((m) => ({
+      to: m.pushToken,
+      title: "🔥 Keep your streak alive!",
+      body: `Your ${m.currentStreak}-event streak is on the line — don't miss it 🔥`,
+      data: { eventId: event.id, type: "streak_reminder" },
+      sound: "default" as const,
+      priority: "high" as const,
+    }));
+
     try {
-      await fetch(EXPO_PUSH_URL, {
+      const response = await fetch(EXPO_PUSH_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify(batch),
+        body: JSON.stringify(messages),
       });
-      sent += batch.length;
+
+      if (!response.ok) {
+        logger.error(
+          { status: response.status, eventId: event.id },
+          "streak notification batch rejected by Expo",
+        );
+        continue;
+      }
+
+      // Mark exactly these batch members as sent
+      sentMembers.push(...batchMembers);
     } catch (err: unknown) {
       logger.error({ err, eventId: event.id }, "streak notification batch send failed");
     }
   }
 
-  if (sent > 0) {
-    // Record all sent notifications for deduplication
-    const records = eligible.slice(0, sent).map((m) => ({
+  if (sentMembers.length > 0) {
+    // Persist deduplication records for the exact members whose push was accepted
+    const records = sentMembers.map((m) => ({
       eventId: event.id,
       userId: m.userId,
     }));
@@ -165,8 +177,8 @@ export async function sendStreakNotificationsForEvent(
       );
   }
 
-  logger.info({ eventId: event.id, sent }, "streak notifications sent");
-  return sent;
+  logger.info({ eventId: event.id, sent: sentMembers.length }, "streak notifications sent");
+  return sentMembers.length;
 }
 
 /**
