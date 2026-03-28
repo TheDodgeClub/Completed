@@ -719,7 +719,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       paddingBottom: 28,
     },
     heroTopRow: {
-      marginBottom: 14,
+      marginBottom: 4,
     },
     heroTagline: {
       fontFamily: "Inter_600SemiBold",
