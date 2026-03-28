@@ -365,7 +365,7 @@ export default function HomeScreen() {
               <View style={[styles.quickActionIcon, { backgroundColor: Colors.primary + "22" }]}>
                 <Feather name="tag" size={20} color={Colors.primary} />
               </View>
-              <Text style={styles.quickActionLabel}>Tickets</Text>
+              <Text style={styles.quickActionLabel}>Buy Tickets</Text>
             </Pressable>
 
             <Pressable
