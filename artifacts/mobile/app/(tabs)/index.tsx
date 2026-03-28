@@ -365,10 +365,20 @@ export default function HomeScreen() {
               style={({ pressed }) => [styles.quickAction, { opacity: pressed ? 0.6 : 0.8 }]}
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(tabs)/tickets"); }}
             >
-              <View style={[styles.quickActionIcon, { backgroundColor: Colors.primary }]}>
+              <LinearGradient colors={[Colors.secondary, Colors.primary]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.quickActionIcon}>
                 <Feather name="tag" size={17} color="#FFFFFF" />
-              </View>
+              </LinearGradient>
               <Text style={styles.quickActionLabel}>Get Tickets</Text>
+            </Pressable>
+
+            <Pressable
+              style={({ pressed }) => [styles.quickAction, { opacity: pressed ? 0.6 : 0.8 }]}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(tabs)/merch"); }}
+            >
+              <LinearGradient colors={[Colors.secondary, Colors.primary]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.quickActionIcon}>
+                <Feather name="shopping-bag" size={17} color="#FFFFFF" />
+              </LinearGradient>
+              <Text style={styles.quickActionLabel}>Club Shop</Text>
             </Pressable>
 
             <Pressable
@@ -379,9 +389,9 @@ export default function HomeScreen() {
                 setQrVisible(true);
               }}
             >
-              <View style={[styles.quickActionIcon, { backgroundColor: Colors.accent }]}>
-                <Feather name="maximize" size={17} color="#111111" />
-              </View>
+              <LinearGradient colors={[Colors.secondary, Colors.primary]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.quickActionIcon}>
+                <Feather name="maximize" size={17} color="#FFFFFF" />
+              </LinearGradient>
               <Text style={styles.quickActionLabel}>My QR</Text>
             </Pressable>
 
@@ -389,20 +399,10 @@ export default function HomeScreen() {
               style={({ pressed }) => [styles.quickAction, { opacity: pressed ? 0.6 : 0.8 }]}
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push("/games/dodge"); }}
             >
-              <View style={[styles.quickActionIcon, { backgroundColor: Colors.purple }]}>
+              <LinearGradient colors={[Colors.secondary, Colors.primary]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.quickActionIcon}>
                 <Text style={{ fontSize: 17 }}>🏐</Text>
-              </View>
+              </LinearGradient>
               <Text style={styles.quickActionLabel}>Mini Game</Text>
-            </Pressable>
-
-            <Pressable
-              style={({ pressed }) => [styles.quickAction, { opacity: pressed ? 0.6 : 0.8 }]}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(tabs)/merch"); }}
-            >
-              <View style={[styles.quickActionIcon, { backgroundColor: Colors.secondary }]}>
-                <Feather name="shopping-bag" size={17} color="#FFFFFF" />
-              </View>
-              <Text style={styles.quickActionLabel}>Club Shop</Text>
             </Pressable>
           </View>
 
