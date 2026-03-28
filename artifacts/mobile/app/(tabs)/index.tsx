@@ -13,6 +13,7 @@ import {
   Animated,
   Modal,
   Platform,
+  Linking,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -276,16 +277,31 @@ export default function HomeScreen() {
           <Text style={styles.heroTagline}>Come alone. Win together.</Text>
 
           {/* Next Event Banner (all users) */}
-          {nextEvent && (
-            <Pressable
-              style={({ pressed }) => [styles.eventBanner, { opacity: pressed ? 0.88 : 1 }]}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(tabs)/tickets"); }}
-            >
-              {/* Use admin hero image if set, otherwise event's own image */}
-              {(appSettings?.homeHeroImageUrl || nextEvent.imageUrl) ? (() => {
-                const imgSrc = appSettings?.homeHeroImageUrl ?? nextEvent.imageUrl!;
-                const resolvedUri = resolveImageUrl(imgSrc) ?? imgSrc;
-                return (
+          {nextEvent && (() => {
+            const bannerLinkUrl = appSettings?.homeHeroBannerLinkUrl;
+            const handleBannerPress = () => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              if (bannerLinkUrl) {
+                if (bannerLinkUrl.startsWith("http://") || bannerLinkUrl.startsWith("https://")) {
+                  Linking.openURL(bannerLinkUrl);
+                } else {
+                  router.push(bannerLinkUrl as any);
+                }
+              } else {
+                router.push("/(tabs)/tickets");
+              }
+            };
+            const displayTitle = appSettings?.homeHeroBannerTitle || nextEvent.title;
+            const displaySubtitle = appSettings?.homeHeroBannerSubtitle ||
+              new Date(nextEvent.date).toLocaleDateString("en-GB", { weekday: "short", month: "short", day: "numeric" });
+            const imgSrc = appSettings?.homeHeroImageUrl ?? nextEvent.imageUrl;
+            const resolvedUri = imgSrc ? (resolveImageUrl(imgSrc) ?? imgSrc) : null;
+            return (
+              <Pressable
+                style={({ pressed }) => [styles.eventBanner, { opacity: pressed ? 0.88 : 1 }]}
+                onPress={handleBannerPress}
+              >
+                {resolvedUri ? (
                   <>
                     <Image
                       source={{ uri: resolvedUri }}
@@ -293,37 +309,33 @@ export default function HomeScreen() {
                         position: "absolute",
                         left: 0,
                         right: 0,
-                        height: 270,
-                        top: -90 * (focalY / 100),
+                        height: 330,
+                        top: -110 * (focalY / 100),
                       }}
                       resizeMode="cover"
                     />
                     <LinearGradient
-                      colors={["transparent", "rgba(0,0,0,0.82)"]}
+                      colors={["transparent", "rgba(0,0,0,0.85)"]}
                       style={styles.eventBannerOverlay}
                     >
-                      <Text style={styles.eventBannerTitle} numberOfLines={1}>{nextEvent.title}</Text>
+                      <Text style={styles.eventBannerTitle} numberOfLines={2}>{displayTitle}</Text>
                       <View style={styles.eventBannerMeta}>
-                        <Text style={styles.eventBannerDate}>
-                          {new Date(nextEvent.date).toLocaleDateString("en-GB", { weekday: "short", month: "short", day: "numeric" })}
-                        </Text>
+                        <Text style={styles.eventBannerDate}>{displaySubtitle}</Text>
                       </View>
                     </LinearGradient>
                   </>
-                );
-              })() : (
-                <View style={styles.eventTextBanner}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.eventBannerTitle} numberOfLines={1}>{nextEvent.title}</Text>
-                    <Text style={styles.eventBannerDate}>
-                      {new Date(nextEvent.date).toLocaleDateString("en-GB", { weekday: "short", month: "short", day: "numeric" })}
-                    </Text>
+                ) : (
+                  <View style={styles.eventTextBanner}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.eventBannerTitle} numberOfLines={1}>{displayTitle}</Text>
+                      <Text style={styles.eventBannerDate}>{displaySubtitle}</Text>
+                    </View>
+                    <Feather name="chevron-right" size={18} color="rgba(255,255,255,0.6)" />
                   </View>
-                  <Feather name="chevron-right" size={18} color="rgba(255,255,255,0.6)" />
-                </View>
-              )}
-            </Pressable>
-          )}
+                )}
+              </Pressable>
+            );
+          })()}
 
           {/* Supporter Journey + Merged Onboarding */}
           {isAuthenticated && user?.accountType === "supporter" && (() => {
@@ -694,10 +706,11 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
 
     /* ── Event Banner in Hero ── */
     eventBanner: {
-      borderRadius: 14,
+      borderRadius: 0,
       overflow: "hidden",
-      height: 180,
-      marginBottom: 16,
+      height: 220,
+      marginHorizontal: -24,
+      marginBottom: 0,
       backgroundColor: "rgba(255,255,255,0.07)",
     },
     eventBannerImage: {
@@ -779,6 +792,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       borderWidth: 1,
       borderColor: "rgba(255,193,7,0.25)",
       overflow: "hidden",
+      marginTop: 16,
     },
     supporterCardHeader: {
       flexDirection: "row",

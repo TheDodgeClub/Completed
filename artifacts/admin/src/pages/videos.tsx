@@ -50,10 +50,17 @@ function HeroImageSection() {
   const [isDragging, setIsDragging] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
 
+  const [bannerTitle, setBannerTitle] = useState("");
+  const [bannerSubtitle, setBannerSubtitle] = useState("");
+  const [bannerLinkUrl, setBannerLinkUrl] = useState("");
+
   useEffect(() => {
     if (settings && !initialized.current) {
       initialized.current = true;
       setHeroImageUrl(settings.homeHeroImageUrl ?? "");
+      setBannerTitle(settings.homeHeroBannerTitle ?? "");
+      setBannerSubtitle(settings.homeHeroBannerSubtitle ?? "");
+      setBannerLinkUrl(settings.homeHeroBannerLinkUrl ?? "");
       const pos = settings.homeHeroImagePosition;
       if (pos) {
         const parts = pos.split(" ");
@@ -95,6 +102,20 @@ function HeroImageSection() {
     );
   }
 
+  function handleSaveOverlay() {
+    updateSettings(
+      {
+        homeHeroBannerTitle: bannerTitle.trim() || null,
+        homeHeroBannerSubtitle: bannerSubtitle.trim() || null,
+        homeHeroBannerLinkUrl: bannerLinkUrl.trim() || null,
+      },
+      {
+        onSuccess: () => toast({ title: "Banner text & link saved." }),
+        onError: () => toast({ title: "Failed to save.", variant: "destructive" }),
+      }
+    );
+  }
+
   if (isLoading) return null;
 
   return (
@@ -102,29 +123,36 @@ function HeroImageSection() {
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
           <ImageIcon className="w-5 h-5 text-primary" />
-          <CardTitle className="text-base">Home Screen Hero Image</CardTitle>
+          <CardTitle className="text-base">Home Screen Event Banner</CardTitle>
         </div>
         <CardDescription>
-          Upload a background image for the upcoming event banner on the home screen. When set, this replaces the event's own photo. Drag the crosshair to choose which part of the image shows in the banner.
+          Customise the banner image, overlay text, and tap destination on the mobile home screen. Leave text fields blank to fall back to the next event's own title and date.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-6">
+        {/* Image upload */}
         <ImageUploader
           value={heroImageUrl || undefined}
           onChange={handleImageChange}
-          label="Hero Background Image"
+          label="Banner Background Image"
         />
 
+        {!heroImageUrl && (
+          <p className="text-xs text-muted-foreground">
+            No image set — the banner will show the event's own photo if it has one.
+          </p>
+        )}
+
+        {/* Focal point — only shown when image is set */}
         {heroImageUrl && (
           <div className="space-y-3">
             <div>
               <p className="text-sm font-medium mb-0.5">Focal Point</p>
               <p className="text-xs text-muted-foreground">
-                Drag the circle on the preview to choose which part of the image stays centred in the mobile hero.
+                Drag the circle to choose which part of the image stays centred in the banner.
               </p>
             </div>
 
-            {/* Drag-to-position preview — 16:7 matches wide hero crop */}
             <div
               ref={previewRef}
               className="relative rounded-xl overflow-hidden border border-border cursor-crosshair select-none"
@@ -140,7 +168,7 @@ function HeroImageSection() {
             >
               <img
                 src={heroImageUrl}
-                alt="Hero preview"
+                alt="Banner preview"
                 draggable={false}
                 style={{
                   position: "absolute",
@@ -168,9 +196,8 @@ function HeroImageSection() {
                   fontWeight: 500,
                 }}
               >
-                Mobile hero preview
+                Mobile banner preview
               </div>
-              {/* Focal crosshair dot */}
               <div
                 style={{
                   position: "absolute",
@@ -203,11 +230,53 @@ function HeroImageSection() {
           </div>
         )}
 
-        {!heroImageUrl && (
-          <p className="text-xs text-muted-foreground">
-            Leave blank to use the default green gradient background.
-          </p>
-        )}
+        {/* Overlay text + link */}
+        <div className="space-y-4 pt-2 border-t border-border">
+          <div>
+            <p className="text-sm font-medium mb-1">Overlay Text</p>
+            <p className="text-xs text-muted-foreground mb-3">
+              Text shown on top of the banner image. Leave blank to use the event's title and date automatically.
+            </p>
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="bannerTitle" className="text-xs">Title</Label>
+                <Input
+                  id="bannerTitle"
+                  placeholder="e.g. Dodge Club Returns — Book Now"
+                  value={bannerTitle}
+                  onChange={(e) => setBannerTitle(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="bannerSubtitle" className="text-xs">Subtitle / Date line</Label>
+                <Input
+                  id="bannerSubtitle"
+                  placeholder="e.g. Sat 12 Apr · Bethnal Green"
+                  value={bannerSubtitle}
+                  onChange={(e) => setBannerSubtitle(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="bannerLink" className="text-xs">Tap destination (URL or in-app path)</Label>
+            <Input
+              id="bannerLink"
+              placeholder="e.g. /(tabs)/tickets  or  https://thedodgeclub.co.uk"
+              value={bannerLinkUrl}
+              onChange={(e) => setBannerLinkUrl(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Leave blank to link to the Tickets tab by default.
+            </p>
+          </div>
+
+          <Button onClick={handleSaveOverlay} disabled={isPending} size="sm">
+            {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Save className="w-3.5 h-3.5 mr-1.5" />}
+            Save Text & Link
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

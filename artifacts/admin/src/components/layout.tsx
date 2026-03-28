@@ -63,8 +63,8 @@ function SidebarNav() {
       <NavItem href="/" icon={LayoutDashboard} label="Dashboard" />
       <NavItem href="/events" icon={CalendarDays} label="Events" count={events?.length} />
       <NavItem href="/members" icon={Users} label="Members" count={members?.length} />
-      <NavItem href="/posts" icon={MessageSquare} label="Posts" count={posts?.length} />
       <NavItem href="/videos" icon={Video} label="Media" count={videos?.length} />
+      <NavItem href="/posts" icon={MessageSquare} label="Posts" count={posts?.length} />
       <NavItem href="/merch" icon={ShoppingBag} label="Merch" count={merch?.length} />
       <NavItem href="/settings" icon={Settings} label="Settings" />
     </nav>
