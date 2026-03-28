@@ -28,10 +28,13 @@ import QRCode from "react-native-qrcode-svg";
 import { useLocalSearchParams } from "expo-router";
 import { useColors } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
+import { useNativeStripe } from "@/hooks/useNativeStripe";
 import {
   listEvents,
   getMyTickets,
   createCheckoutSession,
+  createPaymentIntent,
+  confirmPaymentIntentTicket,
   registerFreeTicket,
   validateDiscountCode,
   getEventAttendees,
@@ -71,6 +74,7 @@ export default function TicketsScreen() {
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { initPaymentSheet, presentPaymentSheet } = useNativeStripe();
   const { tab } = useLocalSearchParams<{ tab?: string }>();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
@@ -124,30 +128,74 @@ export default function TicketsScreen() {
       return;
     }
 
-    // Paid — launch Stripe Checkout (server handles discount calculation)
+    // Paid — on native use Stripe PaymentSheet; on web use Checkout redirect
     setBuyingEventId(event.id);
     try {
-      const { url } = await createCheckoutSession(event.id, checkoutData, ticketTypeId, discountCode, quantity);
-      await WebBrowser.openBrowserAsync(url, {
-        presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
-        dismissButtonStyle: "done",
-        toolbarColor: "#0B5E2F",
-        controlsColor: "#FFD700",
-      });
-      const fresh = await refetchTickets();
-      const eventTickets = (fresh.data ?? []).filter(t => t.eventId === event.id);
-      const newTicket = eventTickets.sort((a, b) => b.id - a.id)[0];
-      if (newTicket) {
-        setSelectedTicket(newTicket);
+      if (Platform.OS !== "web") {
+        // Native PaymentSheet flow
+        const result = await createPaymentIntent(event.id, checkoutData, ticketTypeId, discountCode, quantity);
+
+        // If server already issued a free ticket (after discount)
+        if (result.free && result.ticket) {
+          await refetchTickets();
+          setSelectedTicket(result.ticket as any);
+          setActiveTab("my");
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          return;
+        }
+
+        const { error: initError } = await initPaymentSheet({
+          merchantDisplayName: "The Dodge Club",
+          paymentIntentClientSecret: result.clientSecret,
+          defaultBillingDetails: {},
+          allowsDelayedPaymentMethods: false,
+          returnURL: "mobile://stripe-redirect",
+        });
+
+        if (initError) {
+          Alert.alert("Error", initError.message ?? "Could not initialise payment");
+          return;
+        }
+
+        const { error: presentError } = await presentPaymentSheet();
+
+        if (presentError) {
+          if (presentError.code !== "Canceled") {
+            Alert.alert("Payment Failed", presentError.message ?? "Your payment could not be completed.");
+          }
+          return;
+        }
+
+        // Payment succeeded — confirm ticket on server
+        const { ticket } = await confirmPaymentIntentTicket(result.paymentIntentId);
+        await refetchTickets();
+        setSelectedTicket(ticket as any);
         setActiveTab("my");
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        // Web fallback — Stripe Checkout redirect
+        const { url } = await createCheckoutSession(event.id, checkoutData, ticketTypeId, discountCode, quantity);
+        await WebBrowser.openBrowserAsync(url, {
+          presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
+          dismissButtonStyle: "done",
+          toolbarColor: "#0B5E2F",
+          controlsColor: "#FFD700",
+        });
+        const fresh = await refetchTickets();
+        const eventTickets = (fresh.data ?? []).filter(t => t.eventId === event.id);
+        const newTicket = eventTickets.sort((a, b) => b.id - a.id)[0];
+        if (newTicket) {
+          setSelectedTicket(newTicket);
+          setActiveTab("my");
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
       }
     } catch (err: any) {
       Alert.alert("Error", err.message ?? "Could not start checkout");
     } finally {
       setBuyingEventId(null);
     }
-  }, [registerFree, refetchTickets]);
+  }, [registerFree, refetchTickets, initPaymentSheet, presentPaymentSheet]);
 
   const handleBuyTicket = useCallback((event: Event) => {
     if (!user) {

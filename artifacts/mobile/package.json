@@ -57,6 +57,7 @@
     "zod-validation-error": "^3.4.0"
   },
   "dependencies": {
+    "@stripe/stripe-react-native": "^0.61.0",
     "expo-auth-session": "^7.0.10",
     "expo-clipboard": "~8.0.8",
     "expo-crypto": "^15.0.8",

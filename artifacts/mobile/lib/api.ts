@@ -403,6 +403,35 @@ export async function getNotificationStatus(): Promise<{ notificationsEnabled: b
   return apiFetch<{ notificationsEnabled: boolean }>("/users/me/notification-status");
 }
 
+/* ---- stripe ---- */
+
+export async function getStripePublishableKey(): Promise<string> {
+  const data = await apiFetch<{ publishableKey: string }>("/tickets/config");
+  return data.publishableKey;
+}
+
+export async function createPaymentIntent(
+  eventId: number,
+  checkoutData?: Record<string, string>,
+  ticketTypeId?: number,
+  discountCode?: string,
+  quantity: number = 1,
+): Promise<{ clientSecret: string; paymentIntentId: string; amount: number; free?: boolean; ticket?: Ticket }> {
+  return apiFetch<{ clientSecret: string; paymentIntentId: string; amount: number; free?: boolean; ticket?: Ticket }>(
+    "/tickets/payment-intent",
+    { method: "POST", body: JSON.stringify({ eventId, checkoutData, ticketTypeId, discountCode, quantity }) }
+  );
+}
+
+export async function confirmPaymentIntentTicket(
+  paymentIntentId: string,
+): Promise<{ ticket: Ticket }> {
+  return apiFetch<{ ticket: Ticket }>("/tickets/confirm-payment", {
+    method: "POST",
+    body: JSON.stringify({ paymentIntentId }),
+  });
+}
+
 /* ---- tickets ---- */
 
 export async function getMyTickets(): Promise<Ticket[]> {

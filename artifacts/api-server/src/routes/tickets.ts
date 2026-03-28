@@ -581,6 +581,245 @@ router.post("/gift", requireAuth, async (req: any, res) => {
   res.json({ checkoutUrl: session.url });
 });
 
+/* POST /api/tickets/payment-intent — mobile PaymentSheet flow */
+router.post("/payment-intent", requireAuth, async (req: any, res) => {
+  const userId = req.session.userId;
+  const { eventId, checkoutData, ticketTypeId, discountCode, quantity: rawQuantity } = req.body as {
+    eventId?: number; checkoutData?: Record<string, string>;
+    ticketTypeId?: number; discountCode?: string; quantity?: number;
+  };
+  if (!eventId) { res.status(400).json({ error: "eventId required" }); return; }
+  const quantity = Math.max(1, Math.min(10, Number(rawQuantity) || 1));
+
+  const [event] = await db.select().from(eventsTable).where(eq(eventsTable.id, eventId)).limit(1);
+  if (!event) { res.status(404).json({ error: "Event not found" }); return; }
+
+  // Server-side waiver enforcement
+  if (event.waiverText && checkoutData?.__waiver_signed !== "true") {
+    res.status(400).json({ error: "You must sign the waiver before purchasing a ticket." });
+    return;
+  }
+
+  // Resolve ticket type
+  let baseAmountPence = event.ticketPrice ? Math.round(Number(event.ticketPrice) * 100) : 0;
+  let resolvedTicketTypeId: number | null = null;
+  let resolvedTicketTypeName: string | null = null;
+
+  if (ticketTypeId) {
+    const [tt] = await db.select().from(ticketTypesTable).where(eq(ticketTypesTable.id, Number(ticketTypeId))).limit(1);
+    if (!tt || tt.eventId !== eventId) { res.status(400).json({ error: "Invalid ticket type" }); return; }
+    if (!tt.isActive) { res.status(400).json({ error: "This ticket type is not available" }); return; }
+    if (tt.quantity !== null && tt.quantitySold >= tt.quantity) { res.status(409).json({ error: "This ticket type is sold out" }); return; }
+    const now = new Date();
+    if (tt.saleStartsAt && now < tt.saleStartsAt) { res.status(400).json({ error: "Sales for this ticket type have not started yet" }); return; }
+    if (tt.saleEndsAt && now > tt.saleEndsAt) { res.status(400).json({ error: "Sales for this ticket type have ended" }); return; }
+    if (tt.maxPerOrder !== null && quantity > tt.maxPerOrder) { res.status(400).json({ error: `You can only buy up to ${tt.maxPerOrder} ticket${tt.maxPerOrder !== 1 ? "s" : ""} per order for this ticket type.` }); return; }
+    if (tt.quantity !== null) {
+      const remaining = tt.quantity - tt.quantitySold;
+      if (quantity > remaining) { res.status(409).json({ error: remaining <= 0 ? "Sorry, this ticket type is sold out." : `Only ${remaining} ticket${remaining !== 1 ? "s" : ""} remaining for this type.` }); return; }
+    }
+    baseAmountPence = tt.price;
+    resolvedTicketTypeId = tt.id;
+    resolvedTicketTypeName = tt.name;
+  }
+
+  // Validate discount code
+  let finalAmountPence = baseAmountPence;
+  let discountCodeRecord: typeof discountCodesTable.$inferSelect | null = null;
+
+  if (discountCode && baseAmountPence > 0) {
+    const [dc] = await db.select().from(discountCodesTable)
+      .where(and(eq(discountCodesTable.code, discountCode.toUpperCase().trim()), eq(discountCodesTable.isActive, true)))
+      .limit(1);
+    if (!dc) { res.status(400).json({ error: "Invalid or inactive discount code" }); return; }
+    if (dc.eventId !== null && dc.eventId !== eventId) { res.status(400).json({ error: "This code is not valid for this event" }); return; }
+    if (dc.expiresAt && new Date() > dc.expiresAt) { res.status(400).json({ error: "This discount code has expired" }); return; }
+    if (dc.maxUses !== null && dc.usesCount >= dc.maxUses) { res.status(400).json({ error: "This discount code has reached its maximum uses" }); return; }
+    discountCodeRecord = dc;
+    if (dc.discountType === "percent") {
+      finalAmountPence = Math.round(baseAmountPence * (1 - dc.discountAmount / 100));
+    } else {
+      finalAmountPence = Math.max(0, baseAmountPence - dc.discountAmount);
+    }
+  }
+
+  // If free (after discount or originally free), issue immediately
+  if (finalAmountPence === 0) {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+    const ticketValues = Array.from({ length: quantity }, () => ({
+      userId, eventId, status: "paid" as const, ticketCode: generateTicketCode(), amountPaid: 0,
+      originalAmountPaid: baseAmountPence > 0 ? 0 : undefined,
+      checkoutData: checkoutData ?? null,
+      ticketTypeId: resolvedTicketTypeId,
+      discountCodeId: discountCodeRecord?.id ?? null,
+    }));
+    const tickets = await db.insert(ticketsTable).values(ticketValues).returning();
+    const [ticket] = tickets;
+
+    if (discountCodeRecord) {
+      await db.update(discountCodesTable).set({ usesCount: discountCodeRecord.usesCount + quantity }).where(eq(discountCodesTable.id, discountCodeRecord.id));
+    }
+    if (resolvedTicketTypeId) {
+      await db.update(ticketTypesTable).set({ quantitySold: sql`${ticketTypesTable.quantitySold} + ${quantity}` }).where(eq(ticketTypesTable.id, resolvedTicketTypeId));
+    }
+
+    if (user) {
+      sendTicketConfirmationEmail({ toEmail: user.email, toName: user.name ?? user.email, eventName: event.title, eventDate: event.date, eventLocation: event.location, ticketCodes: tickets.map(t => t.ticketCode), eventConfig: event }).catch(e => console.error("[email] send error:", e));
+    }
+    res.status(201).json({ free: true, ticket, clientSecret: "", paymentIntentId: "", amount: 0 });
+    return;
+  }
+
+  // Paid — create PaymentIntent
+  if (!baseAmountPence && !resolvedTicketTypeId) {
+    res.status(400).json({ error: "This event does not have tickets configured yet" });
+    return;
+  }
+
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  const stripe = await getUncachableStripeClient();
+  const isValidEmail = (e: string | null) => !!e && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+
+  let customerId = user.stripeCustomerId;
+  if (customerId) {
+    try {
+      const existing = await stripe.customers.retrieve(customerId);
+      if ((existing as any).deleted) customerId = null;
+    } catch (err: any) {
+      if (err?.code === "resource_missing") {
+        customerId = null;
+        await db.update(usersTable).set({ stripeCustomerId: null }).where(eq(usersTable.id, userId));
+      } else { throw err; }
+    }
+  }
+  if (!customerId) {
+    const customer = await stripe.customers.create({
+      ...(isValidEmail(user.email) ? { email: user.email! } : {}),
+      ...(user.name ? { name: user.name } : {}),
+      metadata: { userId: String(userId) },
+    });
+    customerId = customer.id;
+    await db.update(usersTable).set({ stripeCustomerId: customerId }).where(eq(usersTable.id, userId));
+  }
+
+  // Clean up old pending tickets for this user+event
+  await db.delete(ticketsTable).where(and(eq(ticketsTable.userId, userId), eq(ticketsTable.eventId, eventId), eq(ticketsTable.status, "pending")));
+
+  // Pre-create pending ticket
+  const pendingCode = generateTicketCode();
+  const [pendingTicket] = await db.insert(ticketsTable).values({
+    userId, eventId, status: "pending", ticketCode: pendingCode, amountPaid: 0,
+    checkoutData: checkoutData ?? null,
+    ticketTypeId: resolvedTicketTypeId,
+    discountCodeId: discountCodeRecord?.id ?? null,
+    originalAmountPaid: discountCodeRecord ? baseAmountPence : null,
+  }).returning();
+
+  const totalAmount = finalAmountPence * quantity;
+  const productName = resolvedTicketTypeName ? `${event.title} — ${resolvedTicketTypeName}` : event.title;
+
+  const paymentIntent = await stripe.paymentIntents.create({
+    amount: totalAmount,
+    currency: "gbp",
+    customer: customerId,
+    payment_method_types: ["card"],
+    description: productName,
+    metadata: {
+      userId: String(userId),
+      eventId: String(eventId),
+      ticketId: String(pendingTicket.id),
+      quantity: String(quantity),
+      ...(discountCodeRecord ? { discountCodeId: String(discountCodeRecord.id) } : {}),
+      ...(resolvedTicketTypeId ? { ticketTypeId: String(resolvedTicketTypeId) } : {}),
+    },
+  });
+
+  await db.update(ticketsTable).set({ stripePaymentIntentId: paymentIntent.id }).where(eq(ticketsTable.id, pendingTicket.id));
+  res.json({ clientSecret: paymentIntent.client_secret, paymentIntentId: paymentIntent.id, amount: totalAmount });
+});
+
+/* POST /api/tickets/confirm-payment — called by mobile after PaymentSheet success */
+router.post("/confirm-payment", requireAuth, async (req: any, res) => {
+  const userId = req.session.userId;
+  const { paymentIntentId } = req.body as { paymentIntentId?: string };
+  if (!paymentIntentId) { res.status(400).json({ error: "paymentIntentId required" }); return; }
+
+  const stripe = await getUncachableStripeClient();
+
+  let pi: any;
+  try {
+    pi = await stripe.paymentIntents.retrieve(paymentIntentId);
+  } catch {
+    res.status(400).json({ error: "Payment intent not found" }); return;
+  }
+
+  if (pi.status !== "succeeded") {
+    res.status(402).json({ error: "Payment has not succeeded" }); return;
+  }
+
+  const metaUserId = Number(pi.metadata?.userId);
+  if (metaUserId !== userId) { res.status(403).json({ error: "Forbidden" }); return; }
+
+  const ticketId = pi.metadata?.ticketId ? Number(pi.metadata.ticketId) : null;
+  const eventId = pi.metadata?.eventId ? Number(pi.metadata.eventId) : null;
+  const quantity = Math.max(1, Math.min(10, parseInt(pi.metadata?.quantity ?? "1") || 1));
+  const discountCodeId = pi.metadata?.discountCodeId ? Number(pi.metadata.discountCodeId) : null;
+  const ticketTypeId = pi.metadata?.ticketTypeId ? Number(pi.metadata.ticketTypeId) : null;
+  const perTicketAmount = quantity > 0 ? Math.round(pi.amount / quantity) : pi.amount;
+
+  if (!ticketId || !eventId) { res.status(400).json({ error: "Invalid payment intent metadata" }); return; }
+
+  // Check if already confirmed (idempotency)
+  const [existing] = await db.select().from(ticketsTable).where(eq(ticketsTable.id, ticketId)).limit(1);
+  if (existing?.status === "paid") {
+    const [evt] = await db.select().from(eventsTable).where(eq(eventsTable.id, eventId)).limit(1);
+    res.json({ ticket: { ...existing, eventTitle: evt?.title, eventDate: evt?.date, eventLocation: evt?.location, eventImageUrl: evt?.imageUrl, eventXpReward: evt?.xpReward } });
+    return;
+  }
+
+  // Confirm the pending ticket
+  await db.update(ticketsTable).set({
+    status: "paid",
+    amountPaid: perTicketAmount,
+    stripePaymentIntentId: paymentIntentId,
+  }).where(and(eq(ticketsTable.id, ticketId), eq(ticketsTable.userId, userId)));
+
+  // Create additional tickets for quantity > 1
+  const additionalCodes: string[] = [];
+  if (quantity > 1) {
+    const vals = Array.from({ length: quantity - 1 }, () => ({
+      userId, eventId, status: "paid" as const,
+      ticketCode: generateTicketCode(), amountPaid: perTicketAmount,
+      stripePaymentIntentId: paymentIntentId,
+      ticketTypeId, discountCodeId,
+    }));
+    const extras = await db.insert(ticketsTable).values(vals).returning({ ticketCode: ticketsTable.ticketCode });
+    additionalCodes.push(...extras.map(t => t.ticketCode));
+  }
+
+  // Update discount code usage
+  if (discountCodeId) {
+    const [dc] = await db.select().from(discountCodesTable).where(eq(discountCodesTable.id, discountCodeId)).limit(1);
+    if (dc) await db.update(discountCodesTable).set({ usesCount: dc.usesCount + quantity }).where(eq(discountCodesTable.id, discountCodeId));
+  }
+
+  // Update ticket type sold count
+  if (ticketTypeId) {
+    await db.update(ticketTypesTable).set({ quantitySold: sql`${ticketTypesTable.quantitySold} + ${quantity}` }).where(eq(ticketTypesTable.id, ticketTypeId));
+  }
+
+  // Send confirmation email
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+  const [event] = await db.select().from(eventsTable).where(eq(eventsTable.id, eventId)).limit(1);
+  if (user && event && existing) {
+    const allCodes = [existing.ticketCode, ...additionalCodes];
+    sendTicketConfirmationEmail({ toEmail: user.email, toName: user.name ?? user.email, eventName: event.title, eventDate: event.date, eventLocation: event.location, ticketCodes: allCodes, eventConfig: event }).catch(e => console.error("[email] send error:", e));
+  }
+
+  const [confirmedTicket] = await db.select().from(ticketsTable).where(eq(ticketsTable.id, ticketId)).limit(1);
+  res.json({ ticket: { ...confirmedTicket, eventTitle: event?.title, eventDate: event?.date, eventLocation: event?.location, eventImageUrl: event?.imageUrl, eventXpReward: event?.xpReward } });
+});
+
 /* GET /api/tickets/gift-success */
 router.get("/gift-success", async (req, res) => {
   const { session_id, recipientId, recipientEmail, gifterId, eventId } = req.query as {

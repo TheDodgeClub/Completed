@@ -21,6 +21,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { SessionTracker } from "@/components/SessionTracker";
+import { StripeWrapper } from "@/components/StripeWrapper";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -44,6 +45,7 @@ function AuthGate({ children }: { children: ReactNode }) {
 
   return <>{children}</>;
 }
+
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -80,17 +82,19 @@ export default function RootLayout() {
           <QueryClientProvider client={queryClient}>
             <GestureHandlerRootView style={{ flex: 1 }}>
               <AuthProvider>
-                <SessionTracker />
-                <AuthGate>
-                  <Stack>
-                    <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                    <Stack.Screen
-                      name="(auth)"
-                      options={{ headerShown: false }}
-                    />
-                    <Stack.Screen name="games/dodge" options={{ headerShown: false }} />
-                  </Stack>
-                </AuthGate>
+                <StripeWrapper>
+                  <SessionTracker />
+                  <AuthGate>
+                    <Stack>
+                      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                      <Stack.Screen
+                        name="(auth)"
+                        options={{ headerShown: false }}
+                      />
+                      <Stack.Screen name="games/dodge" options={{ headerShown: false }} />
+                    </Stack>
+                  </AuthGate>
+                </StripeWrapper>
               </AuthProvider>
             </GestureHandlerRootView>
           </QueryClientProvider>
