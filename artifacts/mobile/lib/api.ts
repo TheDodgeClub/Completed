@@ -286,6 +286,7 @@ export type AppSettings = {
   clubName: string | null;
   clubTagline: string | null;
   featuredVideo: FeaturedVideo | null;
+  communityGuidelines: string | null;
   privacyPolicy: string | null;
   termsOfService: string | null;
 };

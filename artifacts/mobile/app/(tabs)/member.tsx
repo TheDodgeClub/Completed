@@ -229,7 +229,7 @@ function UpcomingEventRow({ event }: { event: UpcomingEvent }) {
 function GuestView() {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
-  const [legalModal, setLegalModal] = useState<{ title: string; key: "privacyPolicy" | "termsOfService" } | null>(null);
+  const [legalModal, setLegalModal] = useState<{ title: string; key: "communityGuidelines" | "privacyPolicy" | "termsOfService" } | null>(null);
   const { data: settings } = useQuery({ queryKey: ["app-settings"], queryFn: getAppSettings });
   return (
     <ScrollView style={styles.screen} contentInsetAdjustmentBehavior="automatic">
@@ -267,7 +267,13 @@ function GuestView() {
             <Text style={styles.guestFeatureText}>{item.label}</Text>
           </View>
         ))}
-        <View style={{ flexDirection: "row", justifyContent: "center", gap: 20 }}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 20 }}>
+          <Pressable
+            style={({ pressed }) => [styles.privacyLink, { opacity: pressed ? 0.6 : 1 }]}
+            onPress={() => setLegalModal({ title: "Community Guidelines", key: "communityGuidelines" })}
+          >
+            <Text style={styles.privacyLinkText}>Community Guidelines</Text>
+          </Pressable>
           <Pressable
             style={({ pressed }) => [styles.privacyLink, { opacity: pressed ? 0.6 : 1 }]}
             onPress={() => setLegalModal({ title: "Privacy Policy", key: "privacyPolicy" })}
@@ -299,12 +305,14 @@ function EditProfileModal({
   user,
   onSave,
   onDeleteAccount,
+  onOpenLegal,
 }: {
   visible: boolean;
   onClose: () => void;
   user: any;
   onSave: (data: any) => void;
   onDeleteAccount: () => void;
+  onOpenLegal: (key: "communityGuidelines" | "privacyPolicy" | "termsOfService", title: string) => void;
 }) {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
@@ -386,10 +394,9 @@ function EditProfileModal({
 
             <Pressable
               style={({ pressed }) => [styles.privacyLink, { opacity: pressed ? 0.6 : 1, marginBottom: 8 }]}
-              onPress={() => WebBrowser.openBrowserAsync("https://thedodgeclub.co.uk/privacy")}
-              accessibilityLabel="View Privacy Policy (opens website)"
+              onPress={() => onOpenLegal("privacyPolicy", "Privacy Policy")}
             >
-              <Text style={styles.privacyLinkText}>Privacy Policy (website)</Text>
+              <Text style={styles.privacyLinkText}>Privacy Policy</Text>
             </Pressable>
 
             <Pressable
@@ -539,7 +546,7 @@ export default function MemberScreen() {
     staleTime: 10 * 60 * 1000,
   });
 
-  const [legalModal, setLegalModal] = React.useState<{ title: string; key: "privacyPolicy" | "termsOfService" } | null>(null);
+  const [legalModal, setLegalModal] = React.useState<{ title: string; key: "communityGuidelines" | "privacyPolicy" | "termsOfService" } | null>(null);
 
   const { data: clubEvents } = useQuery({
     queryKey: ["upcoming-events"],
@@ -1203,7 +1210,13 @@ export default function MemberScreen() {
           </View>
         )}
 
-        <View style={{ flexDirection: "row", justifyContent: "center", gap: 20, marginBottom: 16 }}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 20, marginBottom: 16 }}>
+          <Pressable
+            style={({ pressed }) => [styles.privacyLink, { opacity: pressed ? 0.6 : 1 }]}
+            onPress={() => setLegalModal({ title: "Community Guidelines", key: "communityGuidelines" })}
+          >
+            <Text style={styles.privacyLinkText}>Community Guidelines</Text>
+          </Pressable>
           <Pressable
             style={({ pressed }) => [styles.privacyLink, { opacity: pressed ? 0.6 : 1 }]}
             onPress={() => setLegalModal({ title: "Privacy Policy", key: "privacyPolicy" })}
@@ -1233,6 +1246,7 @@ export default function MemberScreen() {
         user={user}
         onSave={saveProfile}
         onDeleteAccount={handleDeleteAccount}
+        onOpenLegal={(key, title) => setLegalModal({ key, title })}
       />
     </ScrollView>
   );

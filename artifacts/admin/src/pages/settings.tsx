@@ -92,6 +92,7 @@ export default function SettingsPage() {
   const [fromName, setFromName] = useState(DEFAULT_FROM_NAME);
   const [fromEmail, setFromEmail] = useState(DEFAULT_FROM_EMAIL);
 
+  const [communityGuidelines, setCommunityGuidelines] = useState("");
   const [privacyPolicy, setPrivacyPolicy] = useState("");
   const [termsOfService, setTermsOfService] = useState("");
   const [legalSaving, setLegalSaving] = useState(false);
@@ -101,6 +102,7 @@ export default function SettingsPage() {
       const data = await fetchApi<Record<string, string>>("/api/settings/admin");
       setFromName(data.emailFromName ?? DEFAULT_FROM_NAME);
       setFromEmail(data.emailFromAddress ?? DEFAULT_FROM_EMAIL);
+      setCommunityGuidelines(data.communityGuidelines ?? "");
       setPrivacyPolicy(data.privacyPolicy ?? "");
       setTermsOfService(data.termsOfService ?? "");
     } catch {
@@ -136,6 +138,7 @@ export default function SettingsPage() {
       await fetchApi("/api/settings/admin", {
         method: "PUT",
         body: JSON.stringify({
+          communityGuidelines: communityGuidelines || null,
           privacyPolicy: privacyPolicy || null,
           termsOfService: termsOfService || null,
         }),
@@ -284,6 +287,36 @@ export default function SettingsPage() {
 
         {/* ── Legal ── */}
         <TabsContent value="legal" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-primary" />
+                <CardTitle>Community Guidelines</CardTitle>
+              </div>
+              <CardDescription>
+                Shown in-app when members tap "Community Guidelines" on their profile. Leave blank to display a friendly placeholder message.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <div className="flex items-center gap-2 text-muted-foreground text-sm py-6">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Loading…
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <Textarea
+                    value={communityGuidelines}
+                    onChange={(e) => setCommunityGuidelines(e.target.value)}
+                    placeholder="Enter your Community Guidelines here. Plain text — line breaks are preserved."
+                    rows={14}
+                    className="bg-background border-border rounded-xl text-sm font-mono resize-y"
+                  />
+                  <p className="text-xs text-muted-foreground">Plain text only. Line breaks are preserved when displayed in-app.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
