@@ -36,7 +36,8 @@ function AuthGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!navState?.key || isLoading) return;
     const inAuthGroup = segments[0] === "(auth)";
-    if (!isAuthenticated && !inAuthGroup) {
+    const inLegalGroup = segments[0] === "legal";
+    if (!isAuthenticated && !inAuthGroup && !inLegalGroup) {
       router.replace("/(auth)/register");
     } else if (isAuthenticated && inAuthGroup) {
       router.replace("/(tabs)");
@@ -87,11 +88,11 @@ export default function RootLayout() {
                   <AuthGate>
                     <Stack>
                       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                      <Stack.Screen
-                        name="(auth)"
-                        options={{ headerShown: false }}
-                      />
+                      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
                       <Stack.Screen name="games/dodge" options={{ headerShown: false }} />
+                      <Stack.Screen name="legal/guidelines" options={{ headerShown: false }} />
+                      <Stack.Screen name="legal/privacy" options={{ headerShown: false }} />
+                      <Stack.Screen name="legal/terms" options={{ headerShown: false }} />
                     </Stack>
                   </AuthGate>
                 </StripeWrapper>

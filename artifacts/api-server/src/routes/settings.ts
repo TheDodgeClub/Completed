@@ -27,16 +27,18 @@ async function setSetting(key: string, value: string | null): Promise<void> {
 
 /* GET /api/settings — public settings for the mobile app */
 router.get("/", async (_req, res) => {
-  const [homeVideoUrl, clubName, clubTagline, featuredVideoEnabled, featuredVideoId, communityGuidelines, privacyPolicy, termsOfService] = await Promise.all([
+  const [homeVideoUrl, clubName, clubTagline, featuredVideoEnabled, featuredVideoId, communityGuidelines, privacyPolicyContent, privacyPolicyLegacy, termsOfService] = await Promise.all([
     getSetting("homeVideoUrl"),
     getSetting("clubName"),
     getSetting("clubTagline"),
     getSetting("homeFeaturedVideoEnabled"),
     getSetting("homeFeaturedVideoId"),
     getSetting("communityGuidelines"),
+    getSetting("privacyPolicyContent"),
     getSetting("privacyPolicy"),
     getSetting("termsOfService"),
   ]);
+  const privacyPolicy = privacyPolicyContent ?? privacyPolicyLegacy;
 
   let featuredVideo: { id: number; title: string; url: string; thumbnailUrl: string | null } | null = null;
   if (featuredVideoEnabled === "true" && featuredVideoId) {
@@ -58,7 +60,7 @@ router.get("/", async (_req, res) => {
     }
   }
 
-  res.json({ homeVideoUrl, clubName, clubTagline, featuredVideo, communityGuidelines, privacyPolicy, termsOfService });
+  res.json({ homeVideoUrl, clubName, clubTagline, featuredVideo, communityGuidelines, privacyPolicyContent: privacyPolicy, termsOfService });
 });
 
 /* GET /api/admin/settings — same as above but admin-gated */

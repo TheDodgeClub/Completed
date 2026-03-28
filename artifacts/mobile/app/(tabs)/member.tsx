@@ -24,7 +24,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
-import * as WebBrowser from "expo-web-browser";
 import { useColors } from "@/context/ThemeContext";
 import { resolveImageUrl, API_BASE } from "@/constants/api";
 import { useAuth } from "@/context/AuthContext";
@@ -41,7 +40,6 @@ import {
   deleteAccount,
   getBlockedUsers,
   unblockUser,
-  getAppSettings,
   AttendanceRecord,
   UpcomingEvent,
   Achievement,
@@ -51,55 +49,6 @@ import {
 import { getToken } from "@/lib/api";
 import { useAnnouncements } from "@/hooks/useAnnouncements";
 
-/* ─── Legal Content Modal ─── */
-function LegalContentModal({
-  visible,
-  title,
-  content,
-  onClose,
-}: {
-  visible: boolean;
-  title: string;
-  content: string | null;
-  onClose: () => void;
-}) {
-  const Colors = useColors();
-  const insets = useSafeAreaInsets();
-  const styles = React.useMemo(() => StyleSheet.create({
-    overlay: { flex: 1, backgroundColor: Colors.background },
-    header: {
-      flexDirection: "row", alignItems: "center", gap: 12,
-      paddingTop: insets.top + 12, paddingBottom: 12, paddingHorizontal: 20,
-      borderBottomWidth: 1, borderBottomColor: Colors.border,
-    },
-    headerTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: Colors.text, flex: 1 },
-    closeBtn: { padding: 8 },
-    body: { flex: 1 },
-    bodyContent: { padding: 20, paddingBottom: insets.bottom + 24 },
-    paragraph: { fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.textMuted, lineHeight: 22 },
-    empty: { fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.textMuted, textAlign: "center", marginTop: 40 },
-  }), [Colors, insets]);
-
-  return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>{title}</Text>
-          <Pressable style={({ pressed }) => [styles.closeBtn, { opacity: pressed ? 0.6 : 1 }]} onPress={onClose}>
-            <Feather name="x" size={22} color={Colors.text} />
-          </Pressable>
-        </View>
-        <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
-          {content ? (
-            <Text style={styles.paragraph}>{content}</Text>
-          ) : (
-            <Text style={styles.empty}>Content not available. Please visit thedodgeclub.co.uk for our full legal documents.</Text>
-          )}
-        </ScrollView>
-      </View>
-    </Modal>
-  );
-}
 
 const LEVEL_THRESHOLDS = [0, 300, 800, 1600, 2500, 5000, 10000, 20000, 40000, 80000];
 const LEVEL_NAMES = ["Beginner", "Developing", "Experienced", "Skilled", "Advanced", "Pro", "League", "Expert", "Master", "Icon"];
@@ -229,8 +178,6 @@ function UpcomingEventRow({ event }: { event: UpcomingEvent }) {
 function GuestView() {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
-  const [legalModal, setLegalModal] = useState<{ title: string; key: "communityGuidelines" | "privacyPolicy" | "termsOfService" } | null>(null);
-  const { data: settings } = useQuery({ queryKey: ["app-settings"], queryFn: getAppSettings });
   return (
     <ScrollView style={styles.screen} contentInsetAdjustmentBehavior="automatic">
       <LinearGradient colors={[Colors.primary, "#052A15"]} style={styles.guestHero}>
@@ -270,30 +217,24 @@ function GuestView() {
         <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 20 }}>
           <Pressable
             style={({ pressed }) => [styles.privacyLink, { opacity: pressed ? 0.6 : 1 }]}
-            onPress={() => setLegalModal({ title: "Community Guidelines", key: "communityGuidelines" })}
+            onPress={() => router.push("/legal/guidelines")}
           >
             <Text style={styles.privacyLinkText}>Community Guidelines</Text>
           </Pressable>
           <Pressable
             style={({ pressed }) => [styles.privacyLink, { opacity: pressed ? 0.6 : 1 }]}
-            onPress={() => setLegalModal({ title: "Privacy Policy", key: "privacyPolicy" })}
+            onPress={() => router.push("/legal/privacy")}
           >
             <Text style={styles.privacyLinkText}>Privacy Policy</Text>
           </Pressable>
           <Pressable
             style={({ pressed }) => [styles.privacyLink, { opacity: pressed ? 0.6 : 1 }]}
-            onPress={() => setLegalModal({ title: "Terms of Service", key: "termsOfService" })}
+            onPress={() => router.push("/legal/terms")}
           >
             <Text style={styles.privacyLinkText}>Terms of Service</Text>
           </Pressable>
         </View>
       </View>
-      <LegalContentModal
-        visible={!!legalModal}
-        title={legalModal?.title ?? ""}
-        content={legalModal ? (settings?.[legalModal.key] ?? null) : null}
-        onClose={() => setLegalModal(null)}
-      />
     </ScrollView>
   );
 }
@@ -305,14 +246,12 @@ function EditProfileModal({
   user,
   onSave,
   onDeleteAccount,
-  onOpenLegal,
 }: {
   visible: boolean;
   onClose: () => void;
   user: any;
   onSave: (data: any) => void;
   onDeleteAccount: () => void;
-  onOpenLegal: (key: "communityGuidelines" | "privacyPolicy" | "termsOfService", title: string) => void;
 }) {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
@@ -394,7 +333,7 @@ function EditProfileModal({
 
             <Pressable
               style={({ pressed }) => [styles.privacyLink, { opacity: pressed ? 0.6 : 1, marginBottom: 8 }]}
-              onPress={() => onOpenLegal("privacyPolicy", "Privacy Policy")}
+              onPress={() => router.push("/legal/privacy")}
             >
               <Text style={styles.privacyLinkText}>Privacy Policy</Text>
             </Pressable>
@@ -539,14 +478,6 @@ export default function MemberScreen() {
     queryFn: getBlockedUsers,
     enabled: isAuthenticated,
   });
-
-  const { data: appSettings } = useQuery({
-    queryKey: ["app-settings"],
-    queryFn: getAppSettings,
-    staleTime: 10 * 60 * 1000,
-  });
-
-  const [legalModal, setLegalModal] = React.useState<{ title: string; key: "communityGuidelines" | "privacyPolicy" | "termsOfService" } | null>(null);
 
   const { data: clubEvents } = useQuery({
     queryKey: ["upcoming-events"],
@@ -1213,19 +1144,19 @@ export default function MemberScreen() {
         <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 20, marginBottom: 16 }}>
           <Pressable
             style={({ pressed }) => [styles.privacyLink, { opacity: pressed ? 0.6 : 1 }]}
-            onPress={() => setLegalModal({ title: "Community Guidelines", key: "communityGuidelines" })}
+            onPress={() => router.push("/legal/guidelines")}
           >
             <Text style={styles.privacyLinkText}>Community Guidelines</Text>
           </Pressable>
           <Pressable
             style={({ pressed }) => [styles.privacyLink, { opacity: pressed ? 0.6 : 1 }]}
-            onPress={() => setLegalModal({ title: "Privacy Policy", key: "privacyPolicy" })}
+            onPress={() => router.push("/legal/privacy")}
           >
             <Text style={styles.privacyLinkText}>Privacy Policy</Text>
           </Pressable>
           <Pressable
             style={({ pressed }) => [styles.privacyLink, { opacity: pressed ? 0.6 : 1 }]}
-            onPress={() => setLegalModal({ title: "Terms of Service", key: "termsOfService" })}
+            onPress={() => router.push("/legal/terms")}
           >
             <Text style={styles.privacyLinkText}>Terms of Service</Text>
           </Pressable>
@@ -1233,20 +1164,12 @@ export default function MemberScreen() {
 
       </View>
 
-      <LegalContentModal
-        visible={!!legalModal}
-        title={legalModal?.title ?? ""}
-        content={legalModal ? (appSettings?.[legalModal.key] ?? null) : null}
-        onClose={() => setLegalModal(null)}
-      />
-
       <EditProfileModal
         visible={editVisible}
         onClose={() => setEditVisible(false)}
         user={user}
         onSave={saveProfile}
         onDeleteAccount={handleDeleteAccount}
-        onOpenLegal={(key, title) => setLegalModal({ key, title })}
       />
     </ScrollView>
   );

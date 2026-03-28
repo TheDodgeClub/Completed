@@ -93,9 +93,12 @@ export default function SettingsPage() {
   const [fromEmail, setFromEmail] = useState(DEFAULT_FROM_EMAIL);
 
   const [communityGuidelines, setCommunityGuidelines] = useState("");
-  const [privacyPolicy, setPrivacyPolicy] = useState("");
+  const [privacyPolicyContent, setPrivacyPolicyContent] = useState("");
   const [termsOfService, setTermsOfService] = useState("");
-  const [legalSaving, setLegalSaving] = useState(false);
+
+  const [guidelinesSaving, setGuidelinesSaving] = useState(false);
+  const [privacySaving, setPrivacySaving] = useState(false);
+  const [termsSaving, setTermsSaving] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -103,7 +106,7 @@ export default function SettingsPage() {
       setFromName(data.emailFromName ?? DEFAULT_FROM_NAME);
       setFromEmail(data.emailFromAddress ?? DEFAULT_FROM_EMAIL);
       setCommunityGuidelines(data.communityGuidelines ?? "");
-      setPrivacyPolicy(data.privacyPolicy ?? "");
+      setPrivacyPolicyContent(data.privacyPolicyContent ?? "");
       setTermsOfService(data.termsOfService ?? "");
     } catch {
       // ignore
@@ -132,22 +135,48 @@ export default function SettingsPage() {
     }
   }
 
-  async function handleLegalSave() {
-    setLegalSaving(true);
+  async function handleGuidelinesSave() {
+    setGuidelinesSaving(true);
     try {
       await fetchApi("/api/settings/admin", {
         method: "PUT",
-        body: JSON.stringify({
-          communityGuidelines: communityGuidelines || null,
-          privacyPolicy: privacyPolicy || null,
-          termsOfService: termsOfService || null,
-        }),
+        body: JSON.stringify({ communityGuidelines: communityGuidelines || null }),
       });
-      toast({ title: "Legal content saved", description: "Members will see the updated content in-app." });
+      toast({ title: "Community Guidelines saved", description: "Members will see the updated guidelines in-app." });
     } catch (err: any) {
       toast({ title: "Save failed", description: err.message, variant: "destructive" });
     } finally {
-      setLegalSaving(false);
+      setGuidelinesSaving(false);
+    }
+  }
+
+  async function handlePrivacySave() {
+    setPrivacySaving(true);
+    try {
+      await fetchApi("/api/settings/admin", {
+        method: "PUT",
+        body: JSON.stringify({ privacyPolicyContent: privacyPolicyContent || null }),
+      });
+      toast({ title: "Privacy Policy saved", description: "Members will see the updated policy in-app." });
+    } catch (err: any) {
+      toast({ title: "Save failed", description: err.message, variant: "destructive" });
+    } finally {
+      setPrivacySaving(false);
+    }
+  }
+
+  async function handleTermsSave() {
+    setTermsSaving(true);
+    try {
+      await fetchApi("/api/settings/admin", {
+        method: "PUT",
+        body: JSON.stringify({ termsOfService: termsOfService || null }),
+      });
+      toast({ title: "Terms of Service saved", description: "Members will see the updated terms in-app." });
+    } catch (err: any) {
+      toast({ title: "Save failed", description: err.message, variant: "destructive" });
+    } finally {
+      setTermsSaving(false);
     }
   }
 
@@ -287,6 +316,7 @@ export default function SettingsPage() {
 
         {/* ── Legal ── */}
         <TabsContent value="legal" className="space-y-6">
+          {/* Community Guidelines */}
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
@@ -294,7 +324,7 @@ export default function SettingsPage() {
                 <CardTitle>Community Guidelines</CardTitle>
               </div>
               <CardDescription>
-                Shown in-app when members tap "Community Guidelines" on their profile. Leave blank to display a friendly placeholder message.
+                Shown in-app when members tap "Community Guidelines" on their profile. Leave blank to show a friendly placeholder.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -311,12 +341,18 @@ export default function SettingsPage() {
                     rows={14}
                     className="bg-background border-border rounded-xl text-sm font-mono resize-y"
                   />
-                  <p className="text-xs text-muted-foreground">Plain text only. Line breaks are preserved when displayed in-app.</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-muted-foreground">Plain text only. Line breaks are preserved when displayed in-app.</p>
+                    <Button onClick={handleGuidelinesSave} disabled={guidelinesSaving} className="rounded-xl bg-primary hover:bg-primary/90 text-white gap-2">
+                      {guidelinesSaving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : <><CheckCircle2 className="w-4 h-4" /> Save Guidelines</>}
+                    </Button>
+                  </div>
                 </div>
               )}
             </CardContent>
           </Card>
 
+          {/* Privacy Policy */}
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
@@ -324,7 +360,7 @@ export default function SettingsPage() {
                 <CardTitle>Privacy Policy</CardTitle>
               </div>
               <CardDescription>
-                Shown in-app when members tap "Privacy Policy" on the profile or registration screen. Leave blank to display a fallback message pointing to thedodgeclub.co.uk.
+                Shown in-app when members tap "Privacy Policy" on the profile or registration screen. Leave blank to show a friendly placeholder.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -335,18 +371,24 @@ export default function SettingsPage() {
               ) : (
                 <div className="space-y-3">
                   <Textarea
-                    value={privacyPolicy}
-                    onChange={(e) => setPrivacyPolicy(e.target.value)}
+                    value={privacyPolicyContent}
+                    onChange={(e) => setPrivacyPolicyContent(e.target.value)}
                     placeholder="Enter your full Privacy Policy here. Plain text — line breaks are preserved."
                     rows={14}
                     className="bg-background border-border rounded-xl text-sm font-mono resize-y"
                   />
-                  <p className="text-xs text-muted-foreground">Plain text only. Line breaks are preserved when displayed in-app.</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-muted-foreground">Plain text only. Line breaks are preserved when displayed in-app.</p>
+                    <Button onClick={handlePrivacySave} disabled={privacySaving} className="rounded-xl bg-primary hover:bg-primary/90 text-white gap-2">
+                      {privacySaving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : <><CheckCircle2 className="w-4 h-4" /> Save Privacy Policy</>}
+                    </Button>
+                  </div>
                 </div>
               )}
             </CardContent>
           </Card>
 
+          {/* Terms of Service */}
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
@@ -354,7 +396,7 @@ export default function SettingsPage() {
                 <CardTitle>Terms of Service</CardTitle>
               </div>
               <CardDescription>
-                Shown in-app when members tap "Terms of Service" on the profile or registration screen. Leave blank to display a fallback message.
+                Shown in-app when members tap "Terms of Service" on the profile or registration screen. Leave blank to show a friendly placeholder.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -371,19 +413,16 @@ export default function SettingsPage() {
                     rows={14}
                     className="bg-background border-border rounded-xl text-sm font-mono resize-y"
                   />
-                  <p className="text-xs text-muted-foreground">Plain text only. Line breaks are preserved when displayed in-app.</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-muted-foreground">Plain text only. Line breaks are preserved when displayed in-app.</p>
+                    <Button onClick={handleTermsSave} disabled={termsSaving} className="rounded-xl bg-primary hover:bg-primary/90 text-white gap-2">
+                      {termsSaving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : <><CheckCircle2 className="w-4 h-4" /> Save Terms of Service</>}
+                    </Button>
+                  </div>
                 </div>
               )}
             </CardContent>
           </Card>
-
-          {!loading && (
-            <div className="flex justify-end">
-              <Button onClick={handleLegalSave} disabled={legalSaving} className="rounded-xl bg-primary hover:bg-primary/90 text-white gap-2">
-                {legalSaving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : <><CheckCircle2 className="w-4 h-4" /> Save Legal Content</>}
-              </Button>
-            </div>
-          )}
         </TabsContent>
       </Tabs>
     </div>

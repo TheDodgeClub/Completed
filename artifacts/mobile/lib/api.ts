@@ -287,7 +287,7 @@ export type AppSettings = {
   clubTagline: string | null;
   featuredVideo: FeaturedVideo | null;
   communityGuidelines: string | null;
-  privacyPolicy: string | null;
+  privacyPolicyContent: string | null;
   termsOfService: string | null;
 };
 
