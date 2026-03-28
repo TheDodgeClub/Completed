@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
   },
 
   /* Footer */
-  footer: { position: "absolute", bottom: 10, alignItems: "center", width: "100%" },
+  footer: { position: "absolute", bottom: 38, alignItems: "center", width: "100%" },
   footerText: {
     fontFamily: "Inter_700Bold",
     fontSize: 11,
