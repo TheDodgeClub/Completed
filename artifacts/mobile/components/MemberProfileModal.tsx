@@ -129,7 +129,7 @@ export function MemberProfileModal({ member, onClose }: {
         { text: "Inappropriate behaviour", onPress: () => doReport("Inappropriate behaviour") },
         { text: "Abusive or harmful content", onPress: () => doReport("Abusive or harmful content") },
         { text: "Spam or fake account", onPress: () => doReport("Spam or fake account") },
-        { text: "Other", onPress: () => doReport() },
+        { text: "Other", onPress: () => doReport(undefined) },
         { text: "Cancel", style: "cancel" },
       ],
     );

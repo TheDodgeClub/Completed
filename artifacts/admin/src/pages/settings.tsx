@@ -141,6 +141,11 @@ export default function SettingsPage() {
       .catch(() => {});
   }, []);
 
+  // Legal content
+  const [privacyPolicy, setPrivacyPolicy] = useState("");
+  const [termsOfService, setTermsOfService] = useState("");
+  const [legalSaving, setLegalSaving] = useState(false);
+
   // Gift email
   const [giftSaving, setGiftSaving] = useState(false);
   const [giftActiveTab, setGiftActiveTab] = useState<"edit" | "preview">("edit");
@@ -175,6 +180,8 @@ export default function SettingsPage() {
       setGiftBodyText(data.giftEmailBodyText ?? DEFAULT_GIFT_BODY);
       setGiftCtaText(data.giftEmailCtaText ?? "");
       setGiftCtaUrl(data.giftEmailCtaUrl ?? "");
+      setPrivacyPolicy(data.privacyPolicy ?? "");
+      setTermsOfService(data.termsOfService ?? "");
     } catch {
       // ignore
     } finally {
@@ -207,6 +214,24 @@ export default function SettingsPage() {
       toast({ title: "Save failed", description: err.message, variant: "destructive" });
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleLegalSave() {
+    setLegalSaving(true);
+    try {
+      await fetchApi("/api/settings/admin", {
+        method: "PUT",
+        body: JSON.stringify({
+          privacyPolicy: privacyPolicy || null,
+          termsOfService: termsOfService || null,
+        }),
+      });
+      toast({ title: "Legal content saved", description: "Members will see the updated content in-app." });
+    } catch (err: any) {
+      toast({ title: "Save failed", description: err.message, variant: "destructive" });
+    } finally {
+      setLegalSaving(false);
     }
   }
 
@@ -271,6 +296,60 @@ export default function SettingsPage() {
               Go to Videos →
             </span>
           </Link>
+        </CardContent>
+      </Card>
+
+      {/* Legal Content */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Shield className="w-5 h-5 text-primary" />
+            <CardTitle>Legal Content</CardTitle>
+          </div>
+          <CardDescription>
+            Manage your Privacy Policy and Terms of Service. This content is displayed in-app when members tap the links on the profile and registration screens — no external website required.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex items-center gap-2 text-muted-foreground text-sm py-6">
+              <Loader2 className="w-4 h-4 animate-spin" /> Loading…
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5 text-sm font-semibold">
+                  <Shield className="w-4 h-4 text-muted-foreground" />
+                  Privacy Policy
+                </Label>
+                <Textarea
+                  value={privacyPolicy}
+                  onChange={(e) => setPrivacyPolicy(e.target.value)}
+                  placeholder="Enter your full Privacy Policy text here. This will be shown to members in-app when they tap 'Privacy Policy'."
+                  rows={10}
+                  className="bg-background border-border rounded-xl text-sm font-mono resize-y"
+                />
+                <p className="text-xs text-muted-foreground">Plain text. Line breaks are preserved. Leave blank to show a fallback message.</p>
+              </div>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5 text-sm font-semibold">
+                  <FileText className="w-4 h-4 text-muted-foreground" />
+                  Terms of Service
+                </Label>
+                <Textarea
+                  value={termsOfService}
+                  onChange={(e) => setTermsOfService(e.target.value)}
+                  placeholder="Enter your full Terms of Service text here. This will be shown to members in-app when they tap 'Terms of Service'."
+                  rows={10}
+                  className="bg-background border-border rounded-xl text-sm font-mono resize-y"
+                />
+                <p className="text-xs text-muted-foreground">Plain text. Line breaks are preserved. Leave blank to show a fallback message.</p>
+              </div>
+              <Button onClick={handleLegalSave} disabled={legalSaving} className="rounded-xl bg-primary hover:bg-primary/90 text-white gap-2">
+                {legalSaving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : <><CheckCircle2 className="w-4 h-4" /> Save Legal Content</>}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 

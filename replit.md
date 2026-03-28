@@ -69,7 +69,7 @@ workspace/
 - New users get a unique 6-char referral code at registration
 
 ### Data Models
-- `users` — id, email, passwordHash, name, isAdmin, avatarUrl, stripeCustomerId, **isElite**, **stripeSubscriptionId**, **eliteSince**, **accountType** (player|supporter), **referralCode**, **referredBy**
+- `users` — id, email, passwordHash, name, isAdmin, avatarUrl, stripeCustomerId, **isElite**, **stripeSubscriptionId**, **eliteSince**, **accountType** (player|supporter), **referralCode**, **referredBy**, **isBanned** (boolean, login blocked when true)
 - `events` — id, title, description, date, location, ticketUrl, imageUrl, attendeeCount, ticketPrice, ticketCapacity, stripeProductId, stripePriceId, **eliteEarlyAccess**, **eliteDiscountPercent**, **checkInPin** (TEXT), **emailSubject**, **emailHeaderImageUrl**, **emailBodyText**, **emailCtaText**, **emailCtaUrl**, **giftEmailSubject**, **giftEmailHeaderImageUrl**, **giftEmailBodyText**, **giftEmailCtaText**, **giftEmailCtaUrl**
 - `tickets` — id, userId, eventId, stripeCheckoutSessionId, stripePaymentIntentId, status (pending/paid/free/cancelled), ticketCode (16-char hex), checkedIn, amountPaid
 - `attendance` — id, userId, eventId, earnedMedal, attendedAt
@@ -182,6 +182,21 @@ All routes under `/api`:
 - Hook: `artifacts/mobile/hooks/useAnnouncements.ts` — fetches announcements, tracks `lastSeenAnnouncementId` in AsyncStorage, computes `unreadCount`
 - Updates tab: Announcements section appears at the top of the screen with styled cards showing title, body, and time; badge count on the Updates tab icon when there are unread announcements; tabs open as "seen" via `useFocusEffect`
 - Member profile tab: Latest announcement shown as a notification banner between the hero section and the content body, visible for all users (players and supporters)
+
+### User Reporting & Blocking (Task #19)
+- **Schemas**: `user_reports` (id, reporterId, reportedId, reason, resolved, createdAt) + `user_blocks` (reporterId, blockedId, createdAt) — added via startup migration in `api-server/src/index.ts`
+- **User API**: `POST /api/users/:id/report`, `POST/DELETE /api/users/:id/block`, `GET /api/users/me/blocked`
+- **Ban enforcement**: Login (POST /api/auth/login) returns 403 with suspension message if `isBanned = true`
+- **Admin API**: `GET /api/admin/user-reports` (grouped by reported user with unresolved count), `POST /api/admin/user-reports/:id/resolve`, `POST /api/admin/members/:id/ban|unban` (updates `isBanned`), `POST /api/admin/members/:id/warn` (sends Brevo email)
+- **Mobile**: `reportUser/blockUser/unblockUser/getBlockedUsers` in `lib/api.ts`; `MemberProfileModal.tsx` has "⋯" overflow menu with Report/Block actions (own-profile guard); "Blocked Users" section in member.tsx settings with unblock button
+- **Admin dashboard**: Reports tab in Members page (expandable cards per reported user, unresolved badge count, ban/unban/warn/resolve-report actions); Moderation section in PlayerDetailSheet (warn email + suspend/lift suspension)
+
+### In-App Legal Content Management (Task #20)
+- **Storage**: `privacyPolicy` and `termsOfService` stored as key/value pairs in the existing `settings` table
+- **API**: Both keys included in the public `GET /api/settings` response; admin edit via `PUT /api/admin/settings`
+- **Admin**: "Legal Content" card in Admin → Settings with plain-text editors for Privacy Policy and Terms of Service
+- **Mobile**: `LegalContentModal` component in member.tsx (full-screen slide-up with scrollable text); Privacy Policy + Terms of Service links on both GuestView and authenticated profile bottom → open in-app modal instead of external browser; same for register screen Terms/Privacy links
+- **Fallback**: If no content saved in DB, modal shows message directing user to thedodgeclub.co.uk
 
 ## Expanding Later
 
