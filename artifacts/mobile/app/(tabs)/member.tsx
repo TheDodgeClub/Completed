@@ -340,15 +340,15 @@ function EditProfileModal({
             </Pressable>
 
             <View style={styles.legalFooterRow}>
-              <Pressable onPress={() => router.push("/legal/privacy")} style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}>
+              <Pressable onPress={() => { onClose(); setTimeout(() => router.push("/legal/privacy"), 300); }} style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}>
                 <Text style={styles.privacyLinkText}>Privacy Policy</Text>
               </Pressable>
               <Text style={styles.legalSepText}>·</Text>
-              <Pressable onPress={() => router.push("/legal/terms")} style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}>
+              <Pressable onPress={() => { onClose(); setTimeout(() => router.push("/legal/terms"), 300); }} style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}>
                 <Text style={styles.privacyLinkText}>Terms of Use</Text>
               </Pressable>
               <Text style={styles.legalSepText}>·</Text>
-              <Pressable onPress={() => router.push("/legal/guidelines")} style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}>
+              <Pressable onPress={() => { onClose(); setTimeout(() => router.push("/legal/guidelines"), 300); }} style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}>
                 <Text style={styles.privacyLinkText}>Community Guidelines</Text>
               </Pressable>
             </View>
