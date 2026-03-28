@@ -706,7 +706,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
 
     /* ── Event Banner in Hero ── */
     eventBanner: {
-      borderRadius: 0,
+      borderRadius: 18,
       overflow: "hidden",
       height: 220,
       marginHorizontal: -24,
