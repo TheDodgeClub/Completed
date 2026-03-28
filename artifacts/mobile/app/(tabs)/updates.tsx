@@ -94,11 +94,22 @@ function VideoPlayerModal({ video, onClose }: { video: VideoClip; onClose: () =>
   );
 }
 
-/* ─── YouTube auto-thumbnail helper ─── */
+/* ─── Auto-thumbnail helpers ─── */
 function getYouTubeThumbnail(url: string): string | null {
   const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
   if (ytMatch) return `https://img.youtube.com/vi/${ytMatch[1]}/mqdefault.jpg`;
   return null;
+}
+
+function getStreamableThumbnail(url: string): string | null {
+  // Handles both https://streamable.com/<id> and https://streamable.com/l/<id>/mp4.mp4
+  const match = url.match(/streamable\.com\/(?:l\/)?([a-zA-Z0-9]+)/);
+  if (match) return `https://cdn-cf-east.streamable.com/image/${match[1]}.jpg`;
+  return null;
+}
+
+function getAutoThumbnail(url: string): string | null {
+  return getYouTubeThumbnail(url) ?? getStreamableThumbnail(url);
 }
 
 /* ─── Video card ─── */
@@ -110,7 +121,7 @@ function VideoCard({ video, onPress }: { video: VideoClip; onPress: () => void }
 
   const thumbnailUri = video.thumbnailUrl
     ? (resolveImageUrl(video.thumbnailUrl) ?? undefined)
-    : (getYouTubeThumbnail(video.url) ?? undefined);
+    : (getAutoThumbnail(video.url) ?? undefined);
 
   return (
     <Pressable

@@ -26,6 +26,7 @@ import * as WebBrowser from "expo-web-browser";
 import * as Haptics from "expo-haptics";
 import QRCode from "react-native-qrcode-svg";
 import { useLocalSearchParams } from "expo-router";
+import Constants from "expo-constants";
 import { useColors } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import { useNativeStripe } from "@/hooks/useNativeStripe";
@@ -46,6 +47,8 @@ import {
   CheckoutField,
   EventAttendee,
 } from "@/lib/api";
+
+const isExpoGo = Constants.executionEnvironment === "storeClient";
 
 const CHECK_IN_BEFORE_MS = 30 * 60 * 1000;
 const CHECK_IN_AFTER_MS = 2 * 60 * 60 * 1000;
@@ -128,10 +131,10 @@ export default function TicketsScreen() {
       return;
     }
 
-    // Paid — on native use Stripe PaymentSheet; on web use Checkout redirect
+    // Paid — on native device builds use Stripe PaymentSheet; on web or Expo Go use Checkout redirect
     setBuyingEventId(event.id);
     try {
-      if (Platform.OS !== "web") {
+      if (Platform.OS !== "web" && !isExpoGo) {
         // Native PaymentSheet flow
         const result = await createPaymentIntent(event.id, checkoutData, ticketTypeId, discountCode, quantity);
 

@@ -272,15 +272,6 @@ export default function HomeScreen() {
             </Pressable>
           )}
 
-          {/* Hero CTA */}
-          <Pressable
-            style={({ pressed }) => [styles.heroCTA, { opacity: pressed ? 0.88 : 1 }]}
-            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(tabs)/tickets"); }}
-          >
-            <Feather name="tag" size={13} color="#0D0D0D" />
-            <Text style={styles.heroCTAText}>Get Tickets</Text>
-          </Pressable>
-
           {/* Supporter Journey + Merged Onboarding */}
           {isAuthenticated && user?.accountType === "supporter" && (() => {
             const sp = getSupporterProgress(user.xp ?? 0);
@@ -368,7 +359,7 @@ export default function HomeScreen() {
               <View style={[styles.quickActionIcon, { backgroundColor: Colors.primary + "22" }]}>
                 <Feather name="tag" size={20} color={Colors.primary} />
               </View>
-              <Text style={styles.quickActionLabel}>Buy Tickets</Text>
+              <Text style={styles.quickActionLabel}>Get Tickets</Text>
             </Pressable>
 
             <Pressable
@@ -544,25 +535,6 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       marginTop: 3,
     },
 
-    /* ── Hero CTA ── */
-    heroCTA: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 7,
-      backgroundColor: "#FFC107",
-      borderRadius: 10,
-      paddingHorizontal: 18,
-      paddingVertical: 11,
-      alignSelf: "flex-start",
-      marginTop: 4,
-      marginBottom: 4,
-    },
-    heroCTAText: {
-      fontFamily: "Inter_700Bold",
-      fontSize: 13,
-      color: "#0D0D0D",
-    },
-
     /* ── Supporter Card (merged journey + onboarding) ── */
     supporterCard: {
       backgroundColor: "rgba(255,255,255,0.07)",
@@ -667,9 +639,9 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       justifyContent: "center",
     },
     quickActionLabel: {
-      fontFamily: "Inter_500Medium",
+      fontFamily: "Inter_700Bold",
       fontSize: 11,
-      color: Colors.textMuted,
+      color: Colors.text,
       textAlign: "center",
     },
 
