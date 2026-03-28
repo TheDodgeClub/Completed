@@ -546,7 +546,6 @@ export default function MemberScreen() {
                     try {
                       setEditVisible(false);
                       await deleteAccount();
-                      await logout();
                       router.replace("/(auth)/login");
                     } catch (err: any) {
                       Alert.alert("Error", err.message ?? "Could not delete account. Please try again.");
