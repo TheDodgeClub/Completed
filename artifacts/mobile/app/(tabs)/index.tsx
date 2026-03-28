@@ -195,8 +195,6 @@ export default function HomeScreen() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [featuredVideoPlaying, setFeaturedVideoPlaying] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [heroHeight, setHeroHeight] = useState(350);
-
   const focalY = useMemo(() => {
     const pos = appSettings?.homeHeroImagePosition;
     if (!pos) return 50;
@@ -258,39 +256,14 @@ export default function HomeScreen() {
         }
       >
         {/* ══════════ AREA 1: HERO ══════════ */}
-        <View
-          style={[styles.hero, { paddingTop: insets.top + 24 }]}
-          onLayout={(e) => setHeroHeight(e.nativeEvent.layout.height)}
-        >
-          {/* Hero background: custom image or default gradient */}
-          {appSettings?.homeHeroImageUrl ? (
-            <>
-              <View style={[StyleSheet.absoluteFill, { overflow: "hidden" }]}>
-                <Image
-                  source={{ uri: resolveImageUrl(appSettings.homeHeroImageUrl) ?? appSettings.homeHeroImageUrl }}
-                  style={{
-                    position: "absolute",
-                    left: 0,
-                    right: 0,
-                    height: heroHeight * 1.5,
-                    top: -(heroHeight * 0.5) * (focalY / 100),
-                  }}
-                  resizeMode="cover"
-                />
-              </View>
-              <LinearGradient
-                colors={["rgba(0,0,0,0.18)", "rgba(0,0,0,0.62)"]}
-                style={StyleSheet.absoluteFill}
-              />
-            </>
-          ) : (
-            <LinearGradient
-              colors={["#074A24", "#021409"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-          )}
+        <View style={[styles.hero, { paddingTop: insets.top + 24 }]}>
+          {/* Hero background: always the green gradient */}
+          <LinearGradient
+            colors={["#074A24", "#021409"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
           {/* Logo */}
           <View style={styles.heroTopRow}>
             <Image
@@ -308,25 +281,37 @@ export default function HomeScreen() {
               style={({ pressed }) => [styles.eventBanner, { opacity: pressed ? 0.88 : 1 }]}
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(tabs)/tickets"); }}
             >
-              {nextEvent.imageUrl ? (
-                <>
-                  <Image
-                    source={{ uri: resolveImageUrl(nextEvent.imageUrl) ?? nextEvent.imageUrl }}
-                    style={styles.eventBannerImage}
-                    resizeMode="cover"
-                  />
-                  <LinearGradient
-                    colors={["transparent", "rgba(0,0,0,0.72)"]}
-                    style={styles.eventBannerOverlay}
-                  >
-                    <View style={styles.eventBannerMeta}>
-                      <Text style={styles.eventBannerDate}>
-                        {new Date(nextEvent.date).toLocaleDateString("en-GB", { weekday: "short", month: "short", day: "numeric" })}
-                      </Text>
-                    </View>
-                  </LinearGradient>
-                </>
-              ) : (
+              {/* Use admin hero image if set, otherwise event's own image */}
+              {(appSettings?.homeHeroImageUrl || nextEvent.imageUrl) ? (() => {
+                const imgSrc = appSettings?.homeHeroImageUrl ?? nextEvent.imageUrl!;
+                const resolvedUri = resolveImageUrl(imgSrc) ?? imgSrc;
+                return (
+                  <>
+                    <Image
+                      source={{ uri: resolvedUri }}
+                      style={{
+                        position: "absolute",
+                        left: 0,
+                        right: 0,
+                        height: 270,
+                        top: -90 * (focalY / 100),
+                      }}
+                      resizeMode="cover"
+                    />
+                    <LinearGradient
+                      colors={["transparent", "rgba(0,0,0,0.82)"]}
+                      style={styles.eventBannerOverlay}
+                    >
+                      <Text style={styles.eventBannerTitle} numberOfLines={1}>{nextEvent.title}</Text>
+                      <View style={styles.eventBannerMeta}>
+                        <Text style={styles.eventBannerDate}>
+                          {new Date(nextEvent.date).toLocaleDateString("en-GB", { weekday: "short", month: "short", day: "numeric" })}
+                        </Text>
+                      </View>
+                    </LinearGradient>
+                  </>
+                );
+              })() : (
                 <View style={styles.eventTextBanner}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.eventBannerTitle} numberOfLines={1}>{nextEvent.title}</Text>

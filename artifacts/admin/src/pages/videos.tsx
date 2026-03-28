@@ -105,7 +105,7 @@ function HeroImageSection() {
           <CardTitle className="text-base">Home Screen Hero Image</CardTitle>
         </div>
         <CardDescription>
-          Upload a background image for the hero section. Replaces the default green gradient. After uploading, drag the crosshair to set which part of the image shows on screen.
+          Upload a background image for the upcoming event banner on the home screen. When set, this replaces the event's own photo. Drag the crosshair to choose which part of the image shows in the banner.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
