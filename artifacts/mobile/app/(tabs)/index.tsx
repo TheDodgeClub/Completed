@@ -255,12 +255,6 @@ export default function HomeScreen() {
                       <Text style={styles.eventBannerDate}>
                         {new Date(nextEvent.date).toLocaleDateString("en-GB", { weekday: "short", month: "short", day: "numeric" })}
                       </Text>
-                      {nextEventCountdown && (
-                        <View style={styles.countdownPill}>
-                          <Feather name="clock" size={10} color="#FFC107" />
-                          <Text style={styles.countdownPillText}>{nextEventCountdown}</Text>
-                        </View>
-                      )}
                     </View>
                   </LinearGradient>
                 </>
@@ -271,9 +265,6 @@ export default function HomeScreen() {
                     <Text style={styles.eventBannerDate}>
                       {new Date(nextEvent.date).toLocaleDateString("en-GB", { weekday: "short", month: "short", day: "numeric" })}
                     </Text>
-                    {nextEventCountdown && (
-                      <Text style={styles.countdownInline}>{nextEventCountdown}</Text>
-                    )}
                   </View>
                   <Feather name="chevron-right" size={18} color="rgba(255,255,255,0.6)" />
                 </View>
@@ -405,6 +396,14 @@ export default function HomeScreen() {
               <Text style={styles.quickActionLabel}>Mini Game</Text>
             </Pressable>
           </View>
+
+          {/* ══════════ AREA 2.5: COUNTDOWN ══════════ */}
+          {nextEventCountdown && (
+            <View style={styles.countdownRow}>
+              <Feather name="clock" size={12} color="#FFC107" />
+              <Text style={styles.countdownRowText}>{nextEventCountdown}</Text>
+            </View>
+          )}
 
           {/* ══════════ AREA 3: FEED ══════════ */}
           <View style={styles.section}>
@@ -579,6 +578,18 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       alignItems: "center",
       gap: 8,
       marginTop: 6,
+    },
+    countdownRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 5,
+      alignSelf: "flex-start",
+      marginBottom: 16,
+    },
+    countdownRowText: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 12,
+      color: "#FFC107",
     },
     countdownPill: {
       flexDirection: "row",
