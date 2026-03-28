@@ -11,6 +11,8 @@ const GOLD_DIM = "rgba(255,215,0,0.30)";
 const NEON = "#39FF14";
 const NEON_DIM = "rgba(57,255,20,0.22)";
 
+const LEVEL_NAMES = ["Beginner", "Developing", "Experienced", "Skilled", "Advanced", "Pro", "League", "Expert", "Master", "Icon"];
+
 type Props = {
   name: string;
   username: string | null;
@@ -26,6 +28,7 @@ const PlayerCard = forwardRef<View, Props>(function PlayerCard(
   { name, username, avatarUrl, level, xp, medalsEarned, ringsEarned, skills },
   ref
 ) {
+  const levelName = LEVEL_NAMES[Math.min(level - 1, LEVEL_NAMES.length - 1)] ?? "Player";
   const skillList = skills
     ? skills.split(",").filter(Boolean).map(s => s.trim()).slice(0, 3)
     : [];
@@ -96,8 +99,10 @@ const PlayerCard = forwardRef<View, Props>(function PlayerCard(
           ) : null}
         </View>
 
-        {/* XP — prominent */}
+        {/* Level name + XP */}
         <View style={styles.xpBand}>
+          <Text style={styles.xpLevelName}>{levelName.toUpperCase()}</Text>
+          <Text style={styles.xpDot}>·</Text>
           <Text style={styles.xpValue}>{xp.toLocaleString()} XP</Text>
         </View>
 
@@ -309,6 +314,18 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingVertical: 6,
     paddingHorizontal: 12,
+  },
+  xpLevelName: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 12,
+    color: GOLD,
+    letterSpacing: 1,
+    opacity: 0.8,
+  },
+  xpDot: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 12,
+    color: "rgba(255,215,0,0.35)",
   },
   xpValue: {
     fontFamily: "Poppins_800ExtraBold",
