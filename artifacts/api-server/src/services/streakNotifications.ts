@@ -155,8 +155,28 @@ export async function sendStreakNotificationsForEvent(
         continue;
       }
 
-      // Mark exactly these batch members as sent
-      sentMembers.push(...batchMembers);
+      // Parse per-recipient Expo ticket responses — only record those accepted
+      type ExpoTicket = { status: "ok" | "error"; id?: string; message?: string; details?: unknown };
+      let tickets: ExpoTicket[] = [];
+      try {
+        const body = (await response.json()) as { data?: ExpoTicket[] };
+        tickets = body.data ?? [];
+      } catch {
+        // If JSON parse fails, fall back to marking all as sent (best effort)
+        tickets = batchMembers.map(() => ({ status: "ok" as const }));
+      }
+
+      const acceptedMembers = batchMembers.filter((_, idx) => tickets[idx]?.status === "ok");
+      const failedCount = batchMembers.length - acceptedMembers.length;
+
+      if (failedCount > 0) {
+        logger.warn(
+          { eventId: event.id, failedCount },
+          "streak notification: some Expo tickets returned error status",
+        );
+      }
+
+      sentMembers.push(...acceptedMembers);
     } catch (err: unknown) {
       logger.error({ err, eventId: event.id }, "streak notification batch send failed");
     }
@@ -177,7 +197,10 @@ export async function sendStreakNotificationsForEvent(
       );
   }
 
-  logger.info({ eventId: event.id, sent: sentMembers.length }, "streak notifications sent");
+  logger.info(
+    { eventId: event.id, eligible: eligible.length, sent: sentMembers.length },
+    "streak notifications sent",
+  );
   return sentMembers.length;
 }
 
