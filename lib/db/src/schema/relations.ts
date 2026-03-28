@@ -10,6 +10,8 @@ import { messagesTable } from "./messages";
 import { postCommentsTable } from "./post_comments";
 import { userSessionsTable } from "./user_sessions";
 import { postReportsTable } from "./post_reports";
+import { userReportsTable } from "./user_reports";
+import { userBlocksTable } from "./user_blocks";
 
 export const usersRelations = relations(usersTable, ({ many }) => ({
   attendance: many(attendanceTable),
@@ -21,6 +23,10 @@ export const usersRelations = relations(usersTable, ({ many }) => ({
   receivedMessages: many(messagesTable, { relationName: "receiver" }),
   comments: many(postCommentsTable),
   sessions: many(userSessionsTable),
+  reportsReceived: many(userReportsTable, { relationName: "reported" }),
+  reportsMade: many(userReportsTable, { relationName: "reporter" }),
+  blocksGiven: many(userBlocksTable, { relationName: "blocker" }),
+  blocksReceived: many(userBlocksTable, { relationName: "blocked" }),
 }));
 
 export const userSessionsRelations = relations(userSessionsTable, ({ one }) => ({
@@ -72,4 +78,14 @@ export const teamHistoryRelations = relations(teamHistoryTable, ({ one }) => ({
 export const eventRegistrationsRelations = relations(eventRegistrationsTable, ({ one }) => ({
   user: one(usersTable, { fields: [eventRegistrationsTable.userId], references: [usersTable.id] }),
   event: one(eventsTable, { fields: [eventRegistrationsTable.eventId], references: [eventsTable.id] }),
+}));
+
+export const userReportsRelations = relations(userReportsTable, ({ one }) => ({
+  reportedUser: one(usersTable, { fields: [userReportsTable.reportedUserId], references: [usersTable.id], relationName: "reported" }),
+  reporter: one(usersTable, { fields: [userReportsTable.reportedByUserId], references: [usersTable.id], relationName: "reporter" }),
+}));
+
+export const userBlocksRelations = relations(userBlocksTable, ({ one }) => ({
+  blocker: one(usersTable, { fields: [userBlocksTable.blockerId], references: [usersTable.id], relationName: "blocker" }),
+  blocked: one(usersTable, { fields: [userBlocksTable.blockedId], references: [usersTable.id], relationName: "blocked" }),
 }));

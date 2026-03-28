@@ -39,13 +39,67 @@ import {
   updateAvatar,
   requestUploadUrl,
   deleteAccount,
+  getBlockedUsers,
+  unblockUser,
+  getAppSettings,
   AttendanceRecord,
   UpcomingEvent,
   Achievement,
   Ticket,
+  BlockedUser,
 } from "@/lib/api";
 import { getToken } from "@/lib/api";
 import { useAnnouncements } from "@/hooks/useAnnouncements";
+
+/* ─── Legal Content Modal ─── */
+function LegalContentModal({
+  visible,
+  title,
+  content,
+  onClose,
+}: {
+  visible: boolean;
+  title: string;
+  content: string | null;
+  onClose: () => void;
+}) {
+  const Colors = useColors();
+  const insets = useSafeAreaInsets();
+  const styles = React.useMemo(() => StyleSheet.create({
+    overlay: { flex: 1, backgroundColor: Colors.background },
+    header: {
+      flexDirection: "row", alignItems: "center", gap: 12,
+      paddingTop: insets.top + 12, paddingBottom: 12, paddingHorizontal: 20,
+      borderBottomWidth: 1, borderBottomColor: Colors.border,
+    },
+    headerTitle: { fontFamily: "Inter_700Bold", fontSize: 18, color: Colors.text, flex: 1 },
+    closeBtn: { padding: 8 },
+    body: { flex: 1 },
+    bodyContent: { padding: 20, paddingBottom: insets.bottom + 24 },
+    paragraph: { fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.textMuted, lineHeight: 22 },
+    empty: { fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.textMuted, textAlign: "center", marginTop: 40 },
+  }), [Colors, insets]);
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+      <View style={styles.overlay}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>{title}</Text>
+          <Pressable style={({ pressed }) => [styles.closeBtn, { opacity: pressed ? 0.6 : 1 }]} onPress={onClose}>
+            <Feather name="x" size={22} color={Colors.text} />
+          </Pressable>
+        </View>
+        <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
+          {content ? (
+            <Text style={styles.paragraph}>{content}</Text>
+          ) : (
+            <Text style={styles.empty}>Content not available. Please visit thedodgeclub.co.uk for our full legal documents.</Text>
+          )}
+        </ScrollView>
+      </View>
+    </Modal>
+  );
+}
 
 const LEVEL_THRESHOLDS = [0, 300, 800, 1600, 2500, 5000, 10000, 20000, 40000, 80000];
 const LEVEL_NAMES = ["Beginner", "Developing", "Experienced", "Skilled", "Advanced", "Pro", "League", "Expert", "Master", "Icon"];
@@ -175,6 +229,8 @@ function UpcomingEventRow({ event }: { event: UpcomingEvent }) {
 function GuestView() {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
+  const [legalModal, setLegalModal] = useState<{ title: string; key: "privacyPolicy" | "termsOfService" } | null>(null);
+  const { data: settings } = useQuery({ queryKey: ["app-settings"], queryFn: getAppSettings });
   return (
     <ScrollView style={styles.screen} contentInsetAdjustmentBehavior="automatic">
       <LinearGradient colors={[Colors.primary, "#052A15"]} style={styles.guestHero}>
@@ -211,13 +267,27 @@ function GuestView() {
             <Text style={styles.guestFeatureText}>{item.label}</Text>
           </View>
         ))}
-        <Pressable
-          style={({ pressed }) => [styles.privacyLink, { opacity: pressed ? 0.6 : 1 }]}
-          onPress={() => WebBrowser.openBrowserAsync("https://thedodgeclub.co.uk/privacy")}
-        >
-          <Text style={styles.privacyLinkText}>Privacy Policy</Text>
-        </Pressable>
+        <View style={{ flexDirection: "row", justifyContent: "center", gap: 20 }}>
+          <Pressable
+            style={({ pressed }) => [styles.privacyLink, { opacity: pressed ? 0.6 : 1 }]}
+            onPress={() => setLegalModal({ title: "Privacy Policy", key: "privacyPolicy" })}
+          >
+            <Text style={styles.privacyLinkText}>Privacy Policy</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.privacyLink, { opacity: pressed ? 0.6 : 1 }]}
+            onPress={() => setLegalModal({ title: "Terms of Service", key: "termsOfService" })}
+          >
+            <Text style={styles.privacyLinkText}>Terms of Service</Text>
+          </Pressable>
+        </View>
       </View>
+      <LegalContentModal
+        visible={!!legalModal}
+        title={legalModal?.title ?? ""}
+        content={legalModal ? (settings?.[legalModal.key] ?? null) : null}
+        onClose={() => setLegalModal(null)}
+      />
     </ScrollView>
   );
 }
@@ -317,8 +387,9 @@ function EditProfileModal({
             <Pressable
               style={({ pressed }) => [styles.privacyLink, { opacity: pressed ? 0.6 : 1, marginBottom: 8 }]}
               onPress={() => WebBrowser.openBrowserAsync("https://thedodgeclub.co.uk/privacy")}
+              accessibilityLabel="View Privacy Policy (opens website)"
             >
-              <Text style={styles.privacyLinkText}>Privacy Policy</Text>
+              <Text style={styles.privacyLinkText}>Privacy Policy (website)</Text>
             </Pressable>
 
             <Pressable
@@ -455,6 +526,20 @@ export default function MemberScreen() {
     queryFn: getMyTickets,
     enabled: isAuthenticated,
   });
+
+  const { data: blockedUsers, refetch: refetchBlocked } = useQuery({
+    queryKey: ["blocked-users"],
+    queryFn: getBlockedUsers,
+    enabled: isAuthenticated,
+  });
+
+  const { data: appSettings } = useQuery({
+    queryKey: ["app-settings"],
+    queryFn: getAppSettings,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const [legalModal, setLegalModal] = React.useState<{ title: string; key: "privacyPolicy" | "termsOfService" } | null>(null);
 
   const { data: clubEvents } = useQuery({
     queryKey: ["upcoming-events"],
@@ -1077,14 +1162,70 @@ export default function MemberScreen() {
           </View>
         )}
 
-        <Pressable
-          style={({ pressed }) => [styles.privacyLink, { opacity: pressed ? 0.6 : 1, alignSelf: "center", marginBottom: 16 }]}
-          onPress={() => WebBrowser.openBrowserAsync("https://thedodgeclub.co.uk/privacy")}
-        >
-          <Text style={styles.privacyLinkText}>Privacy Policy</Text>
-        </Pressable>
+        {/* ── Blocked Users ── */}
+        {blockedUsers && blockedUsers.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Feather name="slash" size={16} color={Colors.textMuted} />
+              <Text style={[styles.sectionTitle, { marginLeft: 8 }]}>Blocked Members</Text>
+            </View>
+            {blockedUsers.map((bu: BlockedUser) => (
+              <View key={bu.id} style={styles.blockedRow}>
+                <View style={styles.blockedAvatar}>
+                  <Text style={styles.blockedAvatarInitial}>{bu.name.charAt(0).toUpperCase()}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.blockedName}>{bu.name}</Text>
+                  {bu.username && <Text style={styles.blockedUsername}>@{bu.username}</Text>}
+                </View>
+                <Pressable
+                  style={({ pressed }) => [styles.unblockBtn, { opacity: pressed ? 0.7 : 1 }]}
+                  onPress={() => {
+                    Alert.alert("Unblock", `Unblock ${bu.name}?`, [
+                      { text: "Cancel", style: "cancel" },
+                      {
+                        text: "Unblock",
+                        onPress: async () => {
+                          try {
+                            await unblockUser(bu.id);
+                            refetchBlocked();
+                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                          } catch {}
+                        },
+                      },
+                    ]);
+                  }}
+                >
+                  <Text style={styles.unblockBtnText}>Unblock</Text>
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        )}
+
+        <View style={{ flexDirection: "row", justifyContent: "center", gap: 20, marginBottom: 16 }}>
+          <Pressable
+            style={({ pressed }) => [styles.privacyLink, { opacity: pressed ? 0.6 : 1 }]}
+            onPress={() => setLegalModal({ title: "Privacy Policy", key: "privacyPolicy" })}
+          >
+            <Text style={styles.privacyLinkText}>Privacy Policy</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.privacyLink, { opacity: pressed ? 0.6 : 1 }]}
+            onPress={() => setLegalModal({ title: "Terms of Service", key: "termsOfService" })}
+          >
+            <Text style={styles.privacyLinkText}>Terms of Service</Text>
+          </Pressable>
+        </View>
 
       </View>
+
+      <LegalContentModal
+        visible={!!legalModal}
+        title={legalModal?.title ?? ""}
+        content={legalModal ? (appSettings?.[legalModal.key] ?? null) : null}
+        onClose={() => setLegalModal(null)}
+      />
 
       <EditProfileModal
         visible={editVisible}
@@ -1624,6 +1765,25 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       color: Colors.textMuted,
       marginTop: 10,
     },
+
+    /* Blocked users */
+    blockedRow: {
+      flexDirection: "row", alignItems: "center", gap: 12,
+      paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border,
+    },
+    blockedAvatar: {
+      width: 40, height: 40, borderRadius: 20,
+      backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border,
+      alignItems: "center", justifyContent: "center",
+    },
+    blockedAvatarInitial: { fontFamily: "Inter_700Bold", fontSize: 16, color: Colors.textMuted },
+    blockedName: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.text },
+    blockedUsername: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textMuted },
+    unblockBtn: {
+      paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8,
+      borderWidth: 1, borderColor: Colors.border,
+    },
+    unblockBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.textMuted },
 
     /* Privacy policy & delete account */
     privacyLink: { alignItems: "center", paddingVertical: 10 },

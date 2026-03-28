@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -8,13 +8,16 @@ import {
   Image,
   StyleSheet,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import * as Haptics from "expo-haptics";
 import { useColors } from "@/context/ThemeContext";
 import { resolveImageUrl } from "@/constants/api";
-import { getMemberProfile, MemberSummary } from "@/lib/api";
+import { getMemberProfile, MemberSummary, reportUser, blockUser } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 const LEVEL_NAMES = ["Beginner", "Developing", "Experienced", "Skilled", "Advanced", "Pro", "League", "Expert", "Master", "Icon"];
 const LEVEL_THRESHOLDS = [0, 300, 800, 1600, 2500, 5000, 10000, 20000, 40000, 80000];
@@ -77,17 +80,72 @@ export function MemberProfileModal({ member, onClose }: {
 }) {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
+  const { user: currentUser } = useAuth();
+  const queryClient = useQueryClient();
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [reportModalVisible, setReportModalVisible] = useState(false);
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ["member-profile", member.id],
     queryFn: () => getMemberProfile(member.id),
   });
 
+  const { mutate: doReport, isPending: reporting } = useMutation({
+    mutationFn: (reason?: string) => reportUser(member.id, reason),
+    onSuccess: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert("Report submitted", "Thank you — our team will review this.");
+      setReportModalVisible(false);
+    },
+    onError: () => {
+      Alert.alert("Error", "Could not submit report. Please try again.");
+    },
+  });
+
+  const { mutate: doBlock } = useMutation({
+    mutationFn: () => blockUser(member.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["blocked-users"] });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert("User blocked", `${member.name} has been blocked. You won't see their content.`, [
+        { text: "OK", onPress: onClose },
+      ]);
+    },
+  });
+
+  const isOwnProfile = currentUser?.id === member.id;
   const isSupporter = (profile?.accountType ?? member.accountType) === "supporter";
   const level = profile ? getLevel(profile.xp) : 1;
   const levelName = LEVEL_NAMES[(level - 1)] ?? "Rookie";
   const levelProgress = (!isSupporter && profile) ? getLevelProgress(profile.xp, level) : null;
   const supporterProgress = (isSupporter && profile) ? getSupporterProgress(profile.xp) : null;
+
+  function handleReportPress() {
+    setMenuVisible(false);
+    Alert.alert(
+      "Report user",
+      "Why are you reporting this member?",
+      [
+        { text: "Inappropriate behaviour", onPress: () => doReport("Inappropriate behaviour") },
+        { text: "Abusive or harmful content", onPress: () => doReport("Abusive or harmful content") },
+        { text: "Spam or fake account", onPress: () => doReport("Spam or fake account") },
+        { text: "Other", onPress: () => doReport() },
+        { text: "Cancel", style: "cancel" },
+      ],
+    );
+  }
+
+  function handleBlockPress() {
+    setMenuVisible(false);
+    Alert.alert(
+      "Block user",
+      `Block ${member.name}? They won't be able to see your profile and you won't see theirs.`,
+      [
+        { text: "Block", style: "destructive", onPress: () => doBlock() },
+        { text: "Cancel", style: "cancel" },
+      ],
+    );
+  }
 
   return (
     <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
@@ -96,6 +154,16 @@ export function MemberProfileModal({ member, onClose }: {
         <Pressable style={styles.modalClose} onPress={onClose}>
           <Feather name="x" size={22} color={Colors.textMuted} />
         </Pressable>
+
+        {/* ⋯ menu — only shown on other users' profiles */}
+        {!isOwnProfile && currentUser && (
+          <Pressable
+            style={styles.menuBtn}
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setMenuVisible(true); }}
+          >
+            <Feather name="more-horizontal" size={22} color={Colors.textMuted} />
+          </Pressable>
+        )}
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 56 }}>
           <LinearGradient colors={[Colors.primary + "CC", Colors.background]} style={styles.profileHero}>
@@ -229,6 +297,37 @@ export function MemberProfileModal({ member, onClose }: {
           ) : null}
         </ScrollView>
       </View>
+
+      {/* ⋯ Action Sheet */}
+      <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={() => setMenuVisible(false)}>
+        <Pressable style={styles.menuOverlay} onPress={() => setMenuVisible(false)}>
+          <View style={[styles.menuSheet, { backgroundColor: Colors.card }]}>
+            <Text style={[styles.menuTitle, { color: Colors.textMuted }]}>Options for {member.name}</Text>
+            <Pressable
+              style={({ pressed }) => [styles.menuItem, { opacity: pressed ? 0.7 : 1 }]}
+              onPress={handleReportPress}
+            >
+              <Feather name="flag" size={18} color="#F59E0B" />
+              <Text style={[styles.menuItemText, { color: Colors.text }]}>Report this member</Text>
+            </Pressable>
+            <View style={[styles.menuDivider, { backgroundColor: Colors.border }]} />
+            <Pressable
+              style={({ pressed }) => [styles.menuItem, { opacity: pressed ? 0.7 : 1 }]}
+              onPress={handleBlockPress}
+            >
+              <Feather name="slash" size={18} color="#EF4444" />
+              <Text style={[styles.menuItemText, { color: "#EF4444" }]}>Block this member</Text>
+            </Pressable>
+            <View style={[styles.menuDivider, { backgroundColor: Colors.border }]} />
+            <Pressable
+              style={({ pressed }) => [styles.menuItem, { opacity: pressed ? 0.7 : 1 }]}
+              onPress={() => setMenuVisible(false)}
+            >
+              <Text style={[styles.menuItemText, { color: Colors.textMuted }]}>Cancel</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
     </Modal>
   );
 }
@@ -242,6 +341,10 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     },
     modalClose: {
       position: "absolute", top: 16, right: 20, zIndex: 10,
+      padding: 8, borderRadius: 20,
+    },
+    menuBtn: {
+      position: "absolute", top: 16, left: 20, zIndex: 10,
       padding: 8, borderRadius: 20,
     },
     profileHero: {
@@ -286,5 +389,14 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     bioText: { fontFamily: "Inter_400Regular", fontSize: 15, color: Colors.text, lineHeight: 22 },
     roleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
     memberSinceText: { fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.textMuted },
+    menuOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
+    menuSheet: {
+      borderTopLeftRadius: 20, borderTopRightRadius: 20,
+      paddingTop: 16, paddingBottom: 36, paddingHorizontal: 20,
+    },
+    menuTitle: { fontFamily: "Inter_400Regular", fontSize: 13, textAlign: "center", marginBottom: 16 },
+    menuItem: { flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 16 },
+    menuItemText: { fontFamily: "Inter_600SemiBold", fontSize: 16 },
+    menuDivider: { height: 1 },
   });
 }

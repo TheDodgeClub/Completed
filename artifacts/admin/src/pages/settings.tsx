@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Video, Mail, Gift, Send, CheckCircle2, Loader2, Eye, Pencil, Link2, Image as ImageIcon, Type } from "lucide-react";
+import { Video, Mail, Gift, Send, CheckCircle2, Loader2, Eye, Pencil, Link2, Image as ImageIcon, Type, FileText, Shield } from "lucide-react";
 import { Link } from "wouter";
 import { fetchApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";

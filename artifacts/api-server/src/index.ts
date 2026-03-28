@@ -45,6 +45,33 @@ async function runMigrations() {
           ALTER TABLE password_reset_tokens ADD CONSTRAINT password_reset_tokens_email_unique UNIQUE (email);
         END IF;
       END $$;
+
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS is_banned BOOLEAN NOT NULL DEFAULT FALSE;
+
+      CREATE TABLE IF NOT EXISTS user_reports (
+        id SERIAL PRIMARY KEY,
+        reported_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        reported_by_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        reason TEXT,
+        resolved BOOLEAN NOT NULL DEFAULT FALSE,
+        resolved_at TIMESTAMP,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS user_blocks (
+        id SERIAL PRIMARY KEY,
+        blocker_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        blocked_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'user_blocks_blocker_blocked_unique'
+        ) THEN
+          ALTER TABLE user_blocks ADD CONSTRAINT user_blocks_blocker_blocked_unique UNIQUE (blocker_id, blocked_id);
+        END IF;
+      END $$;
     `);
     logger.info("DB migrations applied");
   } finally {

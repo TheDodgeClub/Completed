@@ -6,6 +6,7 @@ export interface AdminMember {
   name: string;
   email: string;
   isAdmin: boolean;
+  isBanned: boolean;
   memberSince: string;
   eventsAttended: number;
   medalsEarned: number;
@@ -20,6 +21,25 @@ export interface AdminMember {
   referralCode: string | null;
   referredByName: string | null;
   referralCount: number;
+}
+
+export interface UserReportEntry {
+  id: number;
+  reason: string | null;
+  resolved: boolean;
+  reportedBy: string;
+  createdAt: string;
+}
+
+export interface UserReportGroup {
+  userId: number;
+  name: string;
+  email: string;
+  avatarUrl: string | null;
+  isBanned: boolean;
+  reportCount: number;
+  unresolvedCount: number;
+  reports: UserReportEntry[];
 }
 
 export interface AdminAttendanceRecord {
@@ -136,7 +156,7 @@ export function useDeleteMember() {
 export function useUpdateMember() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: { name?: string; username?: string; bio?: string; memberSince?: string } }) =>
+    mutationFn: ({ id, data }: { id: number; data: { name?: string; username?: string; bio?: string; memberSince?: string; accountType?: string } }) =>
       fetchApi<AdminMember>(`/api/admin/members/${id}`, {
         method: "PUT",
         body: JSON.stringify(data),
@@ -144,6 +164,47 @@ export function useUpdateMember() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["members"] });
     },
+  });
+}
+
+export function useBanMember() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => fetchApi(`/api/admin/members/${id}/ban`, { method: "POST" }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["members"] }); },
+  });
+}
+
+export function useUnbanMember() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => fetchApi(`/api/admin/members/${id}/unban`, { method: "POST" }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["members"] }); },
+  });
+}
+
+export function useWarnMember() {
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: number; reason?: string }) =>
+      fetchApi(`/api/admin/members/${id}/warn`, {
+        method: "POST",
+        body: JSON.stringify({ reason }),
+      }),
+  });
+}
+
+export function useUserReports() {
+  return useQuery({
+    queryKey: ["user-reports"],
+    queryFn: () => fetchApi<UserReportGroup[]>("/api/admin/user-reports"),
+  });
+}
+
+export function useResolveUserReport() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => fetchApi(`/api/admin/user-reports/${id}/resolve`, { method: "POST" }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["user-reports"] }); },
   });
 }
 

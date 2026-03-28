@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
+  Modal,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -18,6 +19,8 @@ import * as Haptics from "expo-haptics";
 import * as WebBrowser from "expo-web-browser";
 import { useColors, useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { getAppSettings } from "@/lib/api";
 
 type AccountType = "player" | "supporter";
 
@@ -68,6 +71,13 @@ export default function RegisterScreen() {
   const [accountType, setAccountType] = useState<AccountType>("player");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [legalModal, setLegalModal] = useState<{ title: string; key: "privacyPolicy" | "termsOfService" } | null>(null);
+
+  const { data: appSettings } = useQuery({
+    queryKey: ["app-settings"],
+    queryFn: getAppSettings,
+    staleTime: 10 * 60 * 1000,
+  });
 
   const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
@@ -345,11 +355,11 @@ export default function RegisterScreen() {
 
         <View style={styles.termsRow}>
           <Text style={styles.termsText}>By creating an account you agree to our </Text>
-          <Pressable onPress={() => WebBrowser.openBrowserAsync("https://thedodgeclub.co.uk/terms")}>
+          <Pressable onPress={() => setLegalModal({ title: "Terms of Service", key: "termsOfService" })}>
             <Text style={styles.termsLink}>Terms of Service</Text>
           </Pressable>
           <Text style={styles.termsText}> and </Text>
-          <Pressable onPress={() => WebBrowser.openBrowserAsync("https://thedodgeclub.co.uk/privacy")}>
+          <Pressable onPress={() => setLegalModal({ title: "Privacy Policy", key: "privacyPolicy" })}>
             <Text style={styles.termsLink}>Privacy Policy</Text>
           </Pressable>
         </View>
@@ -361,7 +371,54 @@ export default function RegisterScreen() {
           </Pressable>
         </View>
       </ScrollView>
+      <RegisterLegalModal
+        visible={!!legalModal}
+        title={legalModal?.title ?? ""}
+        content={legalModal ? (appSettings?.[legalModal.key] ?? null) : null}
+        onClose={() => setLegalModal(null)}
+        Colors={Colors}
+        insets={insets}
+      />
     </KeyboardAvoidingView>
+  );
+}
+
+function RegisterLegalModal({
+  visible, title, content, onClose, Colors, insets,
+}: {
+  visible: boolean;
+  title: string;
+  content: string | null;
+  onClose: () => void;
+  Colors: any;
+  insets: any;
+}) {
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: Colors.background ?? "#FFFFFF" }}>
+        <View style={{
+          flexDirection: "row", alignItems: "center", gap: 12,
+          paddingTop: insets.top + 12, paddingBottom: 12, paddingHorizontal: 20,
+          borderBottomWidth: 1, borderBottomColor: Colors.border ?? "#E5E5E5",
+        }}>
+          <Text style={{ fontFamily: "Inter_700Bold", fontSize: 18, color: Colors.text ?? "#000", flex: 1 }}>{title}</Text>
+          <Pressable style={({ pressed }) => [{ padding: 8, opacity: pressed ? 0.6 : 1 }]} onPress={onClose}>
+            <Feather name="x" size={22} color={Colors.text ?? "#000"} />
+          </Pressable>
+        </View>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 24 }}>
+          {content ? (
+            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.textMuted ?? "#666", lineHeight: 22 }}>
+              {content}
+            </Text>
+          ) : (
+            <Text style={{ fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.textMuted ?? "#666", textAlign: "center", marginTop: 40 }}>
+              Content not available. Please visit thedodgeclub.co.uk for our full legal documents.
+            </Text>
+          )}
+        </ScrollView>
+      </View>
+    </Modal>
   );
 }
 

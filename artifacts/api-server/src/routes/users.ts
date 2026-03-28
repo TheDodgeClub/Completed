@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { db, usersTable, attendanceTable, eventsTable, awardsTable, eventRegistrationsTable, postCommentsTable, postsTable } from "@workspace/db";
-import { eq, gt, desc, lte, isNotNull } from "drizzle-orm";
+import { db, usersTable, attendanceTable, eventsTable, awardsTable, eventRegistrationsTable, postCommentsTable, postsTable, userReportsTable, userBlocksTable } from "@workspace/db";
+import { eq, gt, desc, lte, isNotNull, and } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -609,6 +609,71 @@ router.put("/me/notifications", async (req, res) => {
     .where(eq(usersTable.id, userId));
 
   res.json({ notificationsEnabled: enabled });
+});
+
+/* POST /api/users/:id/report — report a user */
+router.post("/:id/report", async (req, res) => {
+  const userId = req.session?.userId;
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const targetId = Number(req.params.id);
+  if (targetId === userId) { res.status(400).json({ error: "Cannot report yourself" }); return; }
+
+  const { reason } = req.body;
+  await db.insert(userReportsTable).values({
+    reportedUserId: targetId,
+    reportedByUserId: userId,
+    reason: reason ?? null,
+  });
+  res.json({ ok: true });
+});
+
+/* POST /api/users/:id/block — block a user */
+router.post("/:id/block", async (req, res) => {
+  const userId = req.session?.userId;
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const targetId = Number(req.params.id);
+  if (targetId === userId) { res.status(400).json({ error: "Cannot block yourself" }); return; }
+
+  try {
+    await db.insert(userBlocksTable).values({ blockerId: userId, blockedId: targetId });
+  } catch {
+    // already blocked — ignore
+  }
+  res.json({ ok: true });
+});
+
+/* DELETE /api/users/:id/block — unblock a user */
+router.delete("/:id/block", async (req, res) => {
+  const userId = req.session?.userId;
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const targetId = Number(req.params.id);
+  await db.delete(userBlocksTable).where(
+    and(eq(userBlocksTable.blockerId, userId), eq(userBlocksTable.blockedId, targetId))
+  );
+  res.json({ ok: true });
+});
+
+/* GET /api/users/me/blocked — list blocked users */
+router.get("/me/blocked", async (req, res) => {
+  const userId = req.session?.userId;
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const blocks = await db.query.userBlocksTable.findMany({
+    where: eq(userBlocksTable.blockerId, userId),
+    with: { blocked: { columns: { id: true, name: true, avatarUrl: true, username: true } } },
+    orderBy: [desc(userBlocksTable.createdAt)],
+  });
+
+  res.json(blocks.map(b => ({
+    id: b.blocked.id,
+    name: b.blocked.name,
+    avatarUrl: b.blocked.avatarUrl ?? null,
+    username: b.blocked.username ?? null,
+    blockedAt: b.createdAt.toISOString(),
+  })));
 });
 
 export default router;

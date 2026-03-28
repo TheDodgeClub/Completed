@@ -19,3 +19,5 @@ export * from "./announcements";
 export * from "./streak_notifications";
 export * from "./post_reports";
 export * from "./password_reset_tokens";
+export * from "./user_reports";
+export * from "./user_blocks";

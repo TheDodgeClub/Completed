@@ -2,7 +2,9 @@ import { useState, useEffect } from "react";
 import {
   useMembers, useMemberAttendance, useMemberAwards,
   useMarkAttendance, useDeleteAttendance, useGrantAward, useRevokeAward,
-  useUpdateMember, useDeleteMember, AdminMember,
+  useUpdateMember, useDeleteMember, useBanMember, useUnbanMember, useWarnMember,
+  useUserReports, useResolveUserReport,
+  AdminMember, UserReportGroup,
 } from "@/hooks/use-members";
 import { useEvents } from "@/hooks/use-events";
 import { formatDateTime } from "@/lib/format";
@@ -21,7 +23,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import {
   Search, Trophy, CalendarCheck, Trash2, ShieldCheck, Loader2, CircleDot,
-  Pencil, Check, Heart, Copy, Users,
+  Pencil, Check, Heart, Copy, Users, Flag, Ban, AlertTriangle, CheckCircle2, Mail,
 } from "lucide-react";
 import LeaderboardPage from "@/pages/leaderboard";
 
@@ -95,6 +97,10 @@ export default function Members() {
             <Trophy className="w-4 h-4" />
             Leaderboard
           </TabsTrigger>
+          <TabsTrigger value="reports" className="gap-2">
+            <Flag className="w-4 h-4" />
+            Reports
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="players" className="mt-6">
@@ -105,6 +111,9 @@ export default function Members() {
         </TabsContent>
         <TabsContent value="leaderboard" className="mt-6">
           <LeaderboardPage />
+        </TabsContent>
+        <TabsContent value="reports" className="mt-6">
+          <UserReportsTab toast={toast} />
         </TabsContent>
       </Tabs>
     </div>
@@ -254,6 +263,10 @@ function PlayerDetailSheet({ member, onClose, toast }: { member: AdminMember | n
   const { mutate: revokeAward, isPending: revoking } = useRevokeAward();
   const { mutate: updateMember, isPending: updatingProfile } = useUpdateMember();
   const { mutate: deleteMember, isPending: deletingMember } = useDeleteMember();
+  const { mutate: banMember, isPending: banning } = useBanMember();
+  const { mutate: unbanMember, isPending: unbanning } = useUnbanMember();
+  const { mutate: warnMember, isPending: warning } = useWarnMember();
+  const [warnReason, setWarnReason] = useState("");
 
   const [confirmDelete, setConfirmDelete] = useState(false);
   useEffect(() => { setConfirmDelete(false); }, [member?.id]);
@@ -450,7 +463,7 @@ function PlayerDetailSheet({ member, onClose, toast }: { member: AdminMember | n
                     {attendance.map((rec) => (
                       <div key={rec.id} className="flex items-center justify-between px-4 py-3 bg-background border border-border/50 rounded-xl group hover:border-primary/30 transition-colors">
                         <div>
-                          <p className="text-sm font-medium text-foreground">{rec.eventTitle}</p>
+                          <p className="text-sm font-medium text-foreground">{rec.event?.title ?? "Event"}</p>
                           <p className="text-xs text-muted-foreground">{formatDateTime(rec.attendedAt)}</p>
                         </div>
                         <div className="flex items-center gap-2">
@@ -465,6 +478,78 @@ function PlayerDetailSheet({ member, onClose, toast }: { member: AdminMember | n
                 ) : (
                   <p className="text-sm text-muted-foreground text-center py-4">No attendance records yet.</p>
                 )}
+              </div>
+
+              {/* Moderation */}
+              <div className="space-y-4">
+                <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2"><AlertTriangle className="w-5 h-5 text-yellow-500" />Moderation</h3>
+
+                {/* Warn */}
+                <div className="bg-secondary/20 border border-border/50 p-4 rounded-2xl space-y-3">
+                  <p className="text-sm font-semibold text-foreground flex items-center gap-2"><Mail className="w-4 h-4 text-muted-foreground" />Send Warning Email</p>
+                  <Input
+                    placeholder="Optional reason or message to include…"
+                    value={warnReason}
+                    onChange={e => setWarnReason(e.target.value)}
+                    className="bg-background border-border rounded-xl text-sm"
+                  />
+                  <Button
+                    size="sm"
+                    className="w-full rounded-xl bg-yellow-600 hover:bg-yellow-700 text-white gap-2"
+                    disabled={warning}
+                    onClick={() => warnMember({ id: member.id, reason: warnReason || undefined }, {
+                      onSuccess: () => { toast({ title: "Warning email sent" }); setWarnReason(""); },
+                      onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+                    })}
+                  >
+                    {warning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+                    Send Warning
+                  </Button>
+                </div>
+
+                {/* Ban / Unban */}
+                <div className={`p-4 rounded-2xl border space-y-3 ${member.isBanned ? "bg-green-500/5 border-green-500/30" : "bg-orange-500/5 border-orange-500/30"}`}>
+                  {member.isBanned ? (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <Ban className="w-4 h-4 text-green-500" />
+                        <p className="text-sm font-semibold text-green-500">Account is suspended</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground">This member cannot log in. Lift the suspension to restore access.</p>
+                      <Button
+                        size="sm" className="w-full rounded-xl bg-green-700 hover:bg-green-800 text-white gap-2"
+                        disabled={unbanning}
+                        onClick={() => unbanMember(member.id, {
+                          onSuccess: () => toast({ title: `${member.name} unsuspended` }),
+                          onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+                        })}
+                      >
+                        {unbanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                        Lift Suspension
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <Ban className="w-4 h-4 text-orange-500" />
+                        <p className="text-sm font-semibold text-orange-500">Suspend Account</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground">This will prevent the member from logging in. They can be reinstated at any time.</p>
+                      <Button
+                        size="sm" variant="outline"
+                        className="w-full rounded-xl border-orange-500/40 text-orange-500 hover:bg-orange-500 hover:text-white gap-2"
+                        disabled={banning}
+                        onClick={() => banMember(member.id, {
+                          onSuccess: () => toast({ title: `${member.name} suspended` }),
+                          onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+                        })}
+                      >
+                        {banning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Ban className="w-4 h-4" />}
+                        Suspend Account
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
 
               {/* Danger Zone */}
@@ -490,6 +575,140 @@ function PlayerDetailSheet({ member, onClose, toast }: { member: AdminMember | n
         )}
       </SheetContent>
     </Sheet>
+  );
+}
+
+/* ─── User Reports Tab ─── */
+function UserReportsTab({ toast }: { toast: any }) {
+  const { data: groups, isLoading } = useUserReports();
+  const { mutate: banMember, isPending: banning } = useBanMember();
+  const { mutate: unbanMember, isPending: unbanning } = useUnbanMember();
+  const { mutate: warnMember, isPending: warning } = useWarnMember();
+  const { mutate: resolveReport, isPending: resolving } = useResolveUserReport();
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+
+  if (isLoading) return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
+  if (!groups || groups.length === 0) return (
+    <div className="flex flex-col items-center justify-center py-20 text-center gap-3">
+      <Flag className="w-10 h-10 text-muted-foreground/40" />
+      <p className="text-muted-foreground text-sm">No user reports yet.</p>
+    </div>
+  );
+
+  return (
+    <div className="space-y-4">
+      {groups.map((group: UserReportGroup) => {
+        const expanded = expandedId === group.userId;
+        return (
+          <div key={group.userId} className="border border-border/50 rounded-2xl overflow-hidden bg-card">
+            {/* Header row */}
+            <button
+              className="w-full flex items-center gap-4 p-4 hover:bg-secondary/20 transition-colors text-left"
+              onClick={() => setExpandedId(expanded ? null : group.userId)}
+            >
+              <div className="w-10 h-10 rounded-full bg-secondary border border-border flex items-center justify-center text-sm font-bold text-muted-foreground shrink-0">
+                {group.avatarUrl ? (
+                  <img src={group.avatarUrl} alt={group.name} className="w-full h-full object-cover rounded-full" />
+                ) : group.name.charAt(0)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold text-sm text-foreground">{group.name}</span>
+                  {group.isBanned && <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-[10px]"><Ban className="w-2.5 h-2.5 mr-1" />Suspended</Badge>}
+                </div>
+                <p className="text-xs text-muted-foreground">{group.email}</p>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                {group.unresolvedCount > 0 && (
+                  <Badge className="bg-red-500/15 text-red-400 border-red-500/25">{group.unresolvedCount} new</Badge>
+                )}
+                <span className="text-xs text-muted-foreground">{group.reportCount} total</span>
+                <span className="text-muted-foreground text-xs">{expanded ? "▲" : "▼"}</span>
+              </div>
+            </button>
+
+            {/* Expanded detail */}
+            {expanded && (
+              <div className="border-t border-border/50 p-4 space-y-4">
+                {/* Action buttons */}
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm" variant="outline"
+                    className="gap-1.5 text-xs border-yellow-500/40 text-yellow-500 hover:bg-yellow-500 hover:text-white"
+                    disabled={warning}
+                    onClick={() => warnMember({ id: group.userId }, {
+                      onSuccess: () => toast({ title: "Warning email sent" }),
+                      onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+                    })}
+                  >
+                    {warning ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
+                    Send Warning
+                  </Button>
+
+                  {group.isBanned ? (
+                    <Button
+                      size="sm" variant="outline"
+                      className="gap-1.5 text-xs border-green-500/40 text-green-500 hover:bg-green-500 hover:text-white"
+                      disabled={unbanning}
+                      onClick={() => unbanMember(group.userId, {
+                        onSuccess: () => toast({ title: `${group.name} unsuspended` }),
+                        onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+                      })}
+                    >
+                      {unbanning ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                      Lift Suspension
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm" variant="outline"
+                      className="gap-1.5 text-xs border-red-500/40 text-red-500 hover:bg-red-500 hover:text-white"
+                      disabled={banning}
+                      onClick={() => banMember(group.userId, {
+                        onSuccess: () => toast({ title: `${group.name} suspended` }),
+                        onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+                      })}
+                    >
+                      {banning ? <Loader2 className="w-3 h-3 animate-spin" /> : <Ban className="w-3.5 h-3.5" />}
+                      Suspend
+                    </Button>
+                  )}
+                </div>
+
+                {/* Individual reports */}
+                <div className="space-y-2">
+                  {group.reports.map(report => (
+                    <div key={report.id} className={`flex items-start gap-3 p-3 rounded-xl border text-sm ${report.resolved ? "bg-secondary/10 border-border/30 opacity-60" : "bg-background border-border/50"}`}>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-foreground">{report.reason || "No reason given"}</p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          Reported by <span className="font-medium">{report.reportedBy}</span> · {new Date(report.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                        </p>
+                      </div>
+                      {report.resolved ? (
+                        <span className="text-[10px] text-green-500 font-semibold flex items-center gap-1 shrink-0"><Check className="w-3 h-3" />Resolved</span>
+                      ) : (
+                        <Button
+                          size="sm" variant="ghost"
+                          className="h-7 text-xs gap-1 text-muted-foreground hover:text-green-500 hover:bg-green-500/10 shrink-0"
+                          disabled={resolving}
+                          onClick={() => resolveReport(report.id, {
+                            onSuccess: () => toast({ title: "Report resolved" }),
+                            onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+                          })}
+                        >
+                          {resolving ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                          Resolve
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 

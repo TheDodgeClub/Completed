@@ -286,6 +286,8 @@ export type AppSettings = {
   clubName: string | null;
   clubTagline: string | null;
   featuredVideo: FeaturedVideo | null;
+  privacyPolicy: string | null;
+  termsOfService: string | null;
 };
 
 export async function getAppSettings(): Promise<AppSettings> {
@@ -543,4 +545,33 @@ export async function getAnnouncements(): Promise<Announcement[]> {
 
 export async function checkEventIn(eventId: number, pin: string): Promise<{ success?: boolean; alreadyCheckedIn?: boolean; xpGained?: number }> {
   return apiFetch(`/events/${eventId}/checkin`, { method: "POST", body: JSON.stringify({ pin }) });
+}
+
+/* ---- user reporting & blocking ---- */
+
+export async function reportUser(userId: number, reason?: string): Promise<void> {
+  await apiFetch<{ ok: boolean }>(`/users/${userId}/report`, {
+    method: "POST",
+    body: JSON.stringify({ reason: reason ?? null }),
+  });
+}
+
+export async function blockUser(userId: number): Promise<void> {
+  await apiFetch<{ ok: boolean }>(`/users/${userId}/block`, { method: "POST" });
+}
+
+export async function unblockUser(userId: number): Promise<void> {
+  await apiFetch<{ ok: boolean }>(`/users/${userId}/block`, { method: "DELETE" });
+}
+
+export type BlockedUser = {
+  id: number;
+  name: string;
+  avatarUrl: string | null;
+  username: string | null;
+  blockedAt: string;
+};
+
+export async function getBlockedUsers(): Promise<BlockedUser[]> {
+  return apiFetch<BlockedUser[]>("/users/me/blocked");
 }

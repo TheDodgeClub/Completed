@@ -29,6 +29,7 @@ export const usersTable = pgTable("users", {
   accountType: text("account_type").notNull().default("player"),
   referralCode: text("referral_code").unique(),
   referredBy: integer("referred_by"),
+  isBanned: boolean("is_banned").notNull().default(false),
 });
 
 export const insertUserSchema = createInsertSchema(usersTable).omit({

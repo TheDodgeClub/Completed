@@ -230,6 +230,11 @@ router.post("/login", async (req, res) => {
     return;
   }
 
+  if (user.isBanned) {
+    res.status(403).json({ error: "Your account has been suspended. Please contact support." });
+    return;
+  }
+
   const stats = await getUserStats(user.id, user.bonusXp ?? 0);
   req.session = { userId: user.id };
   res.json({ user: toProfile(user, stats), token: String(user.id) });

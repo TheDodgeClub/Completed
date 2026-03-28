@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { db, eventsTable, postsTable, merchTable, usersTable, attendanceTable, awardsTable, videosTable, eventRegistrationsTable, userSessionsTable, ticketsTable, announcementsTable, ticketTypesTable, discountCodesTable, postReportsTable } from "@workspace/db";
+import { db, eventsTable, postsTable, merchTable, usersTable, attendanceTable, awardsTable, videosTable, eventRegistrationsTable, userSessionsTable, ticketsTable, announcementsTable, ticketTypesTable, discountCodesTable, postReportsTable, userReportsTable } from "@workspace/db";
 import { eq, desc, and, avg, count, countDistinct, sum, gte, sql, lte, or, isNull } from "drizzle-orm";
 import { getUncachableStripeClient } from "../stripeClient";
 import { requireAdmin } from "../middlewares/requireAdmin";
@@ -1398,6 +1398,119 @@ router.post("/post-reports/:id/resolve", async (req, res) => {
 /* DELETE /api/admin/post-reports/posts/:postId — delete the reported post entirely */
 router.delete("/post-reports/posts/:postId", async (req, res) => {
   await db.delete(postsTable).where(eq(postsTable.id, Number(req.params.postId)));
+  res.json({ ok: true });
+});
+
+/* ========== USER REPORTS ========== */
+
+/* GET /api/admin/user-reports — list all user reports grouped by reported user */
+router.get("/user-reports", async (_req, res) => {
+  const reports = await db.query.userReportsTable.findMany({
+    with: {
+      reportedUser: { columns: { id: true, name: true, email: true, avatarUrl: true, isBanned: true } },
+      reporter: { columns: { id: true, name: true } },
+    },
+    orderBy: [desc(userReportsTable.createdAt)],
+  });
+
+  type ReportGroup = {
+    userId: number; name: string; email: string; avatarUrl: string | null; isBanned: boolean;
+    reportCount: number; unresolvedCount: number;
+    reports: { id: number; reason: string | null; resolved: boolean; reportedBy: string; createdAt: string }[];
+  };
+
+  const byUser = new Map<number, ReportGroup>();
+  for (const r of reports) {
+    const u = r.reportedUser;
+    if (!byUser.has(u.id)) {
+      byUser.set(u.id, { userId: u.id, name: u.name, email: u.email, avatarUrl: u.avatarUrl ?? null, isBanned: u.isBanned ?? false, reportCount: 0, unresolvedCount: 0, reports: [] });
+    }
+    const group = byUser.get(u.id)!;
+    group.reportCount++;
+    if (!r.resolved) group.unresolvedCount++;
+    group.reports.push({ id: r.id, reason: r.reason, resolved: r.resolved, reportedBy: r.reporter.name, createdAt: r.createdAt.toISOString() });
+  }
+
+  res.json(Array.from(byUser.values()).sort((a, b) => b.unresolvedCount - a.unresolvedCount));
+});
+
+/* POST /api/admin/user-reports/:id/resolve — mark one user report resolved */
+router.post("/user-reports/:id/resolve", async (req, res) => {
+  await db.update(userReportsTable).set({ resolved: true, resolvedAt: new Date() }).where(eq(userReportsTable.id, Number(req.params.id)));
+  res.json({ ok: true });
+});
+
+/* POST /api/admin/members/:id/ban — ban a member */
+router.post("/members/:id/ban", async (req, res) => {
+  const memberId = Number(req.params.id);
+  await db.update(usersTable).set({ isBanned: true }).where(eq(usersTable.id, memberId));
+  res.json({ ok: true });
+});
+
+/* POST /api/admin/members/:id/unban — unban a member */
+router.post("/members/:id/unban", async (req, res) => {
+  const memberId = Number(req.params.id);
+  await db.update(usersTable).set({ isBanned: false }).where(eq(usersTable.id, memberId));
+  res.json({ ok: true });
+});
+
+/* POST /api/admin/members/:id/warn — send a warning email to a member */
+router.post("/members/:id/warn", async (req, res) => {
+  const memberId = Number(req.params.id);
+  const { reason } = req.body;
+
+  const user = await db.query.usersTable.findFirst({ where: eq(usersTable.id, memberId) });
+  if (!user) { res.status(404).json({ error: "Member not found" }); return; }
+
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey) {
+    res.status(500).json({ error: "Email service not configured" });
+    return;
+  }
+
+  const html = `
+<!DOCTYPE html><html><head><meta charset="utf-8"/>
+<style>
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0D0D0D;color:#fff;margin:0;padding:0}
+  .wrap{max-width:480px;margin:40px auto;background:#151515;border-radius:12px;overflow:hidden}
+  .hdr{background:#0B5E2F;padding:28px 32px;text-align:center}
+  .hdr h1{margin:0;font-size:24px;color:#FFD700}
+  .hdr p{margin:6px 0 0;color:rgba(255,255,255,0.7);font-size:13px}
+  .body{padding:32px}
+  .body p{color:rgba(255,255,255,0.85);line-height:1.6;margin:0 0 16px}
+  .reason-box{background:#0D0D0D;border:1px solid #F59E0B;border-radius:8px;padding:16px;margin:16px 0;color:#F59E0B;font-size:14px;line-height:1.5}
+  .footer{padding:16px 32px;text-align:center;font-size:11px;color:rgba(255,255,255,0.25);border-top:1px solid #222}
+</style></head><body>
+<div class="wrap">
+  <div class="hdr"><h1>The Dodge Club</h1><p>Community guidelines notice</p></div>
+  <div class="body">
+    <p>Hi ${user.name},</p>
+    <p>We've reviewed your recent activity and want to let you know about a concern raised by our team.</p>
+    ${reason ? `<div class="reason-box">${reason}</div>` : ""}
+    <p>Please ensure your behaviour on the platform remains respectful and in line with our community guidelines. Repeated violations may result in your account being suspended.</p>
+    <p>If you have any questions, please reply to this email.</p>
+    <p>Best regards,<br/>The Dodge Club Team</p>
+  </div>
+  <div class="footer">The Dodge Club &bull; Automated notice</div>
+</div></body></html>`;
+
+  const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: { "api-key": apiKey, "Content-Type": "application/json", "Accept": "application/json" },
+    body: JSON.stringify({
+      sender: { name: "The Dodge Club", email: "info@thedodgeclub.co.uk" },
+      to: [{ email: user.email, name: user.name }],
+      subject: "Community guidelines notice — The Dodge Club",
+      htmlContent: html,
+    }),
+  });
+
+  if (!resp.ok) {
+    const body = await resp.text();
+    res.status(500).json({ error: `Email failed: ${body}` });
+    return;
+  }
+
   res.json({ ok: true });
 });
 
