@@ -1,5 +1,5 @@
-import React, { forwardRef } from "react";
-import { View, Text, Image, StyleSheet, Platform } from "react-native";
+import React, { forwardRef, useEffect, useRef } from "react";
+import { View, Text, Image, StyleSheet, Platform, Animated, Easing } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { resolveImageUrl } from "@/constants/api";
 
@@ -35,13 +35,52 @@ const PlayerCard = forwardRef<View, Props>(function PlayerCard(
   const initial = name.charAt(0).toUpperCase();
   const resolvedAvatar = resolveImageUrl(avatarUrl);
 
+  // Entrance animation
+  const enterAnim = useRef(new Animated.Value(0)).current;
+  // Gold glow pulse
+  const pulseAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.spring(enterAnim, {
+      toValue: 1,
+      damping: 14,
+      stiffness: 90,
+      useNativeDriver: true,
+    }).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1600,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 0,
+          duration: 1600,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
+
+  const translateY = enterAnim.interpolate({ inputRange: [0, 1], outputRange: [50, 0] });
+  const cardOpacity = enterAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
+  const glowOpacity = pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [0.25, 0.75] });
+
   return (
-    <View
-      ref={ref}
-      style={styles.wrapper}
-      renderToHardwareTextureAndroid
-      shouldRasterizeIOS
-    >
+    <Animated.View style={[styles.animOuter, { opacity: cardOpacity, transform: [{ translateY }] }]}>
+      {/* Pulsing gold glow halo behind the card */}
+      <Animated.View style={[styles.glowHalo, { opacity: glowOpacity }]} />
+
+      <View
+        ref={ref}
+        style={styles.wrapper}
+        renderToHardwareTextureAndroid
+        shouldRasterizeIOS
+      >
       <LinearGradient
         colors={["#0D3D1A", "#0A2E13", "#04180A"]}
         start={{ x: 0.5, y: 0 }}
@@ -139,13 +178,37 @@ const PlayerCard = forwardRef<View, Props>(function PlayerCard(
           <Text style={styles.footerText}>thedodgeclub.co.uk</Text>
         </View>
       </LinearGradient>
-    </View>
+      </View>
+    </Animated.View>
   );
 });
 
 export default PlayerCard;
 
 const styles = StyleSheet.create({
+  animOuter: {
+    width: CARD_W,
+    height: CARD_H,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  glowHalo: {
+    position: "absolute",
+    width: CARD_W + 16,
+    height: CARD_H + 16,
+    borderRadius: 26,
+    borderWidth: 6,
+    borderColor: GOLD,
+    ...Platform.select({
+      ios: {
+        shadowColor: GOLD,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 1,
+        shadowRadius: 18,
+      },
+      android: { elevation: 0 },
+    }),
+  } as any,
   wrapper: {
     width: CARD_W,
     height: CARD_H,
