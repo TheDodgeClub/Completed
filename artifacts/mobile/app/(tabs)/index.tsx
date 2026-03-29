@@ -14,6 +14,7 @@ import {
   Modal,
   Platform,
   Linking,
+  Alert,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -24,7 +25,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import QRCode from "react-native-qrcode-svg";
-import { useColors } from "@/context/ThemeContext";
+import { useColors, useTheme } from "@/context/ThemeContext";
 import { resolveImageUrl } from "@/constants/api";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -34,7 +35,7 @@ import {
 import { PostCard } from "@/components/PostCard";
 import { PostDetailModal } from "@/components/PostDetailModal";
 import { NotificationPromptModal } from "@/components/NotificationPromptModal";
-import { requestAndRegisterNotifications } from "@/hooks/usePushNotifications";
+import { requestAndRegisterNotifications, usePushNotifications } from "@/hooks/usePushNotifications";
 
 const NOTIF_PROMPT_KEY = "notif_prompt_shown";
 
@@ -126,7 +127,9 @@ export default function HomeScreen() {
   const { width: screenWidth } = useWindowDimensions();
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
+  const { isDark, toggleTheme } = useTheme();
   const { user, isAuthenticated, refreshUser } = useAuth();
+  const { notificationsEnabled, toggleNotifications } = usePushNotifications(isAuthenticated);
   const logoBaseWidth = Platform.OS === "web" ? Math.min(screenWidth, 430) : screenWidth;
   const logoHeight = logoBaseWidth * 0.084 * 1.2;
 
@@ -269,13 +272,37 @@ export default function HomeScreen() {
             end={{ x: 1, y: 1 }}
             style={StyleSheet.absoluteFill}
           />
-          {/* Logo */}
+          {/* Logo + header controls */}
           <View style={styles.heroTopRow}>
             <Image
               source={require("@/assets/images/tdc-logo.png")}
               style={{ height: logoHeight, width: logoBaseWidth * 0.63 * 1.2, marginLeft: Platform.OS === "web" ? -20 : -52 }}
               resizeMode="contain"
             />
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <Pressable
+                style={{ padding: 8 }}
+                onPress={async () => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  const ok = await toggleNotifications(!notificationsEnabled);
+                  if (!notificationsEnabled && !ok) {
+                    Alert.alert("Notifications Blocked", "Allow notifications in your device settings to receive Dodge Club alerts.");
+                  }
+                }}
+              >
+                <Feather
+                  name={notificationsEnabled ? "bell" : "bell-off"}
+                  size={20}
+                  color={notificationsEnabled ? Colors.accent : "rgba(255,255,255,0.55)"}
+                />
+              </Pressable>
+              <Pressable
+                style={{ padding: 8 }}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); toggleTheme(); }}
+              >
+                <Feather name={isDark ? "sun" : "moon"} size={20} color="rgba(255,255,255,0.7)" />
+              </Pressable>
+            </View>
           </View>
 
           <Text style={styles.heroTagline}>Come alone. Win together.</Text>
@@ -726,6 +753,9 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       paddingBottom: 28,
     },
     heroTopRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
       marginBottom: 4,
     },
     heroTagline: {

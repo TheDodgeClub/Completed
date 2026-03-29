@@ -24,7 +24,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
-import { useColors, useTheme } from "@/context/ThemeContext";
+import { useColors } from "@/context/ThemeContext";
 import { resolveImageUrl, API_BASE } from "@/constants/api";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -47,7 +47,6 @@ import {
 } from "@/lib/api";
 import { getToken } from "@/lib/api";
 import { useAnnouncements } from "@/hooks/useAnnouncements";
-import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
 import PlayerCard from "@/components/PlayerCard";
@@ -476,9 +475,7 @@ export default function MemberScreen() {
   const insets = useSafeAreaInsets();
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
-  const { isDark, toggleTheme } = useTheme();
   const { user, isAuthenticated, isLoading, logout, refreshUser } = useAuth();
-  const { notificationsEnabled, toggleNotifications } = usePushNotifications(!!user?.id);
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = React.useState(false);
   const [editVisible, setEditVisible] = React.useState(false);
@@ -734,24 +731,6 @@ export default function MemberScreen() {
                 <Text style={styles.shareCardBtnText}>My Card</Text>
               </Pressable>
             )}
-            <Pressable
-              style={styles.themeToggleBtn}
-              onPress={async () => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                const ok = await toggleNotifications(!notificationsEnabled);
-                if (!notificationsEnabled && !ok) {
-                  Alert.alert("Notifications Blocked", "Allow notifications in your device settings to receive Dodge Club alerts.");
-                }
-              }}
-            >
-              <Feather name={notificationsEnabled ? "bell" : "bell-off"} size={16} color={notificationsEnabled ? Colors.accent : "rgba(255,255,255,0.55)"} />
-            </Pressable>
-            <Pressable
-              style={styles.themeToggleBtn}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); toggleTheme(); }}
-            >
-              <Feather name={isDark ? "sun" : "moon"} size={16} color="rgba(255,255,255,0.7)" />
-            </Pressable>
             <Pressable onPress={handleLogout} style={styles.logoutBtn}>
               <Feather name="log-out" size={18} color="rgba(255,255,255,0.7)" />
             </Pressable>
