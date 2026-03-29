@@ -122,7 +122,8 @@ function ClassicTabLayout() {
         name="index"
         options={{
           title: "",
-          headerTransparent: true,
+          headerTransparent: !isWeb,
+          headerStyle: isWeb ? { backgroundColor: "#074A24" } : undefined,
           headerRight: headerControls,
           tabBarIcon: ({ color }) =>
             isIOS ? <SymbolView name="house" tintColor={color} size={22} /> : <Feather name="home" size={21} color={color} />,

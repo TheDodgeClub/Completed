@@ -127,7 +127,8 @@ export default function HomeScreen() {
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const { user, isAuthenticated, refreshUser } = useAuth();
-  const logoHeight = screenWidth * 0.084 * 1.2;
+  const logoBaseWidth = Platform.OS === "web" ? Math.min(screenWidth, 430) : screenWidth;
+  const logoHeight = logoBaseWidth * 0.084 * 1.2;
 
   /* ── Notification pre-prompt ── */
   const [showNotifPrompt, setShowNotifPrompt] = useState(false);
@@ -272,7 +273,7 @@ export default function HomeScreen() {
           <View style={styles.heroTopRow}>
             <Image
               source={require("@/assets/images/tdc-logo.png")}
-              style={{ height: logoHeight, width: screenWidth * 0.63 * 1.2, marginLeft: -52 }}
+              style={{ height: logoHeight, width: logoBaseWidth * 0.63 * 1.2, marginLeft: Platform.OS === "web" ? -20 : -52 }}
               resizeMode="contain"
             />
           </View>
