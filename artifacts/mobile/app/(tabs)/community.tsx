@@ -82,48 +82,48 @@ function LeaderboardCard({
       style={({ pressed }) => ({
         flexDirection: "row",
         alignItems: "center",
-        paddingVertical: isTop3 ? 14 : 10,
-        paddingHorizontal: 16,
+        paddingVertical: isTop3 ? 13 : 9,
+        paddingHorizontal: 14,
         backgroundColor: isTop3 ? `${rankColor}12` : "transparent",
-        borderRadius: isTop3 ? 14 : 0,
+        borderRadius: isTop3 ? 13 : 0,
         borderWidth: isTop3 ? 1 : 0,
         borderColor: `${rankColor}30`,
-        marginBottom: isTop3 ? 8 : 0,
+        marginBottom: isTop3 ? 7 : 0,
         opacity: pressed ? 0.75 : 1,
       })}
     >
-      <View style={{ width: 28, alignItems: "center" }}>
+      <View style={{ width: 25, alignItems: "center" }}>
         <Text style={{
           fontFamily: "Poppins_800ExtraBold",
-          fontSize: isTop3 ? 16 : 13,
+          fontSize: isTop3 ? 14 : 12,
           color: isTop3 ? rankColor : Colors.textMuted,
         }}>{rank}</Text>
       </View>
 
-      <View style={{ position: "relative", marginLeft: 10, marginRight: 12 }}>
+      <View style={{ position: "relative", marginLeft: 9, marginRight: 11 }}>
         {uri ? (
-          <Image source={{ uri }} style={{ width: 38, height: 38, borderRadius: 19, borderWidth: isTop3 ? 2 : 0, borderColor: rankColor }} />
+          <Image source={{ uri }} style={{ width: 34, height: 34, borderRadius: 17, borderWidth: isTop3 ? 2 : 0, borderColor: rankColor }} />
         ) : (
-          <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: `${Colors.primary}30`, alignItems: "center", justifyContent: "center", borderWidth: isTop3 ? 2 : 0, borderColor: rankColor }}>
-            <Text style={{ fontFamily: "Inter_700Bold", fontSize: 15, color: Colors.primary }}>{initials}</Text>
+          <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: `${Colors.primary}30`, alignItems: "center", justifyContent: "center", borderWidth: isTop3 ? 2 : 0, borderColor: rankColor }}>
+            <Text style={{ fontFamily: "Inter_700Bold", fontSize: 14, color: Colors.primary }}>{initials}</Text>
           </View>
         )}
       </View>
 
       <View style={{ flex: 1 }}>
-        <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: isTop3 ? 15 : 14, color: Colors.text }} numberOfLines={1}>
+        <Text style={{ fontFamily: "Inter_600SemiBold", fontSize: isTop3 ? 14 : 13, color: Colors.text }} numberOfLines={1}>
           {entry.name}
         </Text>
         {entry.username ? (
-          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.textMuted }}>@{entry.username}</Text>
+          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 10, color: Colors.textMuted }}>@{entry.username}</Text>
         ) : null}
       </View>
 
       <View style={{ alignItems: "flex-end" }}>
-        <Text style={{ fontFamily: "Poppins_800ExtraBold", fontSize: isTop3 ? 16 : 13, color: isTop3 ? rankColor : Colors.textSecondary }}>
+        <Text style={{ fontFamily: "Poppins_800ExtraBold", fontSize: isTop3 ? 14 : 12, color: isTop3 ? rankColor : Colors.textSecondary }}>
           {statValue}
         </Text>
-        <Text style={{ fontFamily: "Inter_400Regular", fontSize: 10, color: Colors.textMuted }}>{statLabel}</Text>
+        <Text style={{ fontFamily: "Inter_400Regular", fontSize: 9, color: Colors.textMuted }}>{statLabel}</Text>
       </View>
     </Pressable>
   );
@@ -141,15 +141,15 @@ function Leaderboard({ Colors, onMemberPress }: { Colors: any; onMemberPress: (e
   const entries = data ? data[activeTab] : [];
 
   return (
-    <View style={{ marginBottom: 24 }}>
+    <View style={{ marginBottom: 22 }}>
       {/* Title */}
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 14 }}>
-        <Text style={{ fontSize: 20, lineHeight: 24 }}>🏆</Text>
-        <Text style={{ fontFamily: "Poppins_800ExtraBold", fontSize: 20, color: Colors.text }}>Leaderboard</Text>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 7, marginBottom: 13 }}>
+        <Text style={{ fontSize: 18, lineHeight: 22 }}>🏆</Text>
+        <Text style={{ fontFamily: "Poppins_800ExtraBold", fontSize: 18, color: Colors.text }}>Leaderboard</Text>
       </View>
 
       {/* Tabs */}
-      <View style={{ flexDirection: "row", gap: 8, marginBottom: 14 }}>
+      <View style={{ flexDirection: "row", gap: 7, marginBottom: 13 }}>
         {TABS.map(tab => {
           const active = activeTab === tab.key;
           return (
@@ -165,17 +165,17 @@ function Leaderboard({ Colors, onMemberPress }: { Colors: any; onMemberPress: (e
                 alignItems: "center",
                 justifyContent: "center",
                 gap: 5,
-                paddingVertical: 9,
-                borderRadius: 12,
+                paddingVertical: 8,
+                borderRadius: 11,
                 backgroundColor: active ? Colors.primary : Colors.surface,
                 borderWidth: 1,
                 borderColor: active ? Colors.primary : Colors.border,
               }}
             >
-              <Text style={{ fontSize: 13 }}>{tab.icon}</Text>
+              <Text style={{ fontSize: 12 }}>{tab.icon}</Text>
               <Text style={{
                 fontFamily: "Inter_600SemiBold",
-                fontSize: 12,
+                fontSize: 11,
                 color: active ? "#fff" : Colors.textSecondary,
               }}>
                 {tab.label}
@@ -188,16 +188,16 @@ function Leaderboard({ Colors, onMemberPress }: { Colors: any; onMemberPress: (e
       {isLoading ? (
         <ActivityIndicator color={Colors.primary} />
       ) : !entries || entries.length === 0 ? (
-        <View style={{ backgroundColor: Colors.surface, borderRadius: 16, borderWidth: 1, borderColor: Colors.border, padding: 24, alignItems: "center" }}>
-          <Text style={{ fontSize: 28, marginBottom: 8 }}>
+        <View style={{ backgroundColor: Colors.surface, borderRadius: 14, borderWidth: 1, borderColor: Colors.border, padding: 22, alignItems: "center" }}>
+          <Text style={{ fontSize: 25, marginBottom: 7 }}>
             {activeTab === "rings" ? "💍" : activeTab === "medals" ? "🏅" : "⚡"}
           </Text>
-          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 14, color: Colors.textMuted, textAlign: "center" }}>
+          <Text style={{ fontFamily: "Inter_400Regular", fontSize: 13, color: Colors.textMuted, textAlign: "center" }}>
             {activeTab === "rings" ? "No ring holders yet" : activeTab === "medals" ? "No medals earned yet" : "No XP data yet"}
           </Text>
         </View>
       ) : (
-        <View style={{ backgroundColor: Colors.surface, borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: Colors.border, padding: 12, gap: 2 }}>
+        <View style={{ backgroundColor: Colors.surface, borderRadius: 14, overflow: "hidden", borderWidth: 1, borderColor: Colors.border, padding: 11, gap: 2 }}>
           {entries.map((entry, i) => (
             <LeaderboardCard key={entry.id} entry={entry} rank={i + 1} tab={activeTab} Colors={Colors} onPress={() => onMemberPress(entry)} />
           ))}
