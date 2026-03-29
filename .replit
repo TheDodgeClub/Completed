@@ -39,20 +39,20 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "PORT=3000 BASE_PATH=/ pnpm --filter @workspace/admin run dev"
-waitForPort = 3000
+args = "PORT=23744 BASE_PATH=/admin/ pnpm --filter @workspace/admin run dev"
+waitForPort = 23744
 
 [[workflows.workflow]]
 name = "artifacts/scanner: web"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "PORT=3001 BASE_PATH=/ pnpm --filter @workspace/scanner run dev"
-waitForPort = 3001
-
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "PORT=21235 BASE_PATH=/scanner/ pnpm --filter @workspace/scanner run dev"
+waitForPort = 21235
 
 [agent]
 stack = "PNPM_WORKSPACE"
