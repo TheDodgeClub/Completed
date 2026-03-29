@@ -82,6 +82,7 @@ async function runMigrations() {
       END $$;
 
       ALTER TABLE attendance ADD COLUMN IF NOT EXISTS checkin_method TEXT;
+      UPDATE attendance SET checkin_method = 'scan' WHERE checkin_method IS NULL;
     `);
     logger.info("DB migrations applied");
   } finally {
