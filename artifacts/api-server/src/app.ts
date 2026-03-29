@@ -75,7 +75,7 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 app.use("/api", router);
 
 // Temporary GeoJSON download route
-app.get("/download/london.geojson", (_req, res) => {
+app.get("/api/download/london.geojson", (_req, res) => {
   const geojson = {
     type: "FeatureCollection",
     features: [
