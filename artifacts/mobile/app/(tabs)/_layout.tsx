@@ -121,7 +121,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "",
+          title: "Home",
           headerShown: false,
           tabBarIcon: ({ color }) =>
             isIOS ? <SymbolView name="house" tintColor={color} size={22} /> : <Feather name="home" size={21} color={color} />,
