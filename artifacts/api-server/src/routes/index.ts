@@ -13,8 +13,6 @@ import sessionsRouter from "./sessions";
 import ticketsRouter from "./tickets";
 import { settingsRouter } from "./settings";
 import announcementsRouter from "./announcements";
-import seedRouter from "./seed";
-
 const router: IRouter = Router();
 
 router.use(healthRouter);
@@ -31,6 +29,5 @@ router.use("/sessions", sessionsRouter);
 router.use("/tickets", ticketsRouter);
 router.use("/settings", settingsRouter);
 router.use("/announcements", announcementsRouter);
-router.use("/seed", seedRouter);
 
 export default router;
