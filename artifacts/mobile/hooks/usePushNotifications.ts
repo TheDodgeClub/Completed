@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
+import Constants from "expo-constants";
 import { savePushToken, setNotificationsEnabled, getNotificationStatus } from "@/lib/api";
 
 Notifications.setNotificationHandler({
@@ -37,7 +38,12 @@ export async function registerForPushNotifications(): Promise<string | null> {
     return null;
   }
 
-  const token = await Notifications.getExpoPushTokenAsync();
+  const projectId =
+    Constants.expoConfig?.extra?.eas?.projectId ??
+    Constants.easConfig?.projectId;
+  const token = await Notifications.getExpoPushTokenAsync(
+    projectId ? { projectId } : undefined,
+  );
   return token.data;
 }
 
