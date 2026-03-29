@@ -256,7 +256,7 @@ export default function HomeScreen() {
     <>
       <ScrollView
         style={styles.screen}
-        contentInsetAdjustmentBehavior="automatic"
+        contentInsetAdjustmentBehavior="never"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={Platform.OS === "web" ? { paddingBottom: 100 } : undefined}
         refreshControl={
@@ -264,7 +264,7 @@ export default function HomeScreen() {
         }
       >
         {/* ══════════ AREA 1: HERO ══════════ */}
-        <View style={[styles.hero, { paddingTop: insets.top + 24 }]}>
+        <View style={[styles.hero, { paddingTop: Math.max(insets.top, 44) + 24 }]}>
           {/* Hero background: always the green gradient */}
           <LinearGradient
             colors={["#074A24", "#021409"]}
