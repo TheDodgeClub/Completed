@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "72zvBUIS05fi8ZdejGT_W"
+uri = "file://exports/dodge-club-tools.tar.gz"
+type = "unspecified"
+title = "Dodge Club Tools (Admin + Scanner)"

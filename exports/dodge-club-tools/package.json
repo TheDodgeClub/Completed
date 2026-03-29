@@ -1,0 +1,11 @@
+{
+  "name": "dodge-club-tools",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev:admin": "pnpm --filter @tools/admin run dev",
+    "dev:scanner": "pnpm --filter @tools/scanner run dev",
+    "build:admin": "pnpm --filter @tools/admin run build",
+    "build:scanner": "pnpm --filter @tools/scanner run build"
+  }
+}
