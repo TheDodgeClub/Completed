@@ -4,10 +4,10 @@ export const modules: ModuleMap = {
   "./components/mockups/admin-usability/VariantA.tsx": () => import("../components/mockups/admin-usability/VariantA.tsx"),
   "./components/mockups/admin-usability/VariantB.tsx": () => import("../components/mockups/admin-usability/VariantB.tsx"),
   "./components/mockups/admin-usability/VariantC.tsx": () => import("../components/mockups/admin-usability/VariantC.tsx"),
-  "./components/mockups/mobile-home-vibes/VariantA.tsx": () => import("../components/mockups/mobile-home-vibes/VariantA.tsx"),
-  "./components/mockups/mobile-home-vibes/VariantB.tsx": () => import("../components/mockups/mobile-home-vibes/VariantB.tsx"),
-  "./components/mockups/mobile-home-vibes/VariantC.tsx": () => import("../components/mockups/mobile-home-vibes/VariantC.tsx"),
   "./components/mockups/home-usability/VariantA.tsx": () => import("../components/mockups/home-usability/VariantA.tsx"),
   "./components/mockups/home-usability/VariantB.tsx": () => import("../components/mockups/home-usability/VariantB.tsx"),
-  "./components/mockups/home-usability/VariantC.tsx": () => import("../components/mockups/home-usability/VariantC.tsx")
+  "./components/mockups/home-usability/VariantC.tsx": () => import("../components/mockups/home-usability/VariantC.tsx"),
+  "./components/mockups/mobile-home-vibes/VariantA.tsx": () => import("../components/mockups/mobile-home-vibes/VariantA.tsx"),
+  "./components/mockups/mobile-home-vibes/VariantB.tsx": () => import("../components/mockups/mobile-home-vibes/VariantB.tsx"),
+  "./components/mockups/mobile-home-vibes/VariantC.tsx": () => import("../components/mockups/mobile-home-vibes/VariantC.tsx")
 };
