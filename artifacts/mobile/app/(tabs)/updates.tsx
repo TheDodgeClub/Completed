@@ -118,18 +118,34 @@ function VideoCard({ video, onPress }: { video: VideoClip; onPress: () => void }
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const [muted, setMuted] = useState(true);
+  const [videoReady, setVideoReady] = useState(false);
 
   const isExternalLink = video.url.includes("youtube.com") || video.url.includes("youtu.be") || video.url.includes("vimeo.com");
   const resolvedUrl = resolveImageUrl(video.url) ?? video.url;
 
-  const player = useVideoPlayer(isExternalLink ? null : resolvedUrl, (p) => {
-    if (!isExternalLink) {
-      p.loop = true;
-      p.muted = true;
-      p.play();
-    }
+  // Only create a native inline player — web autoplay is unreliable in iframes
+  const useInlinePlayer = !isExternalLink && Platform.OS !== "web";
+
+  const player = useVideoPlayer(useInlinePlayer ? resolvedUrl : null, (p) => {
+    if (!useInlinePlayer) return;
+    p.loop = true;
+    p.muted = true;
+    p.play();
   });
 
+  // Ensure play() is called once the video source is ready (belt-and-suspenders on native)
+  React.useEffect(() => {
+    if (!useInlinePlayer) return;
+    const sub = player.addListener("statusChange", ({ status }) => {
+      if (status === "readyToPlay" && !videoReady) {
+        setVideoReady(true);
+        player.play();
+      }
+    });
+    return () => sub.remove();
+  }, [useInlinePlayer, player]);
+
+  // Thumbnail: explicit admin-set > auto-generated (YouTube/Streamable) > null
   const thumbnailUri = video.thumbnailUrl
     ? (resolveImageUrl(video.thumbnailUrl) ?? undefined)
     : (getAutoThumbnail(video.url) ?? undefined);
@@ -156,20 +172,19 @@ function VideoCard({ video, onPress }: { video: VideoClip; onPress: () => void }
       onPress={handlePress}
     >
       <View style={styles.videoThumb}>
-        {isExternalLink ? (
-          <>
-            {thumbnailUri ? (
-              <Image source={{ uri: thumbnailUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
-            ) : (
-              <View style={[StyleSheet.absoluteFill, styles.videoThumbPlaceholder]}>
-                <Feather name="play-circle" size={32} color={Colors.accent} />
-              </View>
-            )}
-            <View style={styles.playOverlay}>
-              <Feather name="play-circle" size={28} color="#fff" />
-            </View>
-          </>
+        {/* Thumbnail always shown as base layer */}
+        {thumbnailUri ? (
+          <Image
+            source={{ uri: thumbnailUri }}
+            style={StyleSheet.absoluteFill}
+            resizeMode="cover"
+          />
         ) : (
+          <View style={[StyleSheet.absoluteFill, styles.videoThumbPlaceholder]} />
+        )}
+
+        {useInlinePlayer ? (
+          /* Native inline video on top of thumbnail */
           <>
             <VideoView
               player={player}
@@ -177,7 +192,6 @@ function VideoCard({ video, onPress }: { video: VideoClip; onPress: () => void }
               contentFit="cover"
               nativeControls={false}
             />
-            {/* Mute toggle */}
             <Pressable
               onPress={toggleMute}
               style={styles.videoMuteBtn}
@@ -186,6 +200,13 @@ function VideoCard({ video, onPress }: { video: VideoClip; onPress: () => void }
               <Feather name={muted ? "volume-x" : "volume-2"} size={12} color="#fff" />
             </Pressable>
           </>
+        ) : (
+          /* Web / external: static thumbnail with play overlay */
+          <View style={styles.playOverlay}>
+            <View style={styles.playCircle}>
+              <Feather name="play" size={22} color="#fff" style={{ marginLeft: 3 }} />
+            </View>
+          </View>
         )}
       </View>
       <View style={styles.videoInfo}>
@@ -481,7 +502,8 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     videoCard: { width: 220, backgroundColor: Colors.surface, borderRadius: 16, borderWidth: 1, borderColor: Colors.border, overflow: "hidden" },
     videoThumb: { width: 220, height: 124, backgroundColor: Colors.border, overflow: "hidden" },
     videoThumbPlaceholder: { backgroundColor: `${Colors.primary}20`, alignItems: "center", justifyContent: "center" },
-    playOverlay: { position: "absolute", inset: 0, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.35)" },
+    playOverlay: { position: "absolute", inset: 0, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.3)" },
+    playCircle: { width: 48, height: 48, borderRadius: 24, backgroundColor: "rgba(0,0,0,0.55)", alignItems: "center", justifyContent: "center" },
     videoMuteBtn: {
       position: "absolute",
       bottom: 8,
