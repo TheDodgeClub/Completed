@@ -22,7 +22,8 @@
         "NSUserNotificationUsageDescription": "We'll send you event reminders and check-in alerts",
         "NSLocationWhenInUseUsageDescription": "Used to show events near your location",
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "buildNumber": "2"
     },
     "android": {},
     "web": {
