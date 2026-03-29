@@ -160,6 +160,7 @@ function ClassicTabLayout() {
         name="member"
         options={{
           title: "Member",
+          headerShown: false,
           tabBarIcon: ({ color }) =>
             isIOS ? <SymbolView name="person.circle" tintColor={color} size={22} /> : <Feather name="user" size={21} color={color} />,
         }}
