@@ -451,7 +451,7 @@ export default function HomeScreen() {
               <LinearGradient colors={[Colors.secondary, Colors.primary]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.quickActionIcon}>
                 <Feather name="shopping-bag" size={17} color="#FFFFFF" />
               </LinearGradient>
-              <Text style={styles.quickActionLabel}>Club Shop</Text>
+              <Text style={styles.quickActionLabel}>Club Store</Text>
             </Pressable>
 
             <Pressable
