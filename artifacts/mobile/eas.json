@@ -11,7 +11,10 @@
       "distribution": "internal"
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_DOMAIN": "the-dodge-club.replit.app"
+      }
     }
   },
   "submit": {

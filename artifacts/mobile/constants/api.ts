@@ -1,5 +1,5 @@
 // API base URL — all requests go through the shared proxy at /api
-export const API_BASE = `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`;
+export const API_BASE = `https://${process.env.EXPO_PUBLIC_DOMAIN ?? "the-dodge-club.replit.app"}/api`;
 
 /**
  * Resolve an image URL for use on mobile.
