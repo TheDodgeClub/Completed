@@ -17,9 +17,7 @@
   "submit": {
     "production": {
       "ios": {
-        "appleId": "info@thedodgeclub.co.uk",
-        "ascAppId": "",
-        "appleTeamId": ""
+        "appleId": "info@thedodgeclub.co.uk"
       }
     }
   }
