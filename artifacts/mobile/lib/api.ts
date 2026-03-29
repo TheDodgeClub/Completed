@@ -425,8 +425,8 @@ export async function createPaymentIntent(
   ticketTypeId?: number,
   discountCode?: string,
   quantity: number = 1,
-): Promise<{ clientSecret: string; paymentIntentId: string; amount: number; free?: boolean; ticket?: Ticket }> {
-  return apiFetch<{ clientSecret: string; paymentIntentId: string; amount: number; free?: boolean; ticket?: Ticket }>(
+): Promise<{ clientSecret: string; paymentIntentId: string; amount: number; publishableKey: string; free?: boolean; ticket?: Ticket }> {
+  return apiFetch<{ clientSecret: string; paymentIntentId: string; amount: number; publishableKey: string; free?: boolean; ticket?: Ticket }>(
     "/tickets/payment-intent",
     { method: "POST", body: JSON.stringify({ eventId, checkoutData, ticketTypeId, discountCode, quantity }) }
   );

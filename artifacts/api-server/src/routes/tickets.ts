@@ -753,7 +753,8 @@ router.post("/payment-intent", requireAuth, async (req: any, res) => {
   });
 
   await db.update(ticketsTable).set({ stripePaymentIntentId: paymentIntent.id }).where(eq(ticketsTable.id, pendingTicket.id));
-  res.json({ clientSecret: paymentIntent.client_secret, paymentIntentId: paymentIntent.id, amount: totalAmount });
+  const publishableKey = await getStripePublishableKey();
+  res.json({ clientSecret: paymentIntent.client_secret, paymentIntentId: paymentIntent.id, amount: totalAmount, publishableKey });
 });
 
 /* POST /api/tickets/confirm-payment — fast-path called by mobile after PaymentSheet success.
