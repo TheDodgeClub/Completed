@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, ticketsTable, eventsTable, usersTable, ticketTypesTable, discountCodesTable } from "@workspace/db";
-import { eq, and, sql, inArray } from "drizzle-orm";
+import { eq, and, sql, inArray, gt } from "drizzle-orm";
 import { getUncachableStripeClient, getStripePublishableKey } from "../stripeClient";
 import { sendTicketConfirmationEmail, sendGiftEmail } from "../services/email";
 import { fulfillPaymentIntent } from "../services/fulfillPaymentIntent";
@@ -53,7 +53,11 @@ router.get("/my", requireAuth, async (req: any, res) => {
     })
     .from(ticketsTable)
     .innerJoin(eventsTable, eq(ticketsTable.eventId, eventsTable.id))
-    .where(and(eq(ticketsTable.userId, userId), eq(ticketsTable.status, "paid")))
+    .where(and(
+      eq(ticketsTable.userId, userId),
+      eq(ticketsTable.status, "paid"),
+      gt(eventsTable.date, sql`NOW() - INTERVAL '6 hours'`),
+    ))
     .orderBy(eventsTable.date);
 
   // Enrich with ticket type names
