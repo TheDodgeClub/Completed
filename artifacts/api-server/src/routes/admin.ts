@@ -913,6 +913,16 @@ router.delete("/videos/:id", async (req, res) => {
 
 /* ========== PUSH NOTIFICATIONS ========== */
 
+/* GET /api/admin/notify/subscribers — count of members with push enabled */
+router.get("/notify/subscribers", async (_req, res) => {
+  const subscribers = await db.query.usersTable.findMany({
+    where: (u, { and, eq, isNotNull }) =>
+      and(eq(u.notificationsEnabled, true), isNotNull(u.pushToken)) as ReturnType<typeof and>,
+  });
+  const count = subscribers.filter(u => u.pushToken?.startsWith("ExponentPushToken[")).length;
+  res.json({ count });
+});
+
 /* POST /api/admin/notify — send push notification to all subscribed members */
 router.post("/notify", async (req, res) => {
   const { title, body: notifBody, data } = req.body;

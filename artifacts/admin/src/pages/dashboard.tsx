@@ -50,6 +50,13 @@ export default function Dashboard() {
   const [notifTitle, setNotifTitle] = useState("");
   const [notifBody, setNotifBody] = useState("");
 
+  const { data: subscriberData } = useQuery<{ count: number }>({
+    queryKey: ["admin-notify-subscribers"],
+    queryFn: () => fetchApi<{ count: number }>("/api/admin/notify/subscribers"),
+    refetchInterval: 60000,
+  });
+  const subscriberCount = subscriberData?.count ?? null;
+
   const { mutate: sendNotif, isPending: sending } = useMutation({
     mutationFn: () => fetchApi<{ sent: number }>("/api/admin/notify", {
       method: "POST",
@@ -229,9 +236,17 @@ export default function Dashboard() {
           {/* Send Push Notification */}
           <Card className="bg-card border-border/60 shadow-sm">
             <CardHeader className="pb-2 px-4 pt-4">
-              <CardTitle className="flex items-center gap-2 text-sm">
-                <Bell className="w-4 h-4 text-primary" />
-                Send Push Notification
+              <CardTitle className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-2">
+                  <Bell className="w-4 h-4 text-primary" />
+                  Send Push Notification
+                </span>
+                {subscriberCount !== null && (
+                  <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-muted/60 rounded-full px-2.5 py-0.5">
+                    <span className={`inline-block w-1.5 h-1.5 rounded-full ${subscriberCount > 0 ? "bg-green-500" : "bg-muted-foreground/40"}`} />
+                    {subscriberCount} subscriber{subscriberCount !== 1 ? "s" : ""}
+                  </span>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4 pt-0 space-y-3">
