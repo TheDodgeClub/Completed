@@ -80,6 +80,8 @@ async function runMigrations() {
           ALTER TABLE user_blocks ADD CONSTRAINT user_blocks_blocker_blocked_unique UNIQUE (blocker_id, blocked_id);
         END IF;
       END $$;
+
+      ALTER TABLE attendance ADD COLUMN IF NOT EXISTS checkin_method TEXT;
     `);
     logger.info("DB migrations applied");
   } finally {

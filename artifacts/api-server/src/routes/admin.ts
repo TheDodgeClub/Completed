@@ -925,6 +925,7 @@ router.get("/leaderboard", async (_req, res) => {
       })
       .from(attendanceTable)
       .innerJoin(usersTable, eq(attendanceTable.userId, usersTable.id))
+      .where(or(isNull(attendanceTable.checkinMethod), eq(attendanceTable.checkinMethod, "scan")))
       .groupBy(attendanceTable.userId, usersTable.name, usersTable.avatarUrl)
       .orderBy(desc(count(attendanceTable.id)))
       .limit(5),

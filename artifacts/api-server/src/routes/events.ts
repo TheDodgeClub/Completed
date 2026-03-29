@@ -220,7 +220,7 @@ router.post("/:id/checkin", async (req, res) => {
   const xpGained = calcCheckInXP(attendedBefore, eventId, chronoEvents);
 
   await Promise.all([
-    db.insert(attendanceTable).values({ userId, eventId, earnedMedal: false }),
+    db.insert(attendanceTable).values({ userId, eventId, earnedMedal: false, checkinMethod: "pin" }),
     db.update(ticketsTable)
       .set({ checkedIn: true, checkedInAt: new Date() })
       .where(and(
@@ -283,7 +283,7 @@ router.post("/:id/checkin-scan", requireAdmin, async (req, res) => {
 
   // Insert attendance, tick ticket checkedIn, increment event attendeeCount — all in parallel
   await Promise.all([
-    db.insert(attendanceTable).values({ userId: resolvedUserId, eventId, earnedMedal: false }),
+    db.insert(attendanceTable).values({ userId: resolvedUserId, eventId, earnedMedal: false, checkinMethod: "scan" }),
     db.update(ticketsTable)
       .set({ checkedIn: true, checkedInAt: new Date() })
       .where(and(

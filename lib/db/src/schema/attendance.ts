@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, boolean, timestamp, text } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { usersTable } from "./users";
@@ -10,6 +10,7 @@ export const attendanceTable = pgTable("attendance", {
   eventId: integer("event_id").notNull().references(() => eventsTable.id, { onDelete: "cascade" }),
   earnedMedal: boolean("earned_medal").notNull().default(false),
   attendedAt: timestamp("attended_at").notNull().defaultNow(),
+  checkinMethod: text("checkin_method"), // 'scan' | 'pin' | null (null = historical, assumed scan)
 });
 
 export const insertAttendanceSchema = createInsertSchema(attendanceTable).omit({
