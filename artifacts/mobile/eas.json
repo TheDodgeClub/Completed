@@ -20,7 +20,8 @@
   "submit": {
     "production": {
       "ios": {
-        "appleId": "info@thedodgeclub.co.uk"
+        "appleId": "info@thedodgeclub.co.uk",
+        "ascAppId": "6761318985"
       }
     }
   }
