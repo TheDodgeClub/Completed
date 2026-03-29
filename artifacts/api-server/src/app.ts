@@ -74,4 +74,34 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 
 app.use("/api", router);
 
+// Temporary GeoJSON download route
+app.get("/download/london.geojson", (_req, res) => {
+  const geojson = {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          type: "MultiPolygon",
+          coordinates: [
+            [
+              [
+                [-0.5103, 51.2868],
+                [-0.5103, 51.6919],
+                [0.3340, 51.6919],
+                [0.3340, 51.2868],
+                [-0.5103, 51.2868],
+              ],
+            ],
+          ],
+        },
+      },
+    ],
+  };
+  res.setHeader("Content-Disposition", "attachment; filename=london.geojson");
+  res.setHeader("Content-Type", "application/geo+json");
+  res.json(geojson);
+});
+
 export default app;
