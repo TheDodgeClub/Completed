@@ -254,6 +254,7 @@ export default function HomeScreen() {
         style={styles.screen}
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={Platform.OS === "web" ? { paddingBottom: 100 } : undefined}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Colors.primary} />
         }

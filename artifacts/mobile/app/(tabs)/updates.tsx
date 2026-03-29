@@ -9,6 +9,7 @@ import {
   Pressable,
   Image,
   Modal,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { VideoView, useVideoPlayer } from "expo-video";
@@ -271,6 +272,7 @@ export default function UpdatesScreen() {
         style={styles.screen}
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={Platform.OS === "web" ? { paddingBottom: 100 } : undefined}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Colors.primary} />}
       >
         <View style={[styles.header, { paddingTop: insets.top + 24 }]}>

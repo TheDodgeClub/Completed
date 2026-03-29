@@ -93,6 +93,13 @@ export default function TicketsScreen() {
   type SuccessOverlayInfo = { eventName: string; quantity: number; ticketTypeName: string; pendingTicket?: Ticket };
   const [successOverlay, setSuccessOverlay] = useState<SuccessOverlayInfo | null>(null);
   const pendingFreeEventRef = useRef<{ eventName: string; quantity: number; ticketTypeName: string } | null>(null);
+  const webPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const webPollInfoRef = useRef<{ eventId: number; initialCount: number; eventName: string; ticketTypeName: string; quantity: number } | null>(null);
+  const [webPolling, setWebPolling] = useState(false);
+
+  useEffect(() => {
+    return () => { if (webPollRef.current) clearInterval(webPollRef.current); };
+  }, []);
 
   const handleSuccessDismiss = useCallback(() => {
     const pending = successOverlay?.pendingTicket ?? null;
@@ -183,8 +190,40 @@ export default function TicketsScreen() {
         const { ticket } = await confirmPaymentIntentTicket(result.paymentIntentId);
         await refetchTickets();
         setSuccessOverlay({ eventName: event.title, quantity, ticketTypeName: typeName, pendingTicket: ticket });
+      } else if (Platform.OS === "web") {
+        // Web — open Stripe checkout in a new tab then poll for ticket completion
+        const { url } = await createCheckoutSession(event.id, checkoutData, ticketTypeId, discountCode, quantity);
+        try { (window as any).open(url, "_blank", "noopener,noreferrer"); } catch {}
+        const initialCount = (myTickets ?? []).filter(t => t.eventId === event.id).length;
+        if (webPollRef.current) clearInterval(webPollRef.current);
+        webPollInfoRef.current = { eventId: event.id, initialCount, eventName: event.title, ticketTypeName: typeName, quantity };
+        setWebPolling(true);
+        let pollAttempts = 0;
+        webPollRef.current = setInterval(async () => {
+          pollAttempts++;
+          const info = webPollInfoRef.current;
+          if (!info) { clearInterval(webPollRef.current!); webPollRef.current = null; setWebPolling(false); return; }
+          try {
+            const fresh = await refetchTickets();
+            const newTickets = (fresh.data ?? []).filter(t => t.eventId === info.eventId);
+            if (newTickets.length > info.initialCount) {
+              clearInterval(webPollRef.current!);
+              webPollRef.current = null;
+              webPollInfoRef.current = null;
+              setWebPolling(false);
+              const newTicket = newTickets.sort((a, b) => b.id - a.id)[0];
+              setSuccessOverlay({ eventName: info.eventName, quantity: info.quantity, ticketTypeName: info.ticketTypeName, pendingTicket: newTicket });
+            } else if (pollAttempts >= 60) {
+              clearInterval(webPollRef.current!);
+              webPollRef.current = null;
+              webPollInfoRef.current = null;
+              setWebPolling(false);
+            }
+          } catch {}
+        }, 3000);
+        return;
       } else {
-        // Web fallback — Stripe Checkout redirect
+        // Expo Go fallback — Stripe Checkout redirect
         const { url } = await createCheckoutSession(event.id, checkoutData, ticketTypeId, discountCode, quantity);
         await WebBrowser.openBrowserAsync(url, {
           presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
@@ -311,13 +350,21 @@ export default function TicketsScreen() {
         <ActivityIndicator color={Colors.primary} style={{ marginTop: 60 }} />
       ) : (
         <ScrollView
-          contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 40 + (Platform.OS === "web" ? 84 : 0) }}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Colors.primary} />
           }
         >
           <View style={styles.body}>
+            {webPolling && (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: Colors.primary + "18", borderWidth: 1, borderColor: Colors.primary + "40", borderRadius: 12, padding: 14, marginBottom: 12 }}>
+                <ActivityIndicator size="small" color={Colors.primary} />
+                <Text style={{ color: Colors.primary, fontSize: 13, flex: 1, lineHeight: 18 }}>
+                  Complete your payment in the new tab — your ticket will appear here automatically once confirmed.
+                </Text>
+              </View>
+            )}
             {activeTab === "my" ? (
               /* MY TICKETS TAB */
               !user ? (

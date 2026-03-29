@@ -11,6 +11,7 @@ import {
   Modal,
   ScrollView,
   RefreshControl,
+  Platform,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -292,7 +293,7 @@ export default function CommunityScreen() {
         <FlatList
           data={filtered}
           keyExtractor={m => String(m.id)}
-          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 24 }]}
+          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + (Platform.OS === "web" ? 108 : 24) }]}
           ListHeaderComponent={
             <Leaderboard
               Colors={Colors}
