@@ -331,4 +331,33 @@ router.post("/reset-password", async (req, res) => {
   res.json({ message: "Password updated successfully" });
 });
 
+/* ---------- POST /api/auth/setup-admin ----------
+   One-time bootstrap: creates the default admin account if no admin exists.
+   Safe to leave in — does nothing once an admin exists.
+*/
+router.post("/setup-admin", async (req, res) => {
+  const existingAdmin = await db.query.usersTable.findFirst({
+    where: eq(usersTable.isAdmin, true),
+  });
+
+  if (existingAdmin) {
+    res.json({ message: "Admin already exists", email: existingAdmin.email });
+    return;
+  }
+
+  const { email = "admin@dodgeclub.com", password = "dodgeball123" } = req.body ?? {};
+  const passwordHash = await bcrypt.hash(password, 10);
+
+  const [created] = await db.insert(usersTable).values({
+    email,
+    name: "Admin",
+    passwordHash,
+    isAdmin: true,
+    memberSince: new Date(),
+    notificationsEnabled: false,
+  }).returning({ id: usersTable.id, email: usersTable.email });
+
+  res.json({ message: "Admin created", email: created.email });
+});
+
 export default router;
