@@ -179,62 +179,6 @@ router.post("/", async (req, res) => {
   res.status(201).json(toEvent(event, []));
 });
 
-/* POST /api/events/:id/checkin — member PIN self check-in */
-router.post("/:id/checkin", async (req, res) => {
-  const userId = req.session?.userId;
-  if (!userId) { res.status(401).json({ error: "Unauthorised" }); return; }
-
-  const eventId = Number(req.params.id);
-  const { pin } = req.body;
-
-  const event = await db.query.eventsTable.findFirst({ where: eq(eventsTable.id, eventId) });
-  if (!event || !event.isPublished) { res.status(404).json({ error: "Event not found" }); return; }
-
-  if (!isCheckInWindowOpen(event.date)) {
-    res.status(400).json({ error: "Check-in is not open for this event yet" }); return;
-  }
-
-  if (!event.checkInPin) {
-    res.status(400).json({ error: "This event has no check-in PIN set" }); return;
-  }
-
-  if ((pin ?? "").trim().toUpperCase() !== event.checkInPin.trim().toUpperCase()) {
-    res.status(400).json({ error: "Incorrect PIN" }); return;
-  }
-
-  // Idempotent — if already checked in return success
-  const existing = await db.query.attendanceTable.findFirst({
-    where: and(eq(attendanceTable.userId, userId), eq(attendanceTable.eventId, eventId)),
-  });
-  if (existing) { res.json({ alreadyCheckedIn: true, xpGained: 0 }); return; }
-
-  // Compute accurate xpGained including streak + milestone bonuses
-  const [attendanceRows, chronoEvents] = await Promise.all([
-    db.select({ eventId: attendanceTable.eventId }).from(attendanceTable).where(eq(attendanceTable.userId, userId)),
-    db.select({ id: eventsTable.id, xpReward: eventsTable.xpReward })
-      .from(eventsTable)
-      .where(lte(eventsTable.date, event.date))
-      .orderBy(eventsTable.date),
-  ]);
-  const attendedBefore = new Set(attendanceRows.map(r => r.eventId));
-  const xpGained = calcCheckInXP(attendedBefore, eventId, chronoEvents);
-
-  await Promise.all([
-    db.insert(attendanceTable).values({ userId, eventId, earnedMedal: false, checkinMethod: "pin" }),
-    db.update(ticketsTable)
-      .set({ checkedIn: true, checkedInAt: new Date() })
-      .where(and(
-        eq(ticketsTable.userId, userId),
-        eq(ticketsTable.eventId, eventId),
-        eq(ticketsTable.checkedIn, false),
-      )),
-    db.update(eventsTable)
-      .set({ attendeeCount: sql`${eventsTable.attendeeCount} + 1` })
-      .where(eq(eventsTable.id, eventId)),
-  ]);
-  res.json({ success: true, xpGained });
-});
-
 /* POST /api/events/:id/checkin-scan — scanner QR check-in (admin only) */
 router.post("/:id/checkin-scan", requireAdmin, async (req, res) => {
   const eventId = Number(req.params.id);

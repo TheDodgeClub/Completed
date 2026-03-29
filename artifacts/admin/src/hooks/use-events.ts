@@ -27,7 +27,6 @@ export interface Event {
   checkoutFields: CheckoutField[];
   waiverText: string | null;
   xpReward: number;
-  checkInPin: string | null;
   ticketTypeCount: number;
   ticketTypeMinPrice: number | null;
   ticketTypeMaxPrice: number | null;

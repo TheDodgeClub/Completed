@@ -41,7 +41,6 @@ import {
   validateDiscountCode,
   getEventAttendees,
   giftTicket,
-  checkEventIn,
   Event,
   Ticket,
   TicketType,
@@ -50,14 +49,6 @@ import {
 } from "@/lib/api";
 
 const isExpoGo = Constants.executionEnvironment === "storeClient";
-
-const CHECK_IN_BEFORE_MS = 30 * 60 * 1000;
-const CHECK_IN_AFTER_MS = 2 * 60 * 60 * 1000;
-function isCheckInWindowOpen(dateStr: string) {
-  const now = Date.now();
-  const t = new Date(dateStr).getTime();
-  return now >= t - CHECK_IN_BEFORE_MS && now <= t + CHECK_IN_AFTER_MS;
-}
 
 function getCountdown(dateStr: string): string | null {
   const diff = new Date(dateStr).getTime() - Date.now();
@@ -534,37 +525,6 @@ function EventBuyCard({
   Colors: any;
 }) {
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
-  const { user } = useAuth();
-  const [checkedIn, setCheckedIn] = useState(false);
-  const [pinModalVisible, setPinModalVisible] = useState(false);
-  const [pinValue, setPinValue] = useState("");
-  const [checkInLoading, setCheckInLoading] = useState(false);
-  const [checkInError, setCheckInError] = useState<string | null>(null);
-  const [checkInXp, setCheckInXp] = useState<number | null>(null);
-  const windowOpen = isCheckInWindowOpen(event.date);
-
-  async function handleCheckIn() {
-    if (!pinValue.trim()) return;
-    setCheckInLoading(true);
-    setCheckInError(null);
-    try {
-      const result = await checkEventIn(event.id, pinValue.trim());
-      if (result.success || result.alreadyCheckedIn) {
-        setCheckedIn(true);
-        setPinModalVisible(false);
-        setPinValue("");
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        if (result.success && result.xpGained) {
-          setCheckInXp(result.xpGained);
-          setTimeout(() => setCheckInXp(null), 4000);
-        }
-      }
-    } catch (e: any) {
-      setCheckInError(e?.message ?? "Incorrect PIN. Try again.");
-    } finally {
-      setCheckInLoading(false);
-    }
-  }
   const date = new Date(event.date);
   const day = date.toLocaleDateString("en-GB", { day: "2-digit" });
   const month = date.toLocaleDateString("en-GB", { month: "short" }).toUpperCase();
@@ -690,60 +650,6 @@ function EventBuyCard({
         </>
       )}
 
-      {/* Check-in button — visible when window is open and user is logged in */}
-      {user && windowOpen && (
-        <>
-          <Pressable
-            style={({ pressed }) => [styles.checkInBtn, checkedIn && styles.checkInBtnDone, { opacity: pressed ? 0.8 : 1 }]}
-            onPress={() => { if (!checkedIn) { setCheckInError(null); setPinValue(""); setPinModalVisible(true); } }}
-            disabled={checkedIn}
-          >
-            <Feather name={checkedIn ? "check-circle" : "log-in"} size={15} color={checkedIn ? "#30D158" : Colors.primary} />
-            <Text style={[styles.checkInBtnText, checkedIn && { color: "#30D158" }]}>
-              {checkedIn ? "Checked In ✓" : "Check In"}
-            </Text>
-          </Pressable>
-          {checkInXp !== null && (
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4, marginTop: 6 }}>
-              <Text style={{ fontSize: 14, color: "#FFD60A", fontWeight: "700" }}>⚡ +{checkInXp} XP earned!</Text>
-            </View>
-          )}
-        </>
-      )}
-
-      {/* PIN Modal */}
-      <Modal visible={pinModalVisible} transparent animationType="fade" onRequestClose={() => setPinModalVisible(false)}>
-        <Pressable style={styles.pinOverlay} onPress={() => setPinModalVisible(false)}>
-          <Pressable style={styles.pinCard} onPress={e => e.stopPropagation()}>
-            <Text style={styles.pinTitle}>Check In to {event.title}</Text>
-            <Text style={styles.pinSubtitle}>Enter the event PIN shown at the door</Text>
-            <TextInput
-              style={styles.pinInput}
-              value={pinValue}
-              onChangeText={v => { setPinValue(v.toUpperCase()); setCheckInError(null); }}
-              placeholder="Enter PIN"
-              placeholderTextColor={Colors.textMuted}
-              autoCapitalize="characters"
-              autoFocus
-              maxLength={8}
-            />
-            {checkInError && <Text style={styles.pinError}>{checkInError}</Text>}
-            <Pressable
-              style={({ pressed }) => [styles.pinSubmitBtn, { opacity: pressed || checkInLoading ? 0.7 : 1 }]}
-              onPress={handleCheckIn}
-              disabled={checkInLoading || !pinValue.trim()}
-            >
-              {checkInLoading
-                ? <ActivityIndicator color="#fff" size="small" />
-                : <Text style={styles.pinSubmitText}>Confirm Check In</Text>
-              }
-            </Pressable>
-            <Pressable onPress={() => setPinModalVisible(false)}>
-              <Text style={styles.pinCancelText}>Cancel</Text>
-            </Pressable>
-          </Pressable>
-        </Pressable>
-      </Modal>
     </View>
   );
 }
@@ -1683,95 +1589,6 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       fontFamily: "Inter_600SemiBold",
       fontSize: 13,
       color: Colors.primary,
-    },
-    checkInBtn: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 7,
-      marginHorizontal: 16,
-      marginBottom: 14,
-      marginTop: 4,
-      paddingVertical: 11,
-      borderRadius: 10,
-      borderWidth: 1.5,
-      borderColor: Colors.primary,
-      backgroundColor: "transparent",
-    },
-    checkInBtnDone: {
-      borderColor: "#30D158",
-    },
-    checkInBtnText: {
-      fontFamily: "Inter_700Bold",
-      fontSize: 14,
-      color: Colors.primary,
-    },
-    pinOverlay: {
-      flex: 1,
-      backgroundColor: "rgba(0,0,0,0.7)",
-      justifyContent: "center",
-      alignItems: "center",
-      paddingHorizontal: 24,
-    },
-    pinCard: {
-      backgroundColor: Colors.card,
-      borderRadius: 16,
-      padding: 24,
-      width: "100%",
-      maxWidth: 360,
-    },
-    pinTitle: {
-      fontFamily: "Poppins_700Bold",
-      fontSize: 16,
-      color: Colors.text,
-      marginBottom: 6,
-      textAlign: "center",
-    },
-    pinSubtitle: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 13,
-      color: Colors.textMuted,
-      textAlign: "center",
-      marginBottom: 20,
-    },
-    pinInput: {
-      backgroundColor: Colors.background,
-      borderWidth: 1.5,
-      borderColor: Colors.border,
-      borderRadius: 10,
-      paddingHorizontal: 16,
-      paddingVertical: 13,
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 20,
-      color: Colors.text,
-      textAlign: "center",
-      letterSpacing: 6,
-      marginBottom: 12,
-    },
-    pinError: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 12,
-      color: "#FF3B30",
-      textAlign: "center",
-      marginBottom: 12,
-    },
-    pinSubmitBtn: {
-      backgroundColor: Colors.primary,
-      borderRadius: 10,
-      paddingVertical: 13,
-      alignItems: "center",
-      marginBottom: 12,
-    },
-    pinSubmitText: {
-      fontFamily: "Inter_700Bold",
-      fontSize: 15,
-      color: "#fff",
-    },
-    pinCancelText: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 13,
-      color: Colors.textMuted,
-      textAlign: "center",
     },
     quantityRow: {
       flexDirection: "row",

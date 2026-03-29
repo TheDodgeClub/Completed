@@ -168,8 +168,6 @@ function EventCard({
   const [ticketUrl, setTicketUrl] = useState(event.ticketUrl ?? "");
   const [imageUrl, setImageUrl] = useState(event.imageUrl ?? "");
   const [xpReward, setXpReward] = useState(String(event.xpReward ?? 50));
-  const [checkInPin, setCheckInPin] = useState(event.checkInPin ?? "");
-
   const handlePublish = (e: React.MouseEvent) => {
     e.stopPropagation();
     const next = !event.isPublished;
@@ -189,8 +187,7 @@ function EventCard({
       ticketUrl: ticketUrl || null,
       imageUrl: imageUrl || null,
       xpReward: Number(xpReward) || 50,
-      checkInPin: checkInPin || null,
-    } as any, {
+    }, {
       onSuccess: () => toast({ title: "Event saved" }),
       onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
     });
@@ -338,17 +335,6 @@ function EventCard({
                     <Label className="text-xs text-emerald-400 font-semibold">⚡ XP Reward</Label>
                     <Input type="number" min={0} value={xpReward} onChange={e => setXpReward(e.target.value)} className="bg-background border-border/50 rounded-lg h-8 text-sm" />
                     <p className="text-[10px] text-muted-foreground">XP awarded on check-in</p>
-                  </div>
-                  <div className="space-y-1.5 p-3 bg-blue-500/5 rounded-xl border border-blue-500/20">
-                    <Label className="text-xs text-blue-400 font-semibold">🔑 Check-In PIN</Label>
-                    <Input
-                      value={checkInPin}
-                      onChange={e => setCheckInPin(e.target.value.toUpperCase())}
-                      maxLength={8}
-                      placeholder="e.g. DODGE7"
-                      className="bg-background border-border/50 rounded-lg h-8 text-sm font-mono uppercase tracking-widest"
-                    />
-                    <p className="text-[10px] text-muted-foreground">Shown to door staff</p>
                   </div>
                 </div>
                 <div className="flex justify-end">
@@ -889,11 +875,10 @@ function EventFormModal({ event, onClose }: { event?: Event; onClose: () => void
       stripeProductId: event.stripeProductId,
       stripePriceId: event.stripePriceId,
       xpReward: event.xpReward ?? 50,
-      checkInPin: event.checkInPin ?? "",
     } : {
       title: "", description: "", date: "", location: "", ticketUrl: "", imageUrl: "",
       ticketPrice: null, ticketCapacity: null, stripeProductId: null, stripePriceId: null,
-      xpReward: 50, checkInPin: "",
+      xpReward: 50,
     }
   });
 
@@ -968,20 +953,6 @@ function EventFormModal({ event, onClose }: { event?: Event; onClose: () => void
               placeholder="50"
             />
             <p className="text-xs text-muted-foreground">Base XP awarded to members who attend this event. Streak and milestone bonuses are added on top.</p>
-          </div>
-
-          <div className="space-y-2 p-4 bg-blue-500/5 rounded-xl border border-blue-500/20">
-            <Label className="text-blue-400 font-semibold flex items-center gap-1.5 text-sm">
-              🔑 Check-In PIN
-            </Label>
-            <Input
-              {...register("checkInPin")}
-              className="bg-background border-border rounded-xl h-9 uppercase tracking-widest font-mono"
-              placeholder="e.g. DODGE7"
-              maxLength={8}
-              onChange={(e) => setValue("checkInPin", e.target.value.toUpperCase())}
-            />
-            <p className="text-xs text-muted-foreground">Members enter this PIN in the app to mark themselves as attending. Leave blank to disable PIN check-in. Shown to door staff in the scanner app.</p>
           </div>
 
         </div>
