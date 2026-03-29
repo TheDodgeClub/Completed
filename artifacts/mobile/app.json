@@ -23,7 +23,7 @@
         "NSLocationWhenInUseUsageDescription": "Used to show events near your location",
         "ITSAppUsesNonExemptEncryption": false
       },
-      "buildNumber": "4"
+      "buildNumber": "6"
     },
     "android": {},
     "web": {
