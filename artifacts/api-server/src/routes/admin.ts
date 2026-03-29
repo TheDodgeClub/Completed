@@ -31,7 +31,6 @@ function toAdminEvent(e: typeof eventsTable.$inferSelect, ttSummary?: TicketType
     checkoutFields: (e.checkoutFields as any[]) ?? [],
     waiverText: e.waiverText ?? null,
     xpReward: e.xpReward ?? 50,
-    checkInPin: e.checkInPin ?? null,
     ticketTypeCount: ttSummary?.count ?? 0,
     ticketTypeMinPrice: ttSummary?.minPrice ?? null,
     ticketTypeMaxPrice: ttSummary?.maxPrice ?? null,
@@ -84,7 +83,7 @@ router.post("/events", async (req, res) => {
 router.put("/events/:id", async (req, res) => {
   const {
     title, description, date, location, ticketUrl, imageUrl,
-    xpReward, checkInPin,
+    xpReward,
     emailSubject, emailHeaderImageUrl, emailBodyText, emailCtaText, emailCtaUrl, emailVideoUrl,
     giftEmailSubject, giftEmailHeaderImageUrl, giftEmailBodyText, giftEmailCtaText, giftEmailCtaUrl, giftEmailVideoUrl,
   } = req.body;
@@ -96,7 +95,6 @@ router.put("/events/:id", async (req, res) => {
   if (ticketUrl !== undefined) setData.ticketUrl = ticketUrl || null;
   if (imageUrl !== undefined) setData.imageUrl = imageUrl || null;
   if (xpReward != null) setData.xpReward = Number(xpReward);
-  if (checkInPin !== undefined) setData.checkInPin = checkInPin || null;
   if (emailSubject !== undefined) setData.emailSubject = emailSubject || null;
   if (emailHeaderImageUrl !== undefined) setData.emailHeaderImageUrl = emailHeaderImageUrl || null;
   if (emailBodyText !== undefined) setData.emailBodyText = emailBodyText || null;
