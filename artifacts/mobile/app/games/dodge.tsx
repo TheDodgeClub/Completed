@@ -164,6 +164,8 @@ export default function DodgeGame() {
   const [opponents, setOpponents] = useState<Opponent[]>([]);
   const [ballPos, setBallPos] = useState<{ x: number; y: number } | null>(null);
   const [isHolding, setIsHolding] = useState(false);
+  const [awardedXp, setAwardedXp] = useState(0);
+  const [highScore, setHighScore] = useState(0);
   const chargeAnim = useRef(new Animated.Value(0)).current;
   const chargeAnimHandle = useRef<Animated.CompositeAnimation | null>(null);
 
@@ -330,6 +332,24 @@ export default function DodgeGame() {
     rafRef.current = requestAnimationFrame(tick);
   }, [tick, chargeAnim]);
 
+  /* ── Load high score ── */
+  useEffect(() => {
+    AsyncStorage.getItem("dodge_highscore").then(v => {
+      if (v) setHighScore(parseInt(v, 10));
+    });
+  }, []);
+
+  /* ── Award XP + save high score on game over ── */
+  useEffect(() => {
+    if (phase !== "dead") return;
+    const xp = Math.floor(score * 2);
+    setAwardedXp(xp);
+    if (score > highScore) {
+      setHighScore(score);
+      AsyncStorage.setItem("dodge_highscore", String(score));
+    }
+  }, [phase]);
+
   /* ── Cleanup ── */
   useEffect(() => () => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -468,6 +488,9 @@ export default function DodgeGame() {
                   Hold anywhere to aim, then release to throw.{"\n"}
                   You have 4 lives. Good luck.
                 </Text>
+                {highScore > 0 && (
+                  <Text style={styles.overlaySub}>🏆 Best: {highScore} hits</Text>
+                )}
               </>
             )}
             {phase === "dead" && (
@@ -475,7 +498,11 @@ export default function DodgeGame() {
                 <Text style={styles.overlayTitle}>GAME OVER</Text>
                 <Text style={styles.overlaySub}>
                   You hit {score} opponent{score !== 1 ? "s" : ""}!
+                  {score >= highScore && score > 0 ? "\n🏆 New high score!" : highScore > 0 ? `\nBest: ${highScore}` : ""}
                 </Text>
+                {awardedXp > 0 && (
+                  <Text style={styles.xpLabel}>+{awardedXp} XP</Text>
+                )}
               </>
             )}
             <Pressable style={styles.startBtn} onPress={startGame}>
