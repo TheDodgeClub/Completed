@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   CalendarDays, Wifi, Plus, Activity, Users,
-  Smartphone, Bell, Send,
+  Smartphone, Bell, Send, Trophy,
 } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -16,6 +16,8 @@ import { useToast } from "@/hooks/use-toast";
 
 type LiveUser = { id: number; name: string; avatarUrl: string | null; lastSeenAt: string };
 type LiveUsersData = { count: number; users: LiveUser[] };
+type LeaderboardEntry = { userId: number; name: string; avatarUrl: string | null; count?: number; totalSpentPence?: number };
+type Leaderboard = { topAttenders: LeaderboardEntry[]; topSpenders: LeaderboardEntry[] };
 type SessionStats = {
   totalSessions: number;
   avgDuration: number;
@@ -71,6 +73,12 @@ export default function Dashboard() {
     onError: (err: any) => {
       toast({ title: "Failed to send", description: err.message ?? "Something went wrong.", variant: "destructive" });
     },
+  });
+
+  const { data: leaderboard } = useQuery<Leaderboard>({
+    queryKey: ["admin-leaderboard"],
+    queryFn: () => fetchApi<Leaderboard>("/api/admin/leaderboard"),
+    refetchInterval: 300000,
   });
 
   const { data: sessionStats, isLoading: sessionLoading } = useQuery<SessionStats>({
@@ -271,6 +279,78 @@ export default function Dashboard() {
                 <Send className="w-4 h-4" />
                 {sending ? "Sending…" : "Send to all subscribers"}
               </Button>
+            </CardContent>
+          </Card>
+
+          {/* Top Members Leaderboard */}
+          <Card className="bg-card border-border/60 shadow-sm">
+            <CardHeader className="pb-2 px-4 pt-4">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Trophy className="w-4 h-4 text-yellow-500" />
+                Top Members
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 pb-4 pt-0">
+              <div className="grid grid-cols-2 gap-4">
+                {/* Top Attenders */}
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-2">Most Events Attended</div>
+                  {!leaderboard ? (
+                    <div className="text-xs text-muted-foreground">Loading…</div>
+                  ) : leaderboard.topAttenders.length === 0 ? (
+                    <div className="text-xs text-muted-foreground">No data yet</div>
+                  ) : (
+                    <ol className="space-y-1.5">
+                      {leaderboard.topAttenders.map((entry, i) => (
+                        <li key={entry.userId} className="flex items-center gap-2">
+                          <span className={`text-[10px] font-bold w-4 shrink-0 text-center ${i === 0 ? "text-yellow-500" : i === 1 ? "text-slate-400" : i === 2 ? "text-amber-700" : "text-muted-foreground"}`}>
+                            {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}`}
+                          </span>
+                          <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center overflow-hidden shrink-0">
+                            {entry.avatarUrl ? (
+                              <img src={entry.avatarUrl.startsWith("/objects/") ? `/api/storage${entry.avatarUrl}` : entry.avatarUrl} alt={entry.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-[9px] font-bold">{entry.name.charAt(0)}</span>
+                            )}
+                          </div>
+                          <span className="text-xs font-medium text-foreground truncate flex-1">{entry.name}</span>
+                          <span className="text-xs font-bold text-primary shrink-0">{entry.count}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                </div>
+                {/* Top Spenders */}
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-2">Highest Spend</div>
+                  {!leaderboard ? (
+                    <div className="text-xs text-muted-foreground">Loading…</div>
+                  ) : leaderboard.topSpenders.length === 0 ? (
+                    <div className="text-xs text-muted-foreground">No data yet</div>
+                  ) : (
+                    <ol className="space-y-1.5">
+                      {leaderboard.topSpenders.map((entry, i) => (
+                        <li key={entry.userId} className="flex items-center gap-2">
+                          <span className={`text-[10px] font-bold w-4 shrink-0 text-center ${i === 0 ? "text-yellow-500" : i === 1 ? "text-slate-400" : i === 2 ? "text-amber-700" : "text-muted-foreground"}`}>
+                            {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}`}
+                          </span>
+                          <div className="w-6 h-6 rounded-full bg-secondary flex items-center justify-center overflow-hidden shrink-0">
+                            {entry.avatarUrl ? (
+                              <img src={entry.avatarUrl.startsWith("/objects/") ? `/api/storage${entry.avatarUrl}` : entry.avatarUrl} alt={entry.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-[9px] font-bold">{entry.name.charAt(0)}</span>
+                            )}
+                          </div>
+                          <span className="text-xs font-medium text-foreground truncate flex-1">{entry.name}</span>
+                          <span className="text-xs font-bold text-green-600 shrink-0">
+                            £{((entry.totalSpentPence ?? 0) / 100).toFixed(2)}
+                          </span>
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                </div>
+              </div>
             </CardContent>
           </Card>
 

@@ -911,6 +911,56 @@ router.delete("/videos/:id", async (req, res) => {
   res.json({ ok: true });
 });
 
+/* ========== LEADERBOARD ========== */
+
+/* GET /api/admin/leaderboard — top 5 attenders and top 5 spenders */
+router.get("/leaderboard", async (_req, res) => {
+  const [topAttenders, topSpenders] = await Promise.all([
+    db
+      .select({
+        userId: attendanceTable.userId,
+        name: usersTable.name,
+        avatarUrl: usersTable.avatarUrl,
+        count: count(attendanceTable.id),
+      })
+      .from(attendanceTable)
+      .innerJoin(usersTable, eq(attendanceTable.userId, usersTable.id))
+      .groupBy(attendanceTable.userId, usersTable.name, usersTable.avatarUrl)
+      .orderBy(desc(count(attendanceTable.id)))
+      .limit(5),
+
+    db
+      .select({
+        userId: ticketsTable.userId,
+        name: usersTable.name,
+        avatarUrl: usersTable.avatarUrl,
+        totalSpent: sum(ticketsTable.amountPaid),
+      })
+      .from(ticketsTable)
+      .innerJoin(usersTable, eq(ticketsTable.userId, usersTable.id))
+      .where(eq(ticketsTable.status, "paid"))
+      .groupBy(ticketsTable.userId, usersTable.name, usersTable.avatarUrl)
+      .orderBy(desc(sum(ticketsTable.amountPaid)))
+      .limit(5),
+  ]);
+
+  res.set("Cache-Control", "no-store");
+  res.json({
+    topAttenders: topAttenders.map(r => ({
+      userId: r.userId,
+      name: r.name,
+      avatarUrl: r.avatarUrl ?? null,
+      count: Number(r.count),
+    })),
+    topSpenders: topSpenders.map(r => ({
+      userId: r.userId,
+      name: r.name,
+      avatarUrl: r.avatarUrl ?? null,
+      totalSpentPence: Number(r.totalSpent ?? 0),
+    })),
+  });
+});
+
 /* ========== PUSH NOTIFICATIONS ========== */
 
 /* GET /api/admin/notify/subscribers — count of members with push enabled */
