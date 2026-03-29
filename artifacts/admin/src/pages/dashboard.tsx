@@ -1,13 +1,18 @@
+import { useState } from "react";
 import { useEvents } from "@/hooks/use-events";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   CalendarDays, Wifi, Plus, Activity, Users,
-  Smartphone,
+  Smartphone, Bell, Send,
 } from "lucide-react";
 import { Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchApi } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 type LiveUser = { id: number; name: string; avatarUrl: string | null; lastSeenAt: string };
 type LiveUsersData = { count: number; users: LiveUser[] };
@@ -40,6 +45,26 @@ function resolveAvatarUrl(url: string | null | undefined): string | undefined {
 export default function Dashboard() {
   const { data: user } = useAuth();
   const { data: events, isLoading: eventsLoading } = useEvents();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [notifTitle, setNotifTitle] = useState("");
+  const [notifBody, setNotifBody] = useState("");
+
+  const { mutate: sendNotif, isPending: sending } = useMutation({
+    mutationFn: () => fetchApi<{ sent: number }>("/api/admin/notify", {
+      method: "POST",
+      body: JSON.stringify({ title: notifTitle.trim(), body: notifBody.trim() }),
+    }),
+    onSuccess: (data) => {
+      toast({ title: "Notification sent!", description: `Delivered to ${data.sent} member${data.sent !== 1 ? "s" : ""}.` });
+      setNotifTitle("");
+      setNotifBody("");
+      queryClient.invalidateQueries({ queryKey: ["admin-announcements"] });
+    },
+    onError: (err: any) => {
+      toast({ title: "Failed to send", description: err.message ?? "Something went wrong.", variant: "destructive" });
+    },
+  });
 
   const { data: sessionStats, isLoading: sessionLoading } = useQuery<SessionStats>({
     queryKey: ["admin-session-stats"],
@@ -200,6 +225,39 @@ export default function Dashboard() {
               </Link>
             ))}
           </div>
+
+          {/* Send Push Notification */}
+          <Card className="bg-card border-border/60 shadow-sm">
+            <CardHeader className="pb-2 px-4 pt-4">
+              <CardTitle className="flex items-center gap-2 text-sm">
+                <Bell className="w-4 h-4 text-primary" />
+                Send Push Notification
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 pb-4 pt-0 space-y-3">
+              <Input
+                placeholder="Title  e.g. New event just dropped 🎉"
+                value={notifTitle}
+                onChange={e => setNotifTitle(e.target.value)}
+                maxLength={65}
+              />
+              <Textarea
+                placeholder="Message  e.g. April Showdown tickets are live — grab yours now!"
+                value={notifBody}
+                onChange={e => setNotifBody(e.target.value)}
+                rows={2}
+                maxLength={178}
+              />
+              <Button
+                className="w-full gap-2"
+                disabled={!notifTitle.trim() || !notifBody.trim() || sending}
+                onClick={() => sendNotif()}
+              >
+                <Send className="w-4 h-4" />
+                {sending ? "Sending…" : "Send to all subscribers"}
+              </Button>
+            </CardContent>
+          </Card>
 
           {/* App Engagement */}
           <Card className="bg-card border-border/60 shadow-sm">
