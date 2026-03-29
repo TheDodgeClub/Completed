@@ -539,7 +539,7 @@ router.post("/gift", requireAuth, async (req: any, res) => {
       return;
     }
 
-    const stripe = getUncachableStripeClient();
+    const stripe = await getUncachableStripeClient();
     const lineItems = event.stripePriceId
       ? [{ price: event.stripePriceId, quantity: 1 }]
       : [{ price_data: { currency: "gbp", unit_amount: giftPricePence, ...(giftTicketType?.stripeProductId ? { product: giftTicketType.stripeProductId } : { product_data: { name: `${event.title}${giftTicketType ? ` — ${giftTicketType.name}` : ""}` } }) }, quantity: 1 }];
@@ -567,7 +567,7 @@ router.post("/gift", requireAuth, async (req: any, res) => {
     return;
   }
 
-  const stripe = getUncachableStripeClient();
+  const stripe = await getUncachableStripeClient();
   const lineItems = event.stripePriceId
     ? [{ price: event.stripePriceId, quantity: 1 }]
     : [{ price_data: { currency: "gbp", unit_amount: giftPricePence, ...(giftTicketType?.stripeProductId ? { product: giftTicketType.stripeProductId } : { product_data: { name: `${event.title}${giftTicketType ? ` — ${giftTicketType.name}` : ""}` } }) }, quantity: 1 }];
@@ -792,7 +792,7 @@ router.get("/gift-success", async (req, res) => {
     session_id?: string; recipientId?: string; recipientEmail?: string; gifterId?: string; eventId?: string;
   };
   if (!session_id || !eventId) { res.status(400).send("Missing params"); return; }
-  const stripe = getUncachableStripeClient();
+  const stripe = await getUncachableStripeClient();
   const session = await stripe.checkout.sessions.retrieve(session_id);
   if (session.payment_status !== "paid") { res.status(400).send("Payment not confirmed"); return; }
   const eId = Number(eventId);
@@ -820,7 +820,33 @@ router.get("/gift-success", async (req, res) => {
       }
     }
   }
-  res.redirect("thedodgeclub://gift-success");
+  res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gift Sent!</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0D0D0D; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
+    .card { background: #1a1a1a; border-radius: 20px; padding: 40px 32px; max-width: 360px; width: 100%; text-align: center; border: 1px solid rgba(255,255,255,0.08); }
+    .icon { width: 72px; height: 72px; background: #0B5E2F; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 32px; }
+    h1 { font-size: 22px; font-weight: 700; margin-bottom: 10px; color: #fff; }
+    p { font-size: 15px; color: rgba(255,255,255,0.6); line-height: 1.5; margin-bottom: 28px; }
+    .badge { display: inline-block; background: rgba(11,94,47,0.25); border: 1px solid #0B5E2F; color: #1A8C4E; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; margin-bottom: 28px; }
+    .hint { font-size: 13px; color: rgba(255,255,255,0.35); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">🎁</div>
+    <h1>Gift Sent!</h1>
+    <p>Payment confirmed. Your friend will receive their ticket by email shortly.</p>
+    <div class="badge">🎟 Ticket Gifted</div>
+    <p class="hint">Press <strong>Done</strong> to return to the app.</p>
+  </div>
+</body>
+</html>`);
 });
 
 export default router;

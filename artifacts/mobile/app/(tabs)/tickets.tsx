@@ -270,20 +270,27 @@ export default function TicketsScreen() {
       return;
     }
     setGiftingEventId(giftEvent.id);
+    const savedEventTitle = giftEvent.title;
+    const savedEmail = giftEmail.trim();
     try {
-      const result = await giftTicket(giftEvent.id, giftEmail.trim());
+      const result = await giftTicket(giftEvent.id, savedEmail);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setGiftEvent(null);
       setGiftEmail("");
       if (result.checkoutUrl) {
-        await WebBrowser.openBrowserAsync(result.checkoutUrl, {
-          presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
-          dismissButtonStyle: "done",
-          toolbarColor: "#0B5E2F",
-          controlsColor: "#FFD700",
-        });
+        if (Platform.OS === "web") {
+          if (typeof window !== "undefined") window.open(result.checkoutUrl, "_blank");
+          Alert.alert("Payment Link Opened", `Complete the payment in the new tab. Your friend will receive their ticket for ${savedEventTitle} by email once payment is confirmed.`);
+        } else {
+          await WebBrowser.openBrowserAsync(result.checkoutUrl, {
+            presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
+            dismissButtonStyle: "done",
+            toolbarColor: "#0B5E2F",
+            controlsColor: "#FFD700",
+          });
+        }
       } else {
-        Alert.alert("Ticket Gifted!", `A ticket for ${giftEvent.title} has been sent to ${giftEmail.trim()}.`);
+        Alert.alert("Ticket Gifted!", `A ticket for ${savedEventTitle} has been sent to ${savedEmail}.`);
       }
     } catch (err: any) {
       Alert.alert("Error", err.message ?? "Could not gift ticket");
