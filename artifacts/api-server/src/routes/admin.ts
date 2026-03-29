@@ -70,11 +70,11 @@ router.get("/events", async (_req, res) => {
   res.json(events.map(e => toAdminEvent(e, ttMap.get(e.id))));
 });
 
-/* POST /api/admin/events — create */
+/* POST /api/admin/events — create (published by default so it is immediately visible in the app) */
 router.post("/events", async (req, res) => {
   const { title, description, date, location, ticketUrl, imageUrl, xpReward } = req.body;
   const [event] = await db.insert(eventsTable)
-    .values({ title, description, date: new Date(date), location, ticketUrl: ticketUrl || null, imageUrl: imageUrl || null, xpReward: xpReward != null ? Number(xpReward) : 50 })
+    .values({ title, description, date: new Date(date), location, ticketUrl: ticketUrl || null, imageUrl: imageUrl || null, xpReward: xpReward != null ? Number(xpReward) : 50, isPublished: true })
     .returning();
   res.status(201).json(toAdminEvent(event));
 });
