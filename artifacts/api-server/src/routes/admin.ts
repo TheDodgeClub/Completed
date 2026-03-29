@@ -920,6 +920,7 @@ router.get("/notify/subscribers", async (_req, res) => {
       and(eq(u.notificationsEnabled, true), isNotNull(u.pushToken)) as ReturnType<typeof and>,
   });
   const count = subscribers.filter(u => u.pushToken?.startsWith("ExponentPushToken[")).length;
+  res.set("Cache-Control", "no-store");
   res.json({ count });
 });
 
