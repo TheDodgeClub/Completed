@@ -68,13 +68,18 @@ export default function GoEliteScreen() {
     setCheckoutLoading(true);
     try {
       const data = await createMembershipCheckout();
-      await WebBrowser.openBrowserAsync(data.url, {
-        presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
-        showTitle: false,
-        enableBarCollapsing: true,
-      });
-      // Browser closed — refresh both membership status and user profile (triggers celebration modal if Elite was granted)
-      await Promise.all([refetch(), refreshUser()]);
+      if (typeof window !== "undefined") {
+        // Web — redirect in the same tab; Stripe sends user back to /?membership=success
+        window.location.href = data.url;
+      } else {
+        // Native — in-app browser sheet
+        await WebBrowser.openBrowserAsync(data.url, {
+          presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+          showTitle: false,
+          enableBarCollapsing: true,
+        });
+        await Promise.all([refetch(), refreshUser()]);
+      }
     } catch (err: any) {
       Alert.alert("Error", err.message ?? "Could not open checkout. Please try again.");
     } finally {
@@ -87,13 +92,18 @@ export default function GoEliteScreen() {
     setPortalLoading(true);
     try {
       const data = await createBillingPortalSession();
-      await WebBrowser.openBrowserAsync(data.url, {
-        presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
-        showTitle: false,
-        enableBarCollapsing: true,
-      });
-      // Browser closed — refresh status in case they cancelled
-      await refetch();
+      if (typeof window !== "undefined") {
+        // Web — redirect in the same tab; Stripe sends user back to /
+        window.location.href = data.url;
+      } else {
+        // Native — in-app browser sheet
+        await WebBrowser.openBrowserAsync(data.url, {
+          presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+          showTitle: false,
+          enableBarCollapsing: true,
+        });
+        await refetch();
+      }
     } catch (err: any) {
       Alert.alert("Error", err.message ?? "Could not open billing portal. Please try again.");
     } finally {
