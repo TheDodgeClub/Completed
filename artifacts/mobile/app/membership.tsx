@@ -630,7 +630,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     eliteStarSmall: {
       fontSize: 16,
       fontFamily: "Inter_700Bold",
-      color: "#000",
+      color: "#FFD700",
     },
     upgradeBtnText: {
       fontFamily: "Inter_700Bold",
