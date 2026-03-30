@@ -123,6 +123,7 @@ function toProfile(
     isElite: user.isElite ?? false,
     eliteSince: user.eliteSince?.toISOString() ?? null,
     pendingEliteCelebration: user.pendingEliteCelebration ?? false,
+    pendingEliteXpAwarded: user.pendingEliteXpAwarded ?? false,
   };
 }
 
@@ -145,7 +146,7 @@ async function getUserStats(userId: number, bonusXp: number = 0) {
 router.post("/ack-elite-celebration", async (req, res) => {
   const userId = req.session?.userId;
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
-  await db.update(usersTable).set({ pendingEliteCelebration: false }).where(eq(usersTable.id, userId));
+  await db.update(usersTable).set({ pendingEliteCelebration: false, pendingEliteXpAwarded: false }).where(eq(usersTable.id, userId));
   res.json({ ok: true });
 });
 

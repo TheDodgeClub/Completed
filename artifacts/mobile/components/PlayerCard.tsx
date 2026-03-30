@@ -99,7 +99,7 @@ const PlayerCard = forwardRef<View, Props>(function PlayerCard(
         <View style={[styles.cornerV, styles.cBR]} />
         <View style={[styles.cornerH, styles.cBRH]} />
 
-        {/* Elite ribbon — pinned top-left */}
+        {/* Elite ribbon — pinned top-right */}
         {isElite && (
           <View style={styles.eliteRibbon}>
             <Text style={styles.eliteRibbonText}>⭐ ELITE</Text>
@@ -479,7 +479,7 @@ const styles = StyleSheet.create({
   eliteRibbon: {
     position: "absolute",
     top: 10,
-    left: 10,
+    right: 10,
     backgroundColor: GOLD,
     borderRadius: 7,
     paddingHorizontal: 9,

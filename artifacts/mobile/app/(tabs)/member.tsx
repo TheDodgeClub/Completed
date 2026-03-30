@@ -1286,14 +1286,26 @@ export default function MemberScreen() {
         <View style={styles.celebrationOverlay}>
           <View style={styles.celebrationCard}>
             <Text style={styles.celebrationStar}>⭐</Text>
-            <Text style={styles.celebrationTitle}>You're Elite!</Text>
-            <Text style={styles.celebrationSub}>
-              Welcome to the top tier of The Dodge Club. Your Elite badge is now live on your profile and player card.
+            <Text style={styles.celebrationTitle}>
+              {user?.pendingEliteXpAwarded ? "You're Elite!" : "Welcome Back, Elite!"}
             </Text>
-            <View style={styles.celebrationXpBox}>
-              <Text style={styles.celebrationXpValue}>+500 XP</Text>
-              <Text style={styles.celebrationXpLabel}>Elite Welcome Bonus</Text>
-            </View>
+            <Text style={styles.celebrationSub}>
+              {user?.pendingEliteXpAwarded
+                ? "Welcome to the top tier of The Dodge Club. Your Elite badge is now live on your profile and player card."
+                : "Your Elite membership is active again. All your perks are back — see you on the court!"}
+            </Text>
+            {user?.pendingEliteXpAwarded ? (
+              <View style={styles.celebrationXpBox}>
+                <Text style={styles.celebrationXpValue}>+500 XP</Text>
+                <Text style={styles.celebrationXpLabel}>Elite Welcome Bonus</Text>
+              </View>
+            ) : (
+              <View style={[styles.celebrationXpBox, { backgroundColor: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)" }]}>
+                <Text style={[styles.celebrationXpLabel, { fontSize: 13, paddingHorizontal: 8 }]}>
+                  The one-time XP bonus was already awarded on your first Elite activation — your rank is intact!
+                </Text>
+              </View>
+            )}
             <Text style={styles.celebrationPerksTitle}>What you've unlocked</Text>
             {[
               "Elite badge on profile & player card",

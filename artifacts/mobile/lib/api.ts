@@ -28,6 +28,7 @@ export type UserProfile = {
   isElite?: boolean;
   eliteSince?: string | null;
   pendingEliteCelebration?: boolean;
+  pendingEliteXpAwarded?: boolean;
 };
 
 export type EventAttendee = {
