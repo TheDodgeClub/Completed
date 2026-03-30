@@ -157,6 +157,15 @@ router.get("/me", async (req, res) => {
 
 const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
+/* GET /api/auth/check-email?email=... — public, no auth required */
+router.get("/check-email", async (req, res) => {
+  const raw = (req.query.email as string | undefined) ?? "";
+  const email = raw.trim().toLowerCase();
+  if (!email || !isValidEmail(email)) { res.json({ exists: false }); return; }
+  const user = await db.query.usersTable.findFirst({ where: eq(usersTable.email, email), columns: { id: true } });
+  res.json({ exists: !!user });
+});
+
 /* ---------- POST /api/auth/register ---------- */
 router.post("/register", async (req, res) => {
   const { email, password, name, accountType, referralCode: incomingReferralCode } = req.body;

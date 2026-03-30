@@ -188,6 +188,11 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
 }
 
 /* ---- auth ---- */
+export async function checkEmailExists(email: string): Promise<boolean> {
+  const data = await apiFetch<{ exists: boolean }>(`/auth/check-email?email=${encodeURIComponent(email.trim().toLowerCase())}`);
+  return data.exists;
+}
+
 export async function register(email: string, password: string, name: string, accountType: "player" | "supporter" = "player", referralCode?: string) {
   const data = await apiFetch<{ user: UserProfile; token: string }>("/auth/register", {
     method: "POST",

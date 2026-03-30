@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -17,7 +17,7 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useColors, useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
-import { updateProfile } from "@/lib/api";
+import { updateProfile, checkEmailExists } from "@/lib/api";
 
 type AccountType = "player" | "supporter";
 
@@ -80,7 +80,33 @@ export default function RegisterScreen() {
   const [selectedSkills, setSelectedSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [emailChecking, setEmailChecking] = useState(false);
+  const emailCheckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+
+  useEffect(() => {
+    if (emailCheckTimer.current) clearTimeout(emailCheckTimer.current);
+    setEmailError("");
+    if (!isValidEmail(email.trim())) { setEmailChecking(false); return; }
+    setEmailChecking(true);
+    emailCheckTimer.current = setTimeout(async () => {
+      try {
+        const exists = await checkEmailExists(email);
+        if (exists) {
+          setEmailError("An account with this email already exists.");
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        } else {
+          setEmailError("");
+        }
+      } catch {
+        setEmailError("");
+      } finally {
+        setEmailChecking(false);
+      }
+    }, 600);
+    return () => { if (emailCheckTimer.current) clearTimeout(emailCheckTimer.current); };
+  }, [email]);
 
   const handleNextStep = () => {
     setErrorMsg("");
@@ -90,6 +116,13 @@ export default function RegisterScreen() {
     }
     if (!isValidEmail(email.trim())) {
       setErrorMsg("Please enter a valid email address.");
+      return;
+    }
+    if (emailError) {
+      return;
+    }
+    if (emailChecking) {
+      setErrorMsg("Please wait while we check your email.");
       return;
     }
     if (password.length < 6) {
@@ -416,19 +449,36 @@ export default function RegisterScreen() {
 
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Email</Text>
-          <View style={styles.inputWrap}>
-            <Feather name="mail" size={18} color={Colors.textMuted} style={styles.inputIcon} />
+          <View style={[styles.inputWrap, !!emailError && styles.inputWrapError]}>
+            <Feather name="mail" size={18} color={emailError ? "#FF6B6B" : Colors.textMuted} style={styles.inputIcon} />
             <TextInput
               style={styles.input}
               placeholder="your@email.com"
               placeholderTextColor={Colors.textMuted}
               value={email}
-              onChangeText={setEmail}
+              onChangeText={v => { setEmail(v); setEmailError(""); }}
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
             />
+            {emailChecking && (
+              <ActivityIndicator size="small" color={Colors.textMuted} style={{ marginRight: 12 }} />
+            )}
+            {!emailChecking && !emailError && isValidEmail(email.trim()) && (
+              <Feather name="check-circle" size={18} color="#4CAF50" style={{ marginRight: 12 }} />
+            )}
+            {!emailChecking && !!emailError && (
+              <Feather name="alert-circle" size={18} color="#FF6B6B" style={{ marginRight: 12 }} />
+            )}
           </View>
+          {!!emailError && (
+            <View style={styles.fieldErrorRow}>
+              <Text style={styles.fieldErrorText}>{emailError}</Text>
+              <Pressable onPress={() => router.replace("/(auth)/login")}>
+                <Text style={styles.fieldErrorLink}>Sign in instead</Text>
+              </Pressable>
+            </View>
+          )}
         </View>
 
         <View style={styles.inputGroup}>
@@ -571,6 +621,29 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       borderWidth: 1,
       borderColor: Colors.border,
       paddingHorizontal: 14,
+    },
+    inputWrapError: {
+      borderColor: "#FF6B6B",
+      backgroundColor: "rgba(255,107,107,0.05)",
+    },
+    fieldErrorRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginTop: 6,
+      paddingHorizontal: 4,
+    },
+    fieldErrorText: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 13,
+      color: "#FF6B6B",
+      flex: 1,
+    },
+    fieldErrorLink: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 13,
+      color: Colors.primary,
+      marginLeft: 8,
     },
     inputIcon: { marginRight: 10 },
     input: {
