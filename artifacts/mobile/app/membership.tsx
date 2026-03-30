@@ -40,7 +40,7 @@ const ELITE_PERKS = [
   { icon: "shopping-bag" as const, label: "10% Merch", desc: "10% off all club merch" },
   { icon: "package" as const, label: "Drops", desc: "First access to new merch drops" },
   { icon: "award" as const, label: "Gold Card", desc: "Golden Elite player card" },
-  { icon: "shield" as const, label: "Badge", desc: "Elite badge on profile & player card" },
+  { icon: "shield" as const, label: "Badge", desc: "Elite badge on profile" },
 ];
 
 export default function GoEliteScreen() {

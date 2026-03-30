@@ -1289,7 +1289,7 @@ export default function MemberScreen() {
               "10% off all club merch",
               "First access to new merch drops",
               "Golden Elite player card",
-              "Elite badge on profile & player card",
+              "Elite badge on profile",
             ].map(perk => (
               <View key={perk} style={styles.celebrationPerkRow}>
                 <Feather name="check" size={14} color="#FFD700" />
