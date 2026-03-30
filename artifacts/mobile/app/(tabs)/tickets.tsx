@@ -41,7 +41,6 @@ import {
   registerFreeTicket,
   validateDiscountCode,
   getEventAttendees,
-  giftTicket,
   createGiftPaymentIntent,
   confirmGiftPayment,
   Event,
@@ -104,6 +103,13 @@ export default function TicketsScreen() {
     eventName: string;
     ticketTypeName: string;
     quantity: number;
+  } | null>(null);
+  const [webGiftStripeModal, setWebGiftStripeModal] = useState<{
+    clientSecret: string;
+    publishableKey: string;
+    paymentIntentId: string;
+    recipientEmail: string;
+    eventTitle: string;
   } | null>(null);
 
   const handleSuccessDismiss = useCallback(() => {
@@ -267,6 +273,19 @@ export default function TicketsScreen() {
     }
   }, [webStripeModal, refetchTickets]);
 
+  const handleWebGiftStripeSuccess = useCallback(async () => {
+    const info = webGiftStripeModal;
+    setWebGiftStripeModal(null);
+    if (!info) return;
+    try {
+      await confirmGiftPayment(info.paymentIntentId);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert("Ticket Gifted! 🎁", `A ticket for ${info.eventTitle} has been sent to ${info.recipientEmail}.`);
+    } catch {
+      Alert.alert("Gift Confirmed", `Your friend will receive their ticket for ${info.eventTitle} shortly.`);
+    }
+  }, [webGiftStripeModal]);
+
   const handleGiftSubmit = async () => {
     if (!giftEvent || !giftEmail.trim()) return;
     const emailRx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -308,17 +327,24 @@ export default function TicketsScreen() {
         setGiftEmail("");
         Alert.alert("Ticket Gifted! 🎁", `A ticket for ${savedEventTitle} has been sent to ${savedEmail}.`);
       } else {
-        // Web — open Stripe Checkout in a new tab
-        const result = await giftTicket(giftEvent.id, savedEmail);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        // Web — in-app Stripe modal (no external browser)
+        const pi = await createGiftPaymentIntent(giftEvent.id, savedEmail);
+        if (!pi.clientSecret) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          setGiftEvent(null);
+          setGiftEmail("");
+          Alert.alert("Ticket Gifted!", `A ticket for ${savedEventTitle} has been sent to ${savedEmail}.`);
+          return;
+        }
         setGiftEvent(null);
         setGiftEmail("");
-        if (result.checkoutUrl) {
-          if (typeof window !== "undefined") window.open(result.checkoutUrl, "_blank");
-          Alert.alert("Payment Link Opened", `Complete the payment in the new tab. Your friend will receive their ticket for ${savedEventTitle} by email once payment is confirmed.`);
-        } else {
-          Alert.alert("Ticket Gifted!", `A ticket for ${savedEventTitle} has been sent to ${savedEmail}.`);
-        }
+        setWebGiftStripeModal({
+          clientSecret: pi.clientSecret,
+          publishableKey: pi.publishableKey ?? "",
+          paymentIntentId: pi.paymentIntentId ?? "",
+          recipientEmail: savedEmail,
+          eventTitle: savedEventTitle,
+        });
       }
     } catch (err: any) {
       Alert.alert("Error", err.message ?? "Could not gift ticket");
@@ -465,6 +491,17 @@ export default function TicketsScreen() {
           publishableKey={webStripeModal?.publishableKey ?? ""}
           onSuccess={handleWebStripeSuccess}
           onClose={() => setWebStripeModal(null)}
+        />
+      )}
+
+      {/* In-app Stripe Gift Payment Modal (web only) */}
+      {Platform.OS === "web" && (
+        <WebStripeModal
+          visible={!!webGiftStripeModal}
+          clientSecret={webGiftStripeModal?.clientSecret ?? ""}
+          publishableKey={webGiftStripeModal?.publishableKey ?? ""}
+          onSuccess={handleWebGiftStripeSuccess}
+          onClose={() => setWebGiftStripeModal(null)}
         />
       )}
 
