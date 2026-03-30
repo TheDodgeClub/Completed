@@ -1,21 +1,31 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import Constants from "expo-constants";
 import { savePushToken, setNotificationsEnabled, getNotificationStatus } from "@/lib/api";
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+const isExpoGo = Constants.executionEnvironment === "storeClient";
+
+let Notifications: typeof import("expo-notifications") | null = null;
+
+if (!isExpoGo && Platform.OS !== "web") {
+  try {
+    Notifications = require("expo-notifications");
+    Notifications!.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+  } catch {
+    Notifications = null;
+  }
+}
 
 export async function registerForPushNotifications(): Promise<string | null> {
-  if (Platform.OS === "web") return null;
+  if (Platform.OS === "web" || isExpoGo || !Notifications) return null;
 
   if (Platform.OS === "android") {
     await Notifications.setNotificationChannelAsync("default", {
@@ -63,8 +73,8 @@ export function usePushNotifications(isLoggedIn: boolean) {
   const [notificationsEnabled, setEnabled] = useState(false);
   const [loading, setLoading] = useState(false);
   const [initializing, setInitializing] = useState(true);
-  const notificationListener = useRef<Notifications.EventSubscription | null>(null);
-  const responseListener = useRef<Notifications.EventSubscription | null>(null);
+  const notificationListener = useRef<any>(null);
+  const responseListener = useRef<any>(null);
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -83,8 +93,10 @@ export function usePushNotifications(isLoggedIn: boolean) {
       }
     })();
 
-    notificationListener.current = Notifications.addNotificationReceivedListener(() => {});
-    responseListener.current = Notifications.addNotificationResponseReceivedListener(() => {});
+    if (Notifications) {
+      notificationListener.current = Notifications.addNotificationReceivedListener(() => {});
+      responseListener.current = Notifications.addNotificationResponseReceivedListener(() => {});
+    }
 
     return () => {
       notificationListener.current?.remove();
