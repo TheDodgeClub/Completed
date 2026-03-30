@@ -18,6 +18,19 @@ import * as Haptics from "expo-haptics";
 import { useColors, useTheme } from "@/context/ThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import { updateProfile, checkEmailExists } from "@/lib/api";
+import { API_BASE } from "@/constants/api";
+
+function GoogleIcon() {
+  if (Platform.OS !== "web") return null;
+  return (
+    <svg width="20" height="20" viewBox="0 0 48 48" style={{ marginRight: 10, flexShrink: 0 }}>
+      <path fill="#4285F4" d="M44.5 20H24v8.5h11.8C34.7 33.9 30.1 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 5.1 29.6 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21c10.5 0 20-7.6 20-21 0-1.4-.1-2.7-.5-4z"/>
+      <path fill="#34A853" d="M6.3 14.7l7 5.1C15.1 16 19.2 13 24 13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 5.1 29.6 3 24 3 16.3 3 9.7 7.8 6.3 14.7z"/>
+      <path fill="#FBBC05" d="M24 45c5.6 0 10.5-1.8 14.4-5l-6.7-5.5C29.5 36.1 26.9 37 24 37c-6.1 0-10.7-3.1-11.8-8.5l-7 5.4C8.8 41.1 15.9 45 24 45z"/>
+      <path fill="#EA4335" d="M44.5 20H24v8.5h11.8c-1 3.2-3.3 5.8-6.4 7.5l6.7 5.5C40.3 38.1 44 31.5 44 24c0-1.4-.1-2.7-.5-4z"/>
+    </svg>
+  );
+}
 
 type AccountType = "player" | "supporter";
 
@@ -514,6 +527,27 @@ export default function RegisterScreen() {
           <Feather name="arrow-right" size={18} color="#fff" style={{ marginLeft: 8 }} />
         </Pressable>
 
+        {Platform.OS === "web" && (
+          <>
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or</Text>
+              <View style={styles.dividerLine} />
+            </View>
+            <Pressable
+              style={({ pressed }) => [styles.googleBtn, { opacity: pressed ? 0.85 : 1 }]}
+              onPress={() => {
+                if (typeof window !== "undefined") {
+                  window.location.href = `${API_BASE.replace("/api", "")}/api/auth/google`;
+                }
+              }}
+            >
+              <GoogleIcon />
+              <Text style={styles.googleBtnText}>Continue with Google</Text>
+            </Pressable>
+          </>
+        )}
+
         <View style={styles.termsRow}>
           <Text style={styles.termsText}>By creating an account you agree to our </Text>
           <Pressable onPress={() => router.push("/legal/terms")}>
@@ -726,6 +760,39 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       fontFamily: "Inter_600SemiBold",
       fontSize: 14,
       color: Colors.primary,
+    },
+    dividerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginVertical: 20,
+      gap: 12,
+    },
+    dividerLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: Colors.border,
+    },
+    dividerText: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 13,
+      color: Colors.textMuted,
+    },
+    googleBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: Colors.surface,
+      borderWidth: 1,
+      borderColor: Colors.border,
+      borderRadius: 14,
+      paddingVertical: 15,
+      paddingHorizontal: 20,
+      marginBottom: 4,
+    },
+    googleBtnText: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 15,
+      color: Colors.text,
     },
     roleGrid: {
       flexDirection: "row",

@@ -82,6 +82,14 @@ async function runMigrations() {
       END $$;
 
       ALTER TABLE attendance ADD COLUMN IF NOT EXISTS checkin_method TEXT;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id TEXT;
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'users_google_id_unique'
+        ) THEN
+          ALTER TABLE users ADD CONSTRAINT users_google_id_unique UNIQUE (google_id);
+        END IF;
+      END $$;
     `);
     logger.info("DB migrations applied");
   } finally {
