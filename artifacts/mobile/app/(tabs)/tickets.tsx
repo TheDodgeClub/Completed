@@ -606,7 +606,7 @@ function TicketCard({ ticket, Colors, onPress, onGift }: { ticket: Ticket; Color
               </View>
             ) : (ticket.eventXpReward ?? 0) > 0 ? (
               <View style={styles.ticketXpRow}>
-                <Feather name="zap" size={10} color="#FFC107" />
+                <Feather name="zap" size={10} color={Colors.accent} />
                 <Text style={styles.ticketXpText}>+{ticket.eventXpReward} XP on check-in</Text>
               </View>
             ) : null}
@@ -694,7 +694,7 @@ function EventBuyCard({
           </View>
           {(event.xpReward ?? 50) > 0 && (
             <View style={styles.xpEarnBadge}>
-              <Feather name="zap" size={10} color="#FFC107" />
+              <Feather name="zap" size={10} color={Colors.accent} />
               <Text style={styles.xpEarnText}>Earn {event.xpReward ?? 50} XP</Text>
             </View>
           )}
@@ -1640,7 +1640,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       flexDirection: "row",
       alignItems: "center",
       gap: 3,
-      backgroundColor: "#FFC10720",
+      backgroundColor: Colors.accent + "20",
       borderRadius: 6,
       paddingHorizontal: 6,
       paddingVertical: 2,
@@ -1650,7 +1650,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     xpEarnText: {
       fontFamily: "Inter_600SemiBold",
       fontSize: 11,
-      color: "#FFC107",
+      color: Colors.accent,
     },
     ticketCodeRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
     ticketCode: {
@@ -1663,7 +1663,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     ticketXpText: {
       fontFamily: "Inter_500Medium",
       fontSize: 10,
-      color: "#FFC107",
+      color: Colors.accent,
     },
     qrHint: { alignItems: "center", gap: 4, paddingLeft: 12 },
     qrHintText: {
