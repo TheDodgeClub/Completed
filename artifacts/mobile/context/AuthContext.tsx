@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   UserProfile,
@@ -43,9 +44,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (token) {
           const user = await getMe();
           setState({ user, token, isLoading: false, isAuthenticated: true });
-        } else {
-          setState(s => ({ ...s, isLoading: false }));
+          return;
         }
+        // On web, a user may have authenticated via Google OAuth which sets a
+        // session cookie but stores no token in AsyncStorage.  Attempt a
+        // session-cookie-based getMe() so those users aren't bounced to register.
+        if (Platform.OS === "web") {
+          try {
+            const user = await getMe();
+            setState({ user, token: null, isLoading: false, isAuthenticated: true, justRegistered: false });
+            return;
+          } catch {
+            // No valid session cookie — fall through to unauthenticated state.
+          }
+        }
+        setState(s => ({ ...s, isLoading: false }));
       } catch {
         await AsyncStorage.removeItem("dodge_club_auth_token");
         setState(s => ({ ...s, isLoading: false }));

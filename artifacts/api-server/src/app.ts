@@ -50,13 +50,14 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Token-based session middleware for mobile clients
+// Token-based session middleware for mobile clients.
+// Only override the session when a valid numeric token is present; otherwise
+// leave req.session untouched so cookie-based sessions (e.g. Google OAuth)
+// continue to work on the web app.
 app.use((req: Request, _res: Response, next: NextFunction) => {
   const token = req.headers["x-auth-token"] as string | undefined;
   if (token && /^\d+$/.test(token)) {
     req.session = { userId: Number(token) };
-  } else {
-    req.session = null;
   }
   next();
 });

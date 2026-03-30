@@ -621,6 +621,12 @@ export default function MemberScreen() {
   };
 
   const handleLogout = async () => {
+    if (Platform.OS === "web") {
+      // window.confirm is blocked inside cross-origin iframes, so skip the
+      // dialog on web and sign out directly.
+      await logout();
+      return;
+    }
     Alert.alert("Sign Out", "Are you sure you want to sign out?", [
       { text: "Cancel", style: "cancel" },
       { text: "Sign Out", style: "destructive", onPress: async () => { await logout(); } },
