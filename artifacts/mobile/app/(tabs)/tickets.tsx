@@ -1294,10 +1294,10 @@ function UnifiedCheckoutSheet({
                               <Text style={{ color: Colors.textMuted, fontSize: 12, textDecorationLine: "line-through" }}>
                                 £{(type.price / 100).toFixed(2)}
                               </Text>
-                              <Text style={{ color: "#FFD700", fontSize: 18, fontWeight: "700" }}>
+                              <Text style={{ color: Colors.accent, fontSize: 18, fontWeight: "700" }}>
                                 £{(elitePrice(type.price) / 100).toFixed(2)}
                               </Text>
-                              <Text style={{ color: "#FFD700", fontSize: 10, fontWeight: "600" }}>Elite Price</Text>
+                              <Text style={{ color: Colors.accent, fontSize: 10, fontWeight: "600" }}>Elite Price</Text>
                             </>
                           ) : (
                             <Text style={{ color: Colors.primary, fontSize: 18, fontWeight: "700" }}>
@@ -1446,7 +1446,7 @@ function UnifiedCheckoutSheet({
                       </Text>
                     )}
                     {isElite && selectedType && selectedType.price > 0 && (
-                      <Text style={{ color: "#FFD700", fontSize: 11, fontWeight: "600" }}>Elite 15% discount applied</Text>
+                      <Text style={{ color: Colors.accent, fontSize: 11, fontWeight: "600" }}>Elite 15% discount applied</Text>
                     )}
                     {quantity > 1 && perTicketPence > 0 && (
                       <Text style={{ color: Colors.textMuted, fontSize: 11, marginTop: 2 }}>
