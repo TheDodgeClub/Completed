@@ -34,12 +34,13 @@ const WebStripeModal =
     : null;
 
 const ELITE_PERKS = [
-  { icon: "star" as const, label: "Elite badge on your profile & player card" },
-  { icon: "zap" as const, label: "Double XP bonus at every event" },
-  { icon: "gift" as const, label: "Exclusive monthly merch discount" },
-  { icon: "users" as const, label: "Priority spot reservation for sold-out events" },
-  { icon: "award" as const, label: "Members-only Elite leaderboard" },
-  { icon: "shield" as const, label: "VIP check-in lane at the door" },
+  { icon: "clock" as const, label: "Early ticket access" },
+  { icon: "zap" as const, label: "Double XP bonus" },
+  { icon: "tag" as const, label: "15% off tickets" },
+  { icon: "shopping-bag" as const, label: "10% off merch" },
+  { icon: "package" as const, label: "Early access to merch drops" },
+  { icon: "award" as const, label: "Golden Elite Player Card" },
+  { icon: "shield" as const, label: "Elite Member Badge on profile" },
 ];
 
 export default function GoEliteScreen() {
@@ -294,11 +295,13 @@ export default function GoEliteScreen() {
               { feature: "Event access", free: true, elite: true },
               { feature: "XP & levelling", free: true, elite: true },
               { feature: "Player card", free: true, elite: true },
-              { feature: "Elite badge", free: false, elite: true },
+              { feature: "Early ticket access", free: false, elite: true },
               { feature: "Double XP bonus", free: false, elite: true },
-              { feature: "Priority spots", free: false, elite: true },
-              { feature: "Merch discount", free: false, elite: true },
-              { feature: "VIP check-in", free: false, elite: true },
+              { feature: "15% off tickets", free: false, elite: true },
+              { feature: "10% off merch", free: false, elite: true },
+              { feature: "Early merch drops", free: false, elite: true },
+              { feature: "Golden Player Card", free: false, elite: true },
+              { feature: "Elite badge", free: false, elite: true },
             ].map((row) => (
               <View key={row.feature} style={styles.comparisonRow}>
                 <Text style={[styles.comparisonFeature, { flex: 2 }]}>{row.feature}</Text>
@@ -358,7 +361,7 @@ export default function GoEliteScreen() {
                 </Text>
               </View>
             )}
-            {["Elite badge on profile & player card", "Double XP at every event", "Priority spot reservation", "VIP check-in lane"].map(perk => (
+            {["Early ticket access", "Double XP bonus", "15% off tickets", "10% off merch", "Golden Elite Player Card", "Elite Member Badge on profile"].map(perk => (
               <View key={perk} style={styles.celebrationPerkRow}>
                 <Feather name="check" size={14} color="#FFD700" />
                 <Text style={styles.celebrationPerkText}>{perk}</Text>
