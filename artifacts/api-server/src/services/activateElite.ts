@@ -4,6 +4,25 @@ import { logger } from "../lib/logger";
 
 const ELITE_XP_BONUS = 500;
 
+// ─── Shared email design (off-white polished) ─────────────────────────────────
+const C = {
+  bg: "#f0ede8",
+  card: "#ffffff",
+  headerBg: "#2A1600",
+  headerGold: "#C8960C",
+  text: "#1a1a1a",
+  subtext: "#555555",
+  muted: "#888888",
+  border: "#e0ddd6",
+  goldBox: "#FFF8D6",
+  goldBorder: "#E8C84A",
+  metaBg: "#f8f6f2",
+  btnBg: "#2A1600",
+  btnText: "#FFD700",
+  returning: "#f5f5f5",
+  returningBorder: "#d8d5d0",
+};
+
 async function sendEliteWelcomeEmail(
   email: string,
   name: string,
@@ -15,69 +34,95 @@ async function sendEliteWelcomeEmail(
     return;
   }
 
+  const firstName = name.split(" ")[0];
   const isReturning = !xpAwarded;
+
   const subject = isReturning
-    ? "⭐ Welcome back to Elite — you're back in the game!"
+    ? "⭐ Welcome back to Elite — your perks are live again!"
     : "⭐ Welcome to Elite — your 500 XP bonus is ready!";
 
   const xpSection = xpAwarded
-    ? `<div class="xp-box">
-        <div class="xp">+500 XP</div>
-        <div class="xp-label">Elite Welcome Bonus — already in your account</div>
+    ? `<div style="background:${C.goldBox};border:1px solid ${C.goldBorder};border-radius:10px;padding:18px 20px;text-align:center;margin:24px 0;">
+        <p style="font-size:30px;font-weight:800;color:${C.headerGold};margin:0;letter-spacing:-0.5px;">+500 XP</p>
+        <p style="font-size:13px;color:${C.subtext};margin:4px 0 0;">Elite welcome bonus — already in your account</p>
       </div>`
-    : `<div class="xp-box returning">
-        <div class="xp-label">You've already received the one-time XP bonus from your first Elite membership — no extra XP this time, but your rank &amp; history are fully intact!</div>
+    : `<div style="background:${C.returning};border:1px solid ${C.returningBorder};border-radius:10px;padding:14px 18px;margin:24px 0;">
+        <p style="font-size:13px;color:${C.subtext};margin:0;line-height:1.55;">
+          The one-time XP bonus was awarded on your first Elite membership — your rank and progress are fully intact!
+        </p>
       </div>`;
 
-  const introText = isReturning
-    ? `We're thrilled to have you back on the Elite roster. Your Elite perks are active again immediately.`
-    : `Your Elite membership is now active — we're pumped to have you as one of our Elite members!`;
+  const intro = isReturning
+    ? `We're glad to have you back on the Elite roster. Your perks are active again immediately.`
+    : `Your Elite membership is now live — welcome to the top tier of The Dodge Club.`;
 
-  const html = `
-<!DOCTYPE html><html><head><meta charset="utf-8"/>
-<style>
-  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0D0D0D;color:#fff;margin:0;padding:0}
-  .wrap{max-width:480px;margin:40px auto;background:#151515;border-radius:12px;overflow:hidden}
-  .hdr{background:linear-gradient(135deg,#3D2800,#1A1000);padding:32px;text-align:center}
-  .star{font-size:52px;display:block;margin-bottom:12px}
-  .hdr h1{margin:0;font-size:28px;color:#FFD700;font-weight:900;letter-spacing:2px}
-  .hdr p{margin:8px 0 0;color:rgba(255,255,255,0.65);font-size:14px}
-  .body{padding:32px}
-  .body p{font-size:15px;color:rgba(255,255,255,0.85);line-height:1.6;margin:0 0 16px}
-  .xp-box{background:rgba(255,215,0,0.08);border:1px solid rgba(255,215,0,0.3);border-radius:10px;padding:16px;text-align:center;margin:20px 0}
-  .xp-box.returning{background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.12)}
-  .xp-box .xp{font-size:32px;font-weight:900;color:#FFD700}
-  .xp-box .xp-label{font-size:13px;color:rgba(255,255,255,0.5);margin-top:4px}
-  .perks{margin:20px 0;padding-left:0;list-style:none}
-  .perks li{padding:6px 0;font-size:14px;color:rgba(255,255,255,0.75);border-bottom:1px solid rgba(255,255,255,0.06)}
-  .perks li::before{content:"⭐ ";color:#FFD700}
-  .cancel{font-size:12px;color:rgba(255,255,255,0.35);text-align:center;margin-top:20px}
-  .footer{padding:16px 32px;text-align:center;font-size:11px;color:rgba(255,255,255,0.25);border-top:1px solid #222}
-</style></head><body>
-<div class="wrap">
-  <div class="hdr">
-    <span class="star">⭐</span>
-    <h1>${isReturning ? "WELCOME BACK" : "WELCOME TO ELITE"}</h1>
-    <p>${isReturning ? "Your Elite membership is active again" : "You're now an Elite member of The Dodge Club"}</p>
+  const perks = [
+    ["⭐", "Elite badge", "Shows on your profile and player card"],
+    ["⚡", "Double XP", "Every event earns you twice the experience"],
+    ["🎁", "Merch discount", "Exclusive monthly discount in the store"],
+    ["📌", "Priority spots", "Reserve early access to sold-out events"],
+    ["🏆", "Elite leaderboard", "Compete on the members-only ranking"],
+    ["🚪", "VIP check-in", "Skip the queue with a dedicated lane at the door"],
+  ];
+
+  const perksHtml = perks.map(([icon, title, desc]) => `
+    <tr>
+      <td style="width:36px;padding:10px 12px 10px 0;vertical-align:top;font-size:18px;">${icon}</td>
+      <td style="padding:10px 0;border-bottom:1px solid ${C.border};">
+        <p style="margin:0 0 2px;font-size:14px;font-weight:700;color:${C.text};">${title}</p>
+        <p style="margin:0;font-size:13px;color:${C.subtext};">${desc}</p>
+      </td>
+    </tr>
+  `).join("");
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+</head>
+<body style="margin:0;padding:0;background:${C.bg};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <div style="max-width:560px;margin:32px auto;background:${C.card};border-radius:12px;overflow:hidden;border:1px solid ${C.border};box-shadow:0 2px 12px rgba(0,0,0,0.06);">
+
+    <!-- Header -->
+    <div style="background:${C.headerBg};padding:30px 32px;text-align:center;">
+      <p style="font-size:36px;margin:0 0 8px;">⭐</p>
+      <h1 style="margin:0 0 6px;font-size:22px;font-weight:800;color:${C.headerGold};letter-spacing:0.5px;">
+        ${isReturning ? "WELCOME BACK, ELITE" : "WELCOME TO ELITE"}
+      </h1>
+      <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.6);">
+        ${isReturning ? "Your Elite membership is active again" : "You're now an Elite member of The Dodge Club"}
+      </p>
+    </div>
+
+    <!-- Body -->
+    <div style="padding:32px;">
+      <p style="margin:0 0 14px;font-size:15px;color:${C.text};line-height:1.65;">Hi ${firstName},</p>
+      <p style="margin:0 0 14px;font-size:15px;color:${C.text};line-height:1.65;">${intro}</p>
+
+      ${xpSection}
+
+      <p style="margin:0 0 16px;font-size:14px;font-weight:700;color:${C.subtext};text-transform:uppercase;letter-spacing:0.6px;">Your Elite perks</p>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
+        ${perksHtml}
+      </table>
+
+      <p style="margin:0 0 14px;font-size:15px;color:${C.text};line-height:1.65;">See you on the court — keep dodging!</p>
+      <p style="margin:0 0 24px;font-size:15px;color:${C.text};line-height:1.65;"><strong>The Dodge Club team</strong></p>
+
+      <hr style="border:none;border-top:1px solid ${C.border};margin:24px 0;" />
+      <p style="margin:0;font-size:12px;color:${C.muted};text-align:center;">
+        You can cancel your Elite membership anytime from the app — no hidden fees.
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <div style="padding:18px 32px;text-align:center;font-size:12px;color:${C.muted};border-top:1px solid ${C.border};background:${C.bg};">
+      The Dodge Club &bull; Elite Membership &bull; thedodgeclub.co.uk
+    </div>
   </div>
-  <div class="body">
-    <p>Hi ${name},</p>
-    <p>${introText}</p>
-    ${xpSection}
-    <p>Here's a reminder of what you've unlocked:</p>
-    <ul class="perks">
-      <li>Elite badge on your profile &amp; player card</li>
-      <li>Double XP bonus at every event</li>
-      <li>Exclusive monthly merch discount</li>
-      <li>Priority spot reservation for sold-out events</li>
-      <li>Members-only Elite leaderboard</li>
-      <li>VIP check-in lane at the door</li>
-    </ul>
-    <p>See you on the court — keep dodging!</p>
-    <p class="cancel">You can cancel your Elite membership anytime from the app — no hidden fees, no drama.</p>
-  </div>
-  <div class="footer">The Dodge Club &bull; Elite Membership</div>
-</div></body></html>`;
+</body>
+</html>`;
 
   const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
@@ -89,6 +134,7 @@ async function sendEliteWelcomeEmail(
       htmlContent: html,
     }),
   });
+
   if (!resp.ok) {
     const body = await resp.text();
     logger.error({ status: resp.status, body }, "[activateElite] Brevo email failed");

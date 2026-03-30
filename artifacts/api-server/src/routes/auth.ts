@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
 import { db, usersTable, attendanceTable, awardsTable, eventsTable, postsTable, passwordResetTokensTable } from "@workspace/db";
 import { eq, lte, sql, and, lt } from "drizzle-orm";
+import { sendWelcomeEmail } from "../services/email";
 
 async function sendPasswordResetEmail(email: string, code: string): Promise<void> {
   const apiKey = process.env.BREVO_API_KEY;
@@ -10,29 +11,30 @@ async function sendPasswordResetEmail(email: string, code: string): Promise<void
     console.warn("[auth] BREVO_API_KEY not set — reset code:", code);
     return;
   }
-  const html = `
-<!DOCTYPE html><html><head><meta charset="utf-8"/>
-<style>
-  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0D0D0D;color:#fff;margin:0;padding:0}
-  .wrap{max-width:480px;margin:40px auto;background:#151515;border-radius:12px;overflow:hidden}
-  .hdr{background:#0B5E2F;padding:28px 32px;text-align:center}
-  .hdr h1{margin:0;font-size:24px;color:#FFD700}
-  .hdr p{margin:6px 0 0;color:rgba(255,255,255,0.7);font-size:13px}
-  .body{padding:32px}
-  .code-box{background:#0D0D0D;border:1px dashed #FFD700;border-radius:8px;padding:20px;text-align:center;margin:24px 0}
-  .code{font-family:'Courier New',monospace;font-size:36px;font-weight:bold;color:#FFD700;letter-spacing:10px}
-  .note{font-size:13px;color:rgba(255,255,255,0.5);text-align:center;margin-top:8px}
-  .footer{padding:16px 32px;text-align:center;font-size:11px;color:rgba(255,255,255,0.25);border-top:1px solid #222}
-</style></head><body>
-<div class="wrap">
-  <div class="hdr"><h1>The Dodge Club</h1><p>Password reset request</p></div>
-  <div class="body">
-    <p>Use the code below to reset your password. It expires in <strong>10 minutes</strong>.</p>
-    <div class="code-box"><div class="code">${code}</div></div>
-    <p class="note">If you didn't request this, you can safely ignore this email.</p>
+
+  const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/></head>
+<body style="margin:0;padding:0;background:#f0ede8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <div style="max-width:480px;margin:32px auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e0ddd6;box-shadow:0 2px 12px rgba(0,0,0,0.06);">
+    <div style="background:#0B3E1E;padding:28px 32px;text-align:center;">
+      <h1 style="margin:0 0 4px;font-size:22px;font-weight:800;color:#ffffff;">The Dodge Club</h1>
+      <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.6);">Password reset request</p>
+    </div>
+    <div style="padding:32px;">
+      <p style="margin:0 0 16px;font-size:15px;color:#1a1a1a;line-height:1.65;">Use the code below to reset your password. It expires in <strong>10 minutes</strong>.</p>
+      <div style="background:#f8f6f2;border:1px solid #e0ddd6;border-radius:10px;padding:24px;text-align:center;margin:24px 0;">
+        <p style="font-size:11px;text-transform:uppercase;letter-spacing:0.7px;color:#888888;margin:0 0 10px;">Your reset code</p>
+        <p style="font-family:'Courier New',monospace;font-size:38px;font-weight:bold;color:#0B3E1E;letter-spacing:8px;margin:0;">${code}</p>
+      </div>
+      <p style="font-size:13px;color:#888888;text-align:center;margin:0;">If you didn't request this, you can safely ignore this email.</p>
+    </div>
+    <div style="padding:18px 32px;text-align:center;font-size:12px;color:#888888;border-top:1px solid #e0ddd6;background:#f0ede8;">
+      The Dodge Club &bull; Automated security email
+    </div>
   </div>
-  <div class="footer">The Dodge Club &bull; Automated security email</div>
-</div></body></html>`;
+</body>
+</html>`;
 
   const resp = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
@@ -230,6 +232,12 @@ router.post("/register", async (req, res) => {
 
   req.session = { userId: updatedUser.id };
   const signupStats = { eventsAttended: 0, medalsEarned: 0, ringsEarned: 0, xp: SIGNUP_BONUS_XP, level: 1, currentStreak: 0, bestStreak: 0 };
+
+  // Send welcome email — fire-and-forget so it never delays the signup response
+  sendWelcomeEmail(updatedUser.email, updatedUser.name).catch((err: unknown) =>
+    console.error("[auth] Welcome email failed:", err),
+  );
+
   res.json({ user: toProfile(updatedUser, signupStats), token: String(updatedUser.id) });
 });
 
