@@ -169,10 +169,6 @@ export default function GoEliteScreen() {
       >
         {/* Hero */}
         <LinearGradient colors={["#1A1000", "#3D2800"]} style={styles.hero}>
-          <View style={styles.eliteStar}>
-            <Text style={styles.eliteStarShape}>★</Text>
-            <Text style={styles.eliteStarText}>E</Text>
-          </View>
           <Text style={styles.heroTitle}>Go Elite</Text>
           <Text style={styles.heroPrice}>
             £9.99<Text style={styles.heroPricePer}> / month</Text>
