@@ -804,15 +804,6 @@ export default function MemberScreen() {
                 <Feather name="log-out" size={18} color="rgba(255,255,255,0.7)" />
               </Pressable>
             </View>
-            {user.accountType !== "supporter" && (
-              <Pressable
-                style={({ pressed }) => [styles.shareCardBtn, { opacity: pressed ? 0.8 : 1 }]}
-                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setCardVisible(true); }}
-              >
-                <Feather name="share-2" size={14} color="#FFD700" />
-                <Text style={styles.shareCardBtnText}>My Card</Text>
-              </Pressable>
-            )}
             <Pressable
               style={({ pressed }) => [styles.membershipBtn, user.isElite && styles.membershipBtnElite, { opacity: pressed ? 0.85 : 1 }]}
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/membership"); }}
@@ -904,22 +895,35 @@ export default function MemberScreen() {
           </View>
         )}
 
-        {/* Skills — below progress bar, left-aligned */}
-        {user.accountType !== "supporter" && user.skills && (() => {
-          const skills = user.skills!.split(",").filter(Boolean).map(s => s.trim()).slice(0, 3);
-          return skills.length > 0 ? (
-            <View style={styles.profileSkillsBlock}>
-              <Text style={styles.profileSkillsLabel}>SKILLS</Text>
-              <View style={styles.profileSkillsRow}>
-                {skills.map(skill => (
-                  <View key={skill} style={styles.profileSkillChip}>
-                    <Text style={styles.profileSkillChipText}>{skill}</Text>
+        {/* Skills + My Card row */}
+        {user.accountType !== "supporter" && (
+          <View style={styles.profileSkillsBlock}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              {user.skills && (() => {
+                const skills = user.skills!.split(",").filter(Boolean).map(s => s.trim()).slice(0, 3);
+                return skills.length > 0 ? (
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.profileSkillsLabel}>SKILLS</Text>
+                    <View style={styles.profileSkillsRow}>
+                      {skills.map(skill => (
+                        <View key={skill} style={styles.profileSkillChip}>
+                          <Text style={styles.profileSkillChipText}>{skill}</Text>
+                        </View>
+                      ))}
+                    </View>
                   </View>
-                ))}
-              </View>
+                ) : <View style={{ flex: 1 }} />;
+              })()}
+              <Pressable
+                style={({ pressed }) => [styles.shareCardBtn, { opacity: pressed ? 0.8 : 1 }]}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setCardVisible(true); }}
+              >
+                <Feather name="share-2" size={14} color="#FFD700" />
+                <Text style={styles.shareCardBtnText}>My Card</Text>
+              </Pressable>
             </View>
-          ) : null;
-        })()}
+          </View>
+        )}
       </LinearGradient>
 
       {/* ── Stats Bar ── */}
