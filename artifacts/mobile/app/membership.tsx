@@ -224,7 +224,7 @@ export default function GoEliteScreen() {
 
         {/* Perks Tabs */}
         <View style={styles.perksSection}>
-          <Text style={styles.perksTitle}>What you get</Text>
+          <Text style={styles.perksTitle}>Your unlocks</Text>
           <View style={styles.perkTabsGrid}>
             {ELITE_PERKS.map((perk, i) => {
               const active = selectedPerk === i;
