@@ -377,6 +377,15 @@ export default function HomeScreen() {
                     <Feather name="chevron-right" size={18} color="rgba(255,255,255,0.6)" />
                   </View>
                 ) : null}
+                {!user?.isElite && (
+                  <Pressable
+                    style={({ pressed }) => [styles.goEliteBadge, { position: "absolute", bottom: 12, right: 12, opacity: pressed ? 0.8 : 1 }]}
+                    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/membership"); }}
+                  >
+                    <Text style={styles.goEliteBadgeText}>E</Text>
+                    <Text style={styles.goEliteBadgeLabel}>Go Elite</Text>
+                  </Pressable>
+                )}
               </Pressable>
             );
           })()}
@@ -506,16 +515,6 @@ export default function HomeScreen() {
             </Pressable>
           </View>
 
-          {/* ══════════ GO ELITE BADGE (non-Elite users only) ══════════ */}
-          {!user?.isElite && (
-            <Pressable
-              style={({ pressed }) => [styles.goEliteBadge, { opacity: pressed ? 0.8 : 1 }]}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/membership"); }}
-            >
-              <Text style={styles.goEliteBadgeText}>E</Text>
-              <Text style={styles.goEliteBadgeLabel}>Go Elite</Text>
-            </Pressable>
-          )}
 
           {/* ══════════ AREA 2.5: COUNTDOWN ══════════ */}
           {nextEventCountdown && (
