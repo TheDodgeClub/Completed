@@ -93,6 +93,7 @@ export default function RootLayout() {
                       <Stack.Screen name="legal/guidelines" options={{ headerShown: false }} />
                       <Stack.Screen name="legal/privacy" options={{ headerShown: false }} />
                       <Stack.Screen name="legal/terms" options={{ headerShown: false }} />
+                      <Stack.Screen name="membership" options={{ title: "Elite Membership", presentation: "modal", headerShown: false }} />
                     </Stack>
                   </AuthGate>
                 </StripeWrapper>

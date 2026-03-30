@@ -676,6 +676,8 @@ router.get("/members", async (_req, res) => {
       referralCount: referralCountMap.get(u.id) ?? 0,
       isBanned: u.isBanned ?? false,
       skills: u.skills ?? null,
+      isElite: u.isElite ?? false,
+      eliteSince: u.eliteSince?.toISOString() ?? null,
     };
   });
   res.json(result);

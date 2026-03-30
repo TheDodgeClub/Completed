@@ -120,6 +120,8 @@ function toProfile(
     skills: user.skills ?? null,
     accountType: user.accountType ?? "player",
     referralCode: user.referralCode ?? null,
+    isElite: user.isElite ?? false,
+    eliteSince: user.eliteSince?.toISOString() ?? null,
   };
 }
 

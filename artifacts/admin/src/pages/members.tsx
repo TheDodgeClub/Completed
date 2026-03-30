@@ -123,16 +123,34 @@ export default function Members() {
 /* ─── Players Tab ─── */
 function PlayersTab({ members, isLoading, toast }: { members: AdminMember[] | undefined; isLoading: boolean; toast: any }) {
   const [search, setSearch] = useState("");
+  const [eliteOnly, setEliteOnly] = useState(false);
   const [selected, setSelected] = useState<AdminMember | null>(null);
 
   const filtered = members?.filter(m =>
     (m.accountType === "player" || !m.accountType) &&
+    (!eliteOnly || m.isElite) &&
     (m.name.toLowerCase().includes(search.toLowerCase()) || m.email.toLowerCase().includes(search.toLowerCase()))
   ) ?? [];
 
   return (
     <div className="space-y-4">
-      <SearchBar value={search} onChange={setSearch} />
+      <div className="flex items-center gap-3">
+        <div className="flex-1">
+          <SearchBar value={search} onChange={setSearch} />
+        </div>
+        <button
+          onClick={() => setEliteOnly(e => !e)}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border transition-all whitespace-nowrap ${
+            eliteOnly
+              ? "bg-yellow-500/20 border-yellow-500/50 text-yellow-400"
+              : "bg-secondary/60 border-border/50 text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <span>⭐</span>
+          Elite only
+          {eliteOnly && <span className="ml-1 text-xs bg-yellow-500/20 text-yellow-400 rounded-full px-1.5 py-0.5">{filtered.length}</span>}
+        </button>
+      </div>
       <div className="bg-card border border-border/50 rounded-2xl overflow-hidden shadow-lg shadow-black/10">
         <div className="overflow-x-auto">
           <Table>
@@ -167,6 +185,9 @@ function PlayersTab({ members, isLoading, toast }: { members: AdminMember[] | un
                       {m.isAdmin
                         ? <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20"><ShieldCheck className="w-3 h-3 mr-1" />Admin</Badge>
                         : <Badge variant="outline" className="bg-secondary/50 text-muted-foreground border-border/50">Member</Badge>}
+                      {m.isElite && (
+                        <Badge variant="outline" className="bg-yellow-500/10 text-yellow-400 border-yellow-500/30">⭐ Elite</Badge>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell className="text-center">
@@ -528,6 +549,9 @@ function PlayerDetailSheet({ member, onClose, toast }: { member: AdminMember | n
                       <SheetTitle className="font-display text-xl text-foreground">{member.name}</SheetTitle>
                       <span className="px-2 py-0.5 text-[10px] font-bold bg-accent/20 text-accent border border-accent/30 rounded">LV {member.level ?? 1}</span>
                       <span className="text-xs text-muted-foreground">{levelName}</span>
+                      {member.isElite && (
+                        <span className="px-2 py-0.5 text-[10px] font-bold bg-yellow-500/15 text-yellow-400 border border-yellow-500/30 rounded">⭐ ELITE</span>
+                      )}
                     </div>
                     {member.username && <p className="text-xs text-primary/70 font-medium">@{member.username}</p>}
                     <SheetDescription className="text-muted-foreground text-xs truncate">{member.email}</SheetDescription>

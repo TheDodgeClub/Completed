@@ -779,6 +779,14 @@ export default function MemberScreen() {
               <Feather name="edit-2" size={14} color="#fff" />
               <Text style={styles.editBtnText}>Edit</Text>
             </Pressable>
+            <Pressable
+              style={({ pressed }) => [styles.membershipBtn, user.isElite && styles.membershipBtnElite, { opacity: pressed ? 0.85 : 1 }]}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/membership"); }}
+            >
+              <Text style={[styles.membershipBtnText, user.isElite && styles.membershipBtnTextElite]}>
+                {user.isElite ? "⭐ Elite" : "Membership"}
+              </Text>
+            </Pressable>
             {user.accountType !== "supporter" && (
               <Pressable
                 style={({ pressed }) => [styles.shareCardBtn, { opacity: pressed ? 0.8 : 1 }]}
@@ -798,12 +806,19 @@ export default function MemberScreen() {
         <Text style={styles.memberName}>{user.name}</Text>
         {user.username && <Text style={styles.memberUsername}>@{user.username}</Text>}
 
-        {user.accountType === "supporter" && (
+        {(user.accountType === "supporter" || user.isElite) && (
           <View style={styles.badgeRow}>
-            <View style={styles.supporterBadge}>
-              <Feather name="heart" size={12} color="#fff" />
-              <Text style={styles.supporterBadgeText}>SUPPORTER</Text>
-            </View>
+            {user.accountType === "supporter" && (
+              <View style={styles.supporterBadge}>
+                <Feather name="heart" size={12} color="#fff" />
+                <Text style={styles.supporterBadgeText}>SUPPORTER</Text>
+              </View>
+            )}
+            {user.isElite && (
+              <View style={styles.eliteMemberBadge}>
+                <Text style={styles.eliteMemberBadgeText}>⭐ ELITE</Text>
+              </View>
+            )}
           </View>
         )}
 
@@ -1809,6 +1824,33 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     referralBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: Colors.primary },
 
     /* Supporter badge */
+    eliteMemberBadge: {
+      backgroundColor: "#FFD700",
+      borderRadius: 20,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 4,
+    },
+    eliteMemberBadgeText: { fontFamily: "Inter_700Bold", fontSize: 10, color: "#000", letterSpacing: 1 },
+    membershipBtn: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 5,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 20,
+      backgroundColor: "rgba(255,255,255,0.12)",
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.2)",
+    },
+    membershipBtnElite: {
+      backgroundColor: "rgba(255,215,0,0.15)",
+      borderColor: "rgba(255,215,0,0.35)",
+    },
+    membershipBtnText: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: "#fff" },
+    membershipBtnTextElite: { color: "#FFD700" },
     supporterBadge: {
       flexDirection: "row", alignItems: "center", gap: 4,
       backgroundColor: "#E91E63",

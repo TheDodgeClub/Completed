@@ -22,6 +22,8 @@ export interface AdminMember {
   referredByName: string | null;
   referralCount: number;
   skills: string | null;
+  isElite: boolean;
+  eliteSince: string | null;
 }
 
 export interface UserReportEntry {

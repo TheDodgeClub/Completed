@@ -25,6 +25,8 @@ export type UserProfile = {
   skills: string | null;
   accountType?: "player" | "supporter";
   referralCode?: string | null;
+  isElite?: boolean;
+  eliteSince?: string | null;
 };
 
 export type EventAttendee = {
@@ -597,4 +599,23 @@ export type BlockedUser = {
 
 export async function getBlockedUsers(): Promise<BlockedUser[]> {
   return apiFetch<BlockedUser[]>("/users/me/blocked");
+}
+
+export type MembershipStatus = {
+  isElite: boolean;
+  eliteSince: string | null;
+  nextBillingDate: string | null;
+  stripeSubscriptionId: string | null;
+};
+
+export async function getMembershipStatus(): Promise<MembershipStatus> {
+  return apiFetch<MembershipStatus>("/membership/status");
+}
+
+export async function createMembershipCheckout(): Promise<{ url: string }> {
+  return apiFetch<{ url: string }>("/membership/checkout", { method: "POST" });
+}
+
+export async function createBillingPortalSession(): Promise<{ url: string }> {
+  return apiFetch<{ url: string }>("/membership/portal", { method: "POST" });
 }
