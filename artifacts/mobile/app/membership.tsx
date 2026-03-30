@@ -542,6 +542,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       fontSize: 16,
       color: Colors.text,
       marginBottom: 4,
+      textAlign: "center",
     },
     perkTabsGrid: {
       flexDirection: "row",
