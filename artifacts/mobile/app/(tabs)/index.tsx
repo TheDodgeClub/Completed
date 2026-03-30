@@ -953,18 +953,18 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       borderRadius: 20,
       borderWidth: 1,
       borderColor: "#2A6B40",
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      gap: 6,
+      paddingHorizontal: 11,
+      paddingVertical: 6,
+      gap: 7,
     },
     goEliteBadgeText: {
       fontFamily: "Poppins_800ExtraBold",
-      fontSize: 12,
+      fontSize: 13,
       color: "#FFD700",
     },
     goEliteBadgeLabel: {
       fontFamily: "Inter_600SemiBold",
-      fontSize: 12,
+      fontSize: 13,
       color: "#FFD700",
     },
 
