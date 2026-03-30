@@ -156,6 +156,7 @@ export default function GoEliteScreen() {
         {/* Hero */}
         <LinearGradient colors={["#1A1000", "#3D2800"]} style={styles.hero}>
           <View style={styles.eliteStar}>
+            <Text style={styles.eliteStarShape}>★</Text>
             <Text style={styles.eliteStarText}>E</Text>
           </View>
           <Text style={styles.heroTitle}>Go Elite</Text>
@@ -404,12 +405,26 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     },
     eliteStar: {
       marginBottom: 4,
+      width: 80,
+      height: 80,
+      alignSelf: "center",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    eliteStarShape: {
+      position: "absolute",
+      fontSize: 80,
+      color: "#FFD700",
+      lineHeight: 80,
+      includeFontPadding: false,
     },
     eliteStarText: {
-      fontSize: 52,
+      fontSize: 30,
       fontFamily: "Poppins_800ExtraBold",
-      color: "#FFD700",
-      letterSpacing: -2,
+      color: "#1A1000",
+      lineHeight: 34,
+      includeFontPadding: false,
+      zIndex: 1,
     },
     heroTitle: {
       fontFamily: "Poppins_800ExtraBold",
