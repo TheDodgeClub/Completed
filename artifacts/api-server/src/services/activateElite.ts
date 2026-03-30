@@ -1,5 +1,5 @@
 import { db, usersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { logger } from "../lib/logger";
 
 const ELITE_XP_BONUS = 500;
@@ -98,30 +98,40 @@ async function sendEliteWelcomeEmail(
 }
 
 export async function activateElite(userId: number): Promise<{ xpAwarded: boolean }> {
-  const user = await db.query.usersTable.findFirst({ where: eq(usersTable.id, userId) });
-  if (!user) {
+  // Atomically award XP exactly once: only updates rows where elite_xp_awarded IS FALSE.
+  // This is concurrency-safe — if two activations race, only one will match the WHERE clause.
+  const xpRows = await db
+    .update(usersTable)
+    .set({
+      bonusXp: sql`${usersTable.bonusXp} + ${ELITE_XP_BONUS}`,
+      eliteXpAwarded: true,
+      pendingEliteXpAwarded: true,
+    })
+    .where(sql`${usersTable.id} = ${userId} AND ${usersTable.eliteXpAwarded} = false`)
+    .returning({ id: usersTable.id });
+
+  const xpAwarded = xpRows.length > 0;
+
+  // Set core Elite status fields unconditionally (idempotent).
+  const user = await db
+    .update(usersTable)
+    .set({
+      isElite: true,
+      eliteSince: new Date(),
+      pendingEliteCelebration: true,
+      ...(xpAwarded ? {} : { pendingEliteXpAwarded: false }),
+    })
+    .where(eq(usersTable.id, userId))
+    .returning({ email: usersTable.email, name: usersTable.name });
+
+  if (!user[0]) {
     logger.warn({ userId }, "[activateElite] User not found");
     return { xpAwarded: false };
   }
 
-  const xpAwarded = !user.eliteXpAwarded;
-
-  const updates: Partial<typeof usersTable.$inferInsert> = {
-    isElite: true,
-    eliteSince: new Date(),
-    pendingEliteCelebration: true,
-    pendingEliteXpAwarded: xpAwarded,
-  };
-
-  if (xpAwarded) {
-    updates.bonusXp = (user.bonusXp ?? 0) + ELITE_XP_BONUS;
-    updates.eliteXpAwarded = true;
-  }
-
-  await db.update(usersTable).set(updates).where(eq(usersTable.id, userId));
   logger.info({ userId, xpAwarded }, "[activateElite] Elite activated");
 
-  sendEliteWelcomeEmail(user.email, user.name, xpAwarded).catch((err: unknown) =>
+  sendEliteWelcomeEmail(user[0].email, user[0].name, xpAwarded).catch((err: unknown) =>
     logger.error({ err, userId }, "[activateElite] Welcome email error"),
   );
 

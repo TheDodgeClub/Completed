@@ -485,7 +485,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
     paddingVertical: 3,
     zIndex: 10,
-  } as any,
+  },
   eliteRibbonText: {
     fontFamily: "Inter_700Bold",
     fontSize: 9,

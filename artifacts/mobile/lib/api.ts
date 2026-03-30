@@ -623,5 +623,5 @@ export async function createBillingPortalSession(): Promise<{ url: string }> {
 }
 
 export async function ackEliteCelebration(): Promise<void> {
-  await apiFetch<{ ok: boolean }>("/auth/ack-elite-celebration", { method: "POST" });
+  await apiFetch<{ ok: boolean }>("/users/me/ack-elite-celebration", { method: "POST" });
 }

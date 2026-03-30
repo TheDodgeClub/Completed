@@ -2031,7 +2031,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       borderWidth: 2,
       borderColor: "#0B3E20",
       zIndex: 10,
-    } as any,
+    },
     avatarEliteStickerText: {
       fontSize: 13,
       lineHeight: 15,
