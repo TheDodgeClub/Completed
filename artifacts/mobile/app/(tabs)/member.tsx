@@ -45,7 +45,7 @@ import {
   Ticket,
   BlockedUser,
 } from "@/lib/api";
-import { getToken, checkUsernameAvailable } from "@/lib/api";
+import { getToken, checkUsernameAvailable, ackEliteCelebration } from "@/lib/api";
 import { useAnnouncements } from "@/hooks/useAnnouncements";
 import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
@@ -534,7 +534,20 @@ export default function MemberScreen() {
   const [achievementsCollapsed, setAchievementsCollapsed] = React.useState(true);
   const [cardVisible, setCardVisible] = React.useState(false);
   const [sharingCard, setSharingCard] = React.useState(false);
+  const [celebrationVisible, setCelebrationVisible] = React.useState(false);
   const cardRef = useRef<View>(null);
+
+  React.useEffect(() => {
+    if (user?.pendingEliteCelebration) {
+      setCelebrationVisible(true);
+    }
+  }, [user?.pendingEliteCelebration]);
+
+  const handleAckCelebration = React.useCallback(async () => {
+    setCelebrationVisible(false);
+    try { await ackEliteCelebration(); } catch { /* ignore */ }
+    refreshUser();
+  }, [refreshUser]);
 
   const handleShareCard = async () => {
     setSharingCard(true);
@@ -768,6 +781,11 @@ export default function MemberScreen() {
             <View style={styles.avatarEditBadge}>
               <Feather name="camera" size={10} color="#fff" />
             </View>
+            {user.isElite && (
+              <View style={styles.avatarEliteSticker}>
+                <Text style={styles.avatarEliteStickerText}>⭐</Text>
+              </View>
+            )}
             <Text style={styles.avatarChangeLabel}>{uploadingAvatar ? "Uploading..." : "Change"}</Text>
           </Pressable>
 
@@ -1239,6 +1257,7 @@ export default function MemberScreen() {
                 medalsEarned={user.medalsEarned ?? 0}
                 ringsEarned={user.ringsEarned ?? 0}
                 skills={user.skills}
+                isElite={user.isElite ?? false}
               />
             </View>
 
@@ -1261,6 +1280,42 @@ export default function MemberScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Elite Celebration Modal */}
+      <Modal visible={celebrationVisible} transparent animationType="fade" onRequestClose={handleAckCelebration}>
+        <View style={styles.celebrationOverlay}>
+          <View style={styles.celebrationCard}>
+            <Text style={styles.celebrationStar}>⭐</Text>
+            <Text style={styles.celebrationTitle}>You're Elite!</Text>
+            <Text style={styles.celebrationSub}>
+              Welcome to the top tier of The Dodge Club. Your Elite badge is now live on your profile and player card.
+            </Text>
+            <View style={styles.celebrationXpBox}>
+              <Text style={styles.celebrationXpValue}>+500 XP</Text>
+              <Text style={styles.celebrationXpLabel}>Elite Welcome Bonus</Text>
+            </View>
+            <Text style={styles.celebrationPerksTitle}>What you've unlocked</Text>
+            {[
+              "Elite badge on profile & player card",
+              "Double XP at every event",
+              "Priority spot reservation",
+              "VIP check-in lane",
+            ].map(perk => (
+              <View key={perk} style={styles.celebrationPerkRow}>
+                <Feather name="check" size={14} color="#FFD700" />
+                <Text style={styles.celebrationPerkText}>{perk}</Text>
+              </View>
+            ))}
+            <Pressable
+              style={({ pressed }) => [styles.celebrationBtn, { opacity: pressed ? 0.88 : 1 }]}
+              onPress={() => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); handleAckCelebration(); }}
+            >
+              <Text style={styles.celebrationBtnText}>Let's Go! 🎉</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
     </ScrollView>
   );
 }
@@ -1938,5 +1993,116 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       backgroundColor: "rgba(255,59,48,0.06)",
     },
     deleteAccountText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#FF3B30" },
+
+    /* Golden E sticker on avatar */
+    avatarEliteSticker: {
+      position: "absolute",
+      bottom: 18,
+      right: -2,
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      backgroundColor: "#FFD700",
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 2,
+      borderColor: "#0B3E20",
+      zIndex: 10,
+    } as any,
+    avatarEliteStickerText: {
+      fontSize: 13,
+      lineHeight: 15,
+    },
+
+    /* Elite Celebration Modal */
+    celebrationOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.80)",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 24,
+    },
+    celebrationCard: {
+      backgroundColor: "#1A1000",
+      borderRadius: 22,
+      padding: 28,
+      alignItems: "center",
+      width: "100%",
+      borderWidth: 1,
+      borderColor: "rgba(255,215,0,0.35)",
+      gap: 10,
+    },
+    celebrationStar: {
+      fontSize: 56,
+      lineHeight: 64,
+    },
+    celebrationTitle: {
+      fontFamily: "Poppins_800ExtraBold",
+      fontSize: 28,
+      color: "#FFD700",
+      textAlign: "center",
+    },
+    celebrationSub: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 14,
+      color: "rgba(255,255,255,0.7)",
+      textAlign: "center",
+      lineHeight: 20,
+    },
+    celebrationXpBox: {
+      backgroundColor: "rgba(255,215,0,0.10)",
+      borderWidth: 1,
+      borderColor: "rgba(255,215,0,0.3)",
+      borderRadius: 12,
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      alignItems: "center",
+      width: "100%",
+      marginTop: 4,
+    },
+    celebrationXpValue: {
+      fontFamily: "Poppins_800ExtraBold",
+      fontSize: 28,
+      color: "#FFD700",
+    },
+    celebrationXpLabel: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 12,
+      color: "rgba(255,255,255,0.55)",
+      marginTop: 2,
+    },
+    celebrationPerksTitle: {
+      fontFamily: "Inter_700Bold",
+      fontSize: 13,
+      color: "rgba(255,255,255,0.6)",
+      alignSelf: "flex-start",
+      letterSpacing: 0.5,
+      marginTop: 4,
+    },
+    celebrationPerkRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      alignSelf: "flex-start",
+    },
+    celebrationPerkText: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 13,
+      color: "rgba(255,255,255,0.8)",
+    },
+    celebrationBtn: {
+      backgroundColor: "#FFD700",
+      borderRadius: 14,
+      paddingVertical: 15,
+      paddingHorizontal: 40,
+      alignItems: "center",
+      marginTop: 8,
+      width: "100%",
+    },
+    celebrationBtnText: {
+      fontFamily: "Inter_700Bold",
+      fontSize: 16,
+      color: "#000",
+    },
   });
 }

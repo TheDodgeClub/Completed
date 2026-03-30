@@ -217,3 +217,19 @@ export function useResolveUserReport() {
   });
 }
 
+export function useGrantElite() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => fetchApi(`/api/admin/members/${id}/grant-elite`, { method: "POST" }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["members"] }); },
+  });
+}
+
+export function useRevokeElite() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => fetchApi(`/api/admin/members/${id}/revoke-elite`, { method: "POST" }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["members"] }); },
+  });
+}
+

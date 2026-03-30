@@ -3,6 +3,7 @@ import { db, eventsTable, postsTable, merchTable, usersTable, attendanceTable, a
 import { eq, desc, and, avg, count, countDistinct, sum, gte, sql, lte, or, isNull } from "drizzle-orm";
 import { getUncachableStripeClient } from "../stripeClient";
 import { requireAdmin } from "../middlewares/requireAdmin";
+import { activateElite, deactivateElite } from "../services/activateElite";
 
 const router: IRouter = Router();
 
@@ -720,6 +721,24 @@ router.delete("/members/:id", async (req, res) => {
   await db.delete(attendanceTable).where(eq(attendanceTable.userId, id));
   await db.delete(awardsTable).where(eq(awardsTable.userId, id));
   await db.delete(usersTable).where(eq(usersTable.id, id));
+  res.json({ ok: true });
+});
+
+/* POST /api/admin/members/:id/grant-elite — manually grant Elite membership */
+router.post("/members/:id/grant-elite", async (req, res) => {
+  const id = Number(req.params.id);
+  const user = await db.query.usersTable.findFirst({ where: eq(usersTable.id, id) });
+  if (!user) { res.status(404).json({ error: "Not found" }); return; }
+  await activateElite(id);
+  res.json({ ok: true });
+});
+
+/* POST /api/admin/members/:id/revoke-elite — revoke Elite membership */
+router.post("/members/:id/revoke-elite", async (req, res) => {
+  const id = Number(req.params.id);
+  const user = await db.query.usersTable.findFirst({ where: eq(usersTable.id, id) });
+  if (!user) { res.status(404).json({ error: "Not found" }); return; }
+  await deactivateElite(id);
   res.json({ ok: true });
 });
 

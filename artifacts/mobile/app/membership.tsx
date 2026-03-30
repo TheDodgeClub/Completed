@@ -204,6 +204,10 @@ export default function GoEliteScreen() {
             </View>
           ) : (
             <View style={styles.ctaSection}>
+              <View style={styles.xpBonusRow}>
+                <Text style={styles.xpBonusIcon}>⚡</Text>
+                <Text style={styles.xpBonusText}>Join today and get a one-time <Text style={styles.xpBonusHighlight}>+500 XP</Text> Elite welcome bonus</Text>
+              </View>
               <Pressable
                 style={({ pressed }) => [styles.upgradeBtn, { opacity: pressed ? 0.9 : 1 }]}
                 disabled={checkoutLoading}
@@ -468,6 +472,30 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       fontFamily: "Inter_600SemiBold",
       fontSize: 15,
       color: Colors.text,
+    },
+    xpBonusRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      backgroundColor: "rgba(255,215,0,0.08)",
+      borderWidth: 1,
+      borderColor: "rgba(255,215,0,0.25)",
+      borderRadius: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+    },
+    xpBonusIcon: {
+      fontSize: 18,
+    },
+    xpBonusText: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 13,
+      color: "rgba(255,255,255,0.75)",
+      flex: 1,
+    },
+    xpBonusHighlight: {
+      fontFamily: "Inter_700Bold",
+      color: "#FFD700",
     },
     ctaNote: {
       fontFamily: "Inter_400Regular",

@@ -22,10 +22,11 @@ type Props = {
   medalsEarned: number;
   ringsEarned: number;
   skills: string | null;
+  isElite?: boolean;
 };
 
 const PlayerCard = forwardRef<View, Props>(function PlayerCard(
-  { name, username, avatarUrl, level, xp, medalsEarned, ringsEarned, skills },
+  { name, username, avatarUrl, level, xp, medalsEarned, ringsEarned, skills, isElite },
   ref
 ) {
   const levelName = LEVEL_NAMES[Math.min(level - 1, LEVEL_NAMES.length - 1)] ?? "Player";
@@ -97,6 +98,13 @@ const PlayerCard = forwardRef<View, Props>(function PlayerCard(
         <View style={[styles.cornerH, styles.cBLH]} />
         <View style={[styles.cornerV, styles.cBR]} />
         <View style={[styles.cornerH, styles.cBRH]} />
+
+        {/* Elite ribbon — pinned top-left */}
+        {isElite && (
+          <View style={styles.eliteRibbon}>
+            <Text style={styles.eliteRibbonText}>⭐ ELITE</Text>
+          </View>
+        )}
 
         {/* Top section: centred logo + subtitle, LV pill pinned top-right */}
         <View style={styles.topSection}>
@@ -465,6 +473,24 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: GOLD,
     letterSpacing: 0.4,
+  },
+
+  /* Elite ribbon */
+  eliteRibbon: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    backgroundColor: GOLD,
+    borderRadius: 7,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    zIndex: 10,
+  } as any,
+  eliteRibbonText: {
+    fontFamily: "Inter_700Bold",
+    fontSize: 9,
+    color: "#000",
+    letterSpacing: 1,
   },
 
   /* Footer */

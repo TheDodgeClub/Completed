@@ -27,6 +27,7 @@ export type UserProfile = {
   referralCode?: string | null;
   isElite?: boolean;
   eliteSince?: string | null;
+  pendingEliteCelebration?: boolean;
 };
 
 export type EventAttendee = {
@@ -618,4 +619,8 @@ export async function createMembershipCheckout(): Promise<{ url: string }> {
 
 export async function createBillingPortalSession(): Promise<{ url: string }> {
   return apiFetch<{ url: string }>("/membership/portal", { method: "POST" });
+}
+
+export async function ackEliteCelebration(): Promise<void> {
+  await apiFetch<{ ok: boolean }>("/auth/ack-elite-celebration", { method: "POST" });
 }

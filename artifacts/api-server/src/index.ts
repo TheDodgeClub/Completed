@@ -83,6 +83,8 @@ async function runMigrations() {
 
       ALTER TABLE attendance ADD COLUMN IF NOT EXISTS checkin_method TEXT;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id TEXT;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS elite_xp_awarded BOOLEAN NOT NULL DEFAULT FALSE;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS pending_elite_celebration BOOLEAN NOT NULL DEFAULT FALSE;
       DO $$ BEGIN
         IF NOT EXISTS (
           SELECT 1 FROM pg_constraint WHERE conname = 'users_google_id_unique'

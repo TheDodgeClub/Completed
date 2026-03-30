@@ -1,6 +1,7 @@
 import { getStripeSync, getUncachableStripeClient } from "./stripeClient";
 import { logger } from "./lib/logger";
 import { fulfillPaymentIntent } from "./services/fulfillPaymentIntent";
+import { activateElite, deactivateElite } from "./services/activateElite";
 import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
@@ -66,14 +67,15 @@ export class WebhookHandlers {
           await db
             .update(usersTable)
             .set({
-              isElite: true,
-              eliteSince: new Date(),
               stripeSubscriptionId: session.subscription,
               stripeCustomerId: session.customer ?? undefined,
             })
             .where(eq(usersTable.id, userId))
-            .catch((err: unknown) => logger.error({ err, userId }, "elite activate error"));
-          logger.info({ userId, subscriptionId: session.subscription }, "Elite membership activated");
+            .catch((err: unknown) => logger.error({ err, userId }, "elite stripe fields update error"));
+          await activateElite(userId).catch((err: unknown) =>
+            logger.error({ err, userId }, "elite activate error"),
+          );
+          logger.info({ userId, subscriptionId: session.subscription }, "Elite membership activated via checkout");
         }
       }
     }
@@ -82,11 +84,9 @@ export class WebhookHandlers {
       const sub = event.data.object as { id: string; metadata: Record<string, string> };
       const userId = sub.metadata?.userId ? Number(sub.metadata.userId) : null;
       if (userId) {
-        await db
-          .update(usersTable)
-          .set({ isElite: false, stripeSubscriptionId: null })
-          .where(eq(usersTable.id, userId))
-          .catch((err: unknown) => logger.error({ err, userId }, "elite deactivate error"));
+        await deactivateElite(userId).catch((err: unknown) =>
+          logger.error({ err, userId }, "elite deactivate error"),
+        );
         logger.info({ userId, subscriptionId: sub.id }, "Elite membership cancelled");
       }
     }
@@ -96,7 +96,7 @@ export class WebhookHandlers {
       if (invoice.subscription) {
         await db
           .update(usersTable)
-          .set({ isElite: false })
+          .set({ isElite: false, pendingEliteCelebration: false })
           .where(eq(usersTable.stripeSubscriptionId, invoice.subscription))
           .catch((err: unknown) => logger.error({ err, sub: invoice.subscription }, "elite payment_failed error"));
         logger.info({ subscriptionId: invoice.subscription }, "Elite membership lapsed (payment failed)");

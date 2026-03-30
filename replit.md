@@ -26,7 +26,7 @@ The project is structured as a pnpm monorepo, utilizing Node.js 24 and TypeScrip
 - **Email Service:** Integration with Brevo for transactional emails, supporting per-event customizable templates and global sender settings.
 - **Ticketing System:** Supports multiple ticket types, discount codes, and integration with Stripe for payments. Free registration is also supported.
 - **Check-In System:** PIN-based check-in for members at events and QR code scanning for door staff.
-- **Elite Membership:** A Stripe subscription-based premium tier offering early access, discounts, and exclusive content. Managed via Stripe Checkout and Customer Portal, adhering to iOS App Store guidelines by directing payment flows to a web browser.
+- **Elite Membership:** A Stripe subscription-based premium tier (£9.99/month). Activation awards +500 XP bonus (tracked via `eliteXpAwarded` flag) and queues a celebration modal (`pendingEliteCelebration`). Admin can manually grant/revoke Elite. Elite badge appears on profile avatar (⭐ sticker), player card ribbon, and throughout the app. Welcome email sent via Brevo on activation.
 - **Push Notifications & In-App Announcements:** Leverages `expo-notifications` for push notifications and an internal `announcements` table for in-app messaging, with features for broadcast and unread tracking.
 - **User Moderation:** Includes features for user reporting, blocking, and admin-level banning/unbanning.
 - **Legal Content Management:** Privacy Policy and Terms of Service content are managed in the database and displayed via in-app modals.

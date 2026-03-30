@@ -32,6 +32,8 @@ export const usersTable = pgTable("users", {
   isBanned: boolean("is_banned").notNull().default(false),
   skills: text("skills"),
   googleId: text("google_id").unique(),
+  eliteXpAwarded: boolean("elite_xp_awarded").notNull().default(false),
+  pendingEliteCelebration: boolean("pending_elite_celebration").notNull().default(false),
 });
 
 export const insertUserSchema = createInsertSchema(usersTable).omit({

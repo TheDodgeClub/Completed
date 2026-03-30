@@ -4,6 +4,7 @@ import {
   useMarkAttendance, useDeleteAttendance, useGrantAward, useRevokeAward,
   useUpdateMember, useDeleteMember, useBanMember, useUnbanMember, useWarnMember,
   useUserReports, useResolveUserReport,
+  useGrantElite, useRevokeElite,
   AdminMember, UserReportGroup,
 } from "@/hooks/use-members";
 import { useEvents } from "@/hooks/use-events";
@@ -482,6 +483,8 @@ function PlayerDetailSheet({ member, onClose, toast }: { member: AdminMember | n
   const { mutate: banMember, isPending: banning } = useBanMember();
   const { mutate: unbanMember, isPending: unbanning } = useUnbanMember();
   const { mutate: warnMember, isPending: warning } = useWarnMember();
+  const { mutate: grantElite, isPending: grantingElite } = useGrantElite();
+  const { mutate: revokeElite, isPending: revokingElite } = useRevokeElite();
   const [warnReason, setWarnReason] = useState("");
 
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -577,6 +580,52 @@ function PlayerDetailSheet({ member, onClose, toast }: { member: AdminMember | n
             <div className="flex-1 overflow-y-auto p-6 space-y-8">
               {/* Player Card Preview */}
               <PlayerCardPreview member={member} />
+
+              {/* Elite Membership */}
+              <div className={`flex items-center justify-between px-4 py-3 rounded-xl border ${member.isElite ? "bg-yellow-500/8 border-yellow-500/30" : "bg-secondary/30 border-border/40"}`}>
+                <div className="space-y-0.5">
+                  <p className="text-sm font-semibold text-foreground">Elite Membership</p>
+                  <p className="text-xs text-muted-foreground">
+                    {member.isElite
+                      ? `⭐ Elite since ${member.eliteSince ? new Date(member.eliteSince).toLocaleDateString("en-GB", { month: "long", year: "numeric" }) : "unknown"}`
+                      : "Not an Elite member"}
+                  </p>
+                </div>
+                {member.isElite ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="rounded-xl border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10 gap-1.5 text-xs"
+                    disabled={revokingElite}
+                    onClick={() => {
+                      if (!window.confirm(`Remove Elite status from ${member.name}? This will not cancel any Stripe subscription.`)) return;
+                      revokeElite(member.id, {
+                        onSuccess: () => toast({ title: `Elite removed from ${member.name}` }),
+                        onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+                      });
+                    }}
+                  >
+                    {revokingElite ? <Loader2 className="w-3 h-3 animate-spin" /> : "⭐"}
+                    Remove Elite
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    className="rounded-xl bg-yellow-500 hover:bg-yellow-400 text-black font-bold gap-1.5 text-xs"
+                    disabled={grantingElite}
+                    onClick={() => {
+                      if (!window.confirm(`Grant Elite to ${member.name}? They'll receive +500 XP and a welcome email.`)) return;
+                      grantElite(member.id, {
+                        onSuccess: () => toast({ title: `⭐ Elite granted to ${member.name}` }),
+                        onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+                      });
+                    }}
+                  >
+                    {grantingElite ? <Loader2 className="w-3 h-3 animate-spin" /> : "⭐"}
+                    Grant Elite
+                  </Button>
+                )}
+              </div>
 
               {/* Account Type Toggle */}
               <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-secondary/30 border border-border/40">
