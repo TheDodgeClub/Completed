@@ -34,13 +34,13 @@ const WebStripeModal =
     : null;
 
 const ELITE_PERKS = [
-  { icon: "clock" as const, label: "Early ticket access" },
-  { icon: "zap" as const, label: "Double XP bonus" },
-  { icon: "tag" as const, label: "15% off tickets" },
-  { icon: "shopping-bag" as const, label: "10% off merch" },
-  { icon: "package" as const, label: "Early access to merch drops" },
-  { icon: "award" as const, label: "Golden Elite Player Card" },
-  { icon: "shield" as const, label: "Elite Member Badge on profile" },
+  { icon: "clock" as const, label: "Early Tickets", desc: "Get access to event tickets before general sale opens — never miss out." },
+  { icon: "zap" as const, label: "Double XP", desc: "Earn XP twice as fast at every event and climb the leaderboard faster." },
+  { icon: "tag" as const, label: "15% Off Tickets", desc: "Save 15% on every event ticket you purchase." },
+  { icon: "shopping-bag" as const, label: "10% Off Merch", desc: "10% discount across all club merchandise, any time." },
+  { icon: "package" as const, label: "Merch Drops", desc: "First access to new merch drops before they go on sale to everyone else." },
+  { icon: "award" as const, label: "Golden Card", desc: "Unlock an exclusive golden edition of your player card to show off." },
+  { icon: "shield" as const, label: "Elite Badge", desc: "A gold Elite badge on your profile and player card that sets you apart." },
 ];
 
 export default function GoEliteScreen() {
@@ -49,6 +49,7 @@ export default function GoEliteScreen() {
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [selectedPerk, setSelectedPerk] = useState(0);
   const { user, refreshUser } = useAuth();
   const [celebrationVisible, setCelebrationVisible] = useState(false);
   const [webEliteModal, setWebEliteModal] = useState<{
@@ -212,23 +213,33 @@ export default function GoEliteScreen() {
           </View>
         ) : null}
 
-        {/* Perks List */}
+        {/* Perks Tabs */}
         <View style={styles.perksSection}>
           <Text style={styles.perksTitle}>What you get</Text>
-          {ELITE_PERKS.map((perk) => (
-            <View key={perk.label} style={styles.perkRow}>
-              <View style={[styles.perkIcon, isElite && styles.perkIconActive]}>
-                <Feather
-                  name={perk.icon}
-                  size={16}
-                  color={isElite ? Colors.primary : Colors.textMuted}
-                />
-              </View>
-              <Text style={[styles.perkText, isElite && styles.perkTextActive]}>
-                {perk.label}
-              </Text>
-            </View>
-          ))}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.perkTabsRow}>
+            {ELITE_PERKS.map((perk, i) => {
+              const active = selectedPerk === i;
+              return (
+                <Pressable
+                  key={perk.label}
+                  style={({ pressed }) => [
+                    styles.perkTab,
+                    active && styles.perkTabActive,
+                    { opacity: pressed ? 0.8 : 1 },
+                  ]}
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSelectedPerk(i); }}
+                >
+                  <Feather name={perk.icon} size={18} color={active ? "#FFD700" : Colors.textMuted} />
+                  <Text style={[styles.perkTabLabel, active && styles.perkTabLabelActive]}>{perk.label}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+          <View style={[styles.perkDetail, isElite && styles.perkDetailActive]}>
+            <Feather name={ELITE_PERKS[selectedPerk].icon} size={28} color={isElite ? "#FFD700" : Colors.textMuted} style={{ marginBottom: 8 }} />
+            <Text style={[styles.perkDetailTitle, isElite && styles.perkDetailTitleActive]}>{ELITE_PERKS[selectedPerk].label}</Text>
+            <Text style={styles.perkDetailDesc}>{ELITE_PERKS[selectedPerk].desc}</Text>
+          </View>
         </View>
 
         {/* CTA */}
@@ -528,32 +539,65 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       color: Colors.text,
       marginBottom: 4,
     },
-    perkRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 12,
+    perkTabsRow: {
+      gap: 8,
+      paddingBottom: 4,
     },
-    perkIcon: {
-      width: 36,
-      height: 36,
-      borderRadius: 10,
-      backgroundColor: Colors.card,
+    perkTab: {
       alignItems: "center",
       justifyContent: "center",
-    },
-    perkIconActive: {
-      backgroundColor: `${Colors.primary}18`,
+      gap: 6,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: 12,
       borderWidth: 1,
-      borderColor: `${Colors.primary}30`,
+      borderColor: Colors.border,
+      backgroundColor: Colors.card,
+      minWidth: 72,
     },
-    perkText: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 14,
+    perkTabActive: {
+      borderColor: "#FFD700",
+      backgroundColor: "rgba(255,215,0,0.08)",
+    },
+    perkTabLabel: {
+      fontFamily: "Inter_500Medium",
+      fontSize: 11,
       color: Colors.textMuted,
-      flex: 1,
+      textAlign: "center",
     },
-    perkTextActive: {
+    perkTabLabelActive: {
+      color: "#FFD700",
+    },
+    perkDetail: {
+      alignItems: "center",
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: Colors.border,
+      backgroundColor: Colors.card,
+      paddingHorizontal: 20,
+      paddingVertical: 20,
+      marginTop: 4,
+    },
+    perkDetailActive: {
+      borderColor: "rgba(255,215,0,0.25)",
+      backgroundColor: "rgba(255,215,0,0.06)",
+    },
+    perkDetailTitle: {
+      fontFamily: "Inter_700Bold",
+      fontSize: 16,
       color: Colors.text,
+      textAlign: "center",
+      marginBottom: 6,
+    },
+    perkDetailTitleActive: {
+      color: "#FFD700",
+    },
+    perkDetailDesc: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 13,
+      color: Colors.textMuted,
+      textAlign: "center",
+      lineHeight: 20,
     },
     ctaSection: {
       marginHorizontal: 16,
