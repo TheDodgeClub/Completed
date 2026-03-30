@@ -122,12 +122,11 @@ export type AttendanceRecord = {
 export type Achievement = {
   id: string;
   title: string;
-  description: string;
   icon: string;
   unlocked: boolean;
-  unlockedAt: string | null;
-  current?: number;
-  threshold?: number;
+  progress: number;
+  total: number;
+  label: string;
 };
 
 export type Post = {

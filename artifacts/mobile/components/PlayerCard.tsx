@@ -13,6 +13,11 @@ const NEON_DIM = "rgba(57,255,20,0.22)";
 
 const LEVEL_NAMES = ["Beginner", "Developing", "Experienced", "Skilled", "Advanced", "Pro", "League", "Expert", "Master", "Icon"];
 
+const ACHIEVE_ICONS_ORDERED = ["🎯", "⚡", "🏅", "🥇", "🤝"];
+const ACHIEVE_IDS_ORDERED = ["first_event", "earn_50xp", "three_events", "first_medal", "invite_friend"];
+
+type AchievementBadge = { id: string; unlocked: boolean };
+
 type Props = {
   name: string;
   username: string | null;
@@ -23,10 +28,11 @@ type Props = {
   ringsEarned: number;
   skills: string | null;
   isElite?: boolean;
+  achievements?: AchievementBadge[];
 };
 
 const PlayerCard = forwardRef<View, Props>(function PlayerCard(
-  { name, username, avatarUrl, level, xp, medalsEarned, ringsEarned, skills, isElite },
+  { name, username, avatarUrl, level, xp, medalsEarned, ringsEarned, skills, isElite, achievements },
   ref
 ) {
   const levelName = LEVEL_NAMES[Math.min(level - 1, LEVEL_NAMES.length - 1)] ?? "Player";
@@ -178,6 +184,26 @@ const PlayerCard = forwardRef<View, Props>(function PlayerCard(
             </View>
           </View>
         )}
+
+        {/* Achievement strip */}
+        <View style={styles.achieveStrip}>
+          <Text style={styles.achieveStripLabel}>ACHIEVEMENTS</Text>
+          <View style={styles.achieveStripRow}>
+            {ACHIEVE_IDS_ORDERED.map((id, i) => {
+              const unlocked = achievements?.find(a => a.id === id)?.unlocked ?? false;
+              return (
+                <View
+                  key={id}
+                  style={[styles.achieveStripBadge, unlocked && styles.achieveStripBadgeUnlocked]}
+                >
+                  <Text style={[styles.achieveStripEmoji, !unlocked && { opacity: 0.25 }]}>
+                    {ACHIEVE_ICONS_ORDERED[i]}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        </View>
 
         {/* Footer */}
         <View style={styles.footer}>
@@ -491,6 +517,43 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: "#000",
     letterSpacing: 1,
+  },
+
+  /* Achievement strip */
+  achieveStrip: {
+    alignItems: "center",
+    marginTop: 8,
+    width: CARD_W - 36,
+  },
+  achieveStripLabel: {
+    fontFamily: "Poppins_800ExtraBold",
+    fontSize: 9,
+    color: GOLD,
+    letterSpacing: 2.5,
+    marginBottom: 6,
+    opacity: 0.85,
+  },
+  achieveStripRow: {
+    flexDirection: "row",
+    gap: 10,
+    justifyContent: "center",
+  },
+  achieveStripBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  achieveStripBadgeUnlocked: {
+    backgroundColor: "rgba(255,215,0,0.12)",
+    borderColor: GOLD_DIM,
+  },
+  achieveStripEmoji: {
+    fontSize: 18,
   },
 
   /* Footer */

@@ -462,31 +462,66 @@ router.get("/:id/attendance", async (req, res) => {
 
 /* GET /api/users/:id/achievements */
 router.get("/:id/achievements", async (req, res) => {
-  const records = await db.query.attendanceTable.findMany({ where: eq(attendanceTable.userId, Number(req.params.id)) });
-  const awards = await db.query.awardsTable.findMany({ where: eq(awardsTable.userId, Number(req.params.id)) });
-  const eventsAttended = records.length;
-  const medalsEarned = records.filter(r => r.earnedMedal).length + awards.filter(a => a.type === "medal").length;
+  const userId = Number(req.params.id);
+  const [user, referrer] = await Promise.all([
+    db.query.usersTable.findFirst({ where: eq(usersTable.id, userId), columns: { id: true, bonusXp: true } }),
+    db.query.usersTable.findFirst({ where: eq(usersTable.referredBy, userId), columns: { id: true } }),
+  ]);
+  if (!user) { res.status(404).json({ error: "Not found" }); return; }
 
-  const all = [
-    { id: "first_event", title: "First Timer", description: "Attended your first Dodge Club event", icon: "star", threshold: 1, type: "events" },
-    { id: "five_events", title: "Regular", description: "Attended 5 events", icon: "award", threshold: 5, type: "events" },
-    { id: "ten_events", title: "Veteran", description: "Attended 10 events", icon: "shield", threshold: 10, type: "events" },
-    { id: "twenty_events", title: "Legend", description: "Attended 20 events", icon: "zap", threshold: 20, type: "events" },
-    { id: "first_medal", title: "Medal Winner", description: "Earned your first medal", icon: "medal", threshold: 1, type: "medals" },
-    { id: "five_medals", title: "Champion", description: "Earned 5 medals", icon: "trophy", threshold: 5, type: "medals" },
+  const stats = await getUserStats(userId, user.bonusXp ?? 0);
+  const { eventsAttended, medalsEarned, xp: totalXp } = stats;
+  const hasReferral = !!referrer;
+
+  const achievements = [
+    {
+      id: "first_event",
+      title: "Attend an Event",
+      icon: "target",
+      unlocked: eventsAttended >= 1,
+      progress: Math.min(eventsAttended, 1),
+      total: 1,
+      label: eventsAttended >= 1 ? "Completed!" : "Attend your first event",
+    },
+    {
+      id: "earn_50xp",
+      title: "Earn 50 XP",
+      icon: "zap",
+      unlocked: totalXp >= 50,
+      progress: Math.min(totalXp, 50),
+      total: 50,
+      label: totalXp >= 50 ? "Completed!" : `${totalXp}/50 XP`,
+    },
+    {
+      id: "three_events",
+      title: "Attend 3 Events",
+      icon: "award",
+      unlocked: eventsAttended >= 3,
+      progress: Math.min(eventsAttended, 3),
+      total: 3,
+      label: eventsAttended >= 3 ? "Completed!" : `${eventsAttended}/3 events`,
+    },
+    {
+      id: "first_medal",
+      title: "Win a Medal",
+      icon: "medal",
+      unlocked: medalsEarned >= 1,
+      progress: Math.min(medalsEarned, 1),
+      total: 1,
+      label: medalsEarned >= 1 ? "Completed!" : "Win your first medal",
+    },
+    {
+      id: "invite_friend",
+      title: "Invite a Friend",
+      icon: "users",
+      unlocked: hasReferral,
+      progress: hasReferral ? 1 : 0,
+      total: 1,
+      label: hasReferral ? "Completed!" : "Share your referral code",
+    },
   ];
 
-  const result = all.map(a => {
-    const current = a.type === "events" ? eventsAttended : medalsEarned;
-    const unlocked = current >= a.threshold;
-    return {
-      id: a.id, title: a.title, description: a.description, icon: a.icon,
-      unlocked, unlockedAt: unlocked ? new Date().toISOString() : null,
-      current: Math.min(current, a.threshold), threshold: a.threshold,
-    };
-  });
-
-  res.json(result);
+  res.json(achievements);
 });
 
 /* GET /api/users/:id/upcoming-events */

@@ -55,6 +55,14 @@ import PlayerCard from "@/components/PlayerCard";
 const LEVEL_THRESHOLDS = [0, 300, 800, 1600, 2500, 5000, 10000, 20000, 40000, 80000];
 const LEVEL_NAMES = ["Beginner", "Developing", "Experienced", "Skilled", "Advanced", "Pro", "League", "Expert", "Master", "Icon"];
 
+const ACHIEVE_ICONS: Record<string, string> = {
+  first_event: "🎯",
+  earn_50xp: "⚡",
+  three_events: "🏅",
+  first_medal: "🥇",
+  invite_friend: "🤝",
+};
+
 const SUPPORTER_TIERS = [
   { name: "Club Friend",  emoji: "🤝", minXp: 0,    perk: "Welcome to The Dodge Club!" },
   { name: "Die Hard",     emoji: "🔥", minXp: 150,  perk: "Shoutout at events" },
@@ -531,7 +539,6 @@ export default function MemberScreen() {
   const [refreshing, setRefreshing] = React.useState(false);
   const [editVisible, setEditVisible] = React.useState(false);
   const [uploadingAvatar, setUploadingAvatar] = React.useState(false);
-  const [achievementsCollapsed, setAchievementsCollapsed] = React.useState(true);
   const [cardVisible, setCardVisible] = React.useState(false);
   const [sharingCard, setSharingCard] = React.useState(false);
   const [celebrationVisible, setCelebrationVisible] = React.useState(false);
@@ -1027,62 +1034,32 @@ export default function MemberScreen() {
           )}
         </View>
 
-        {/* ── Achievement Progress — players only, collapsible ── */}
+        {/* ── Achievements — players only, horizontal scroll cards ── */}
         {user.accountType !== "supporter" && achievements && achievements.length > 0 && (
           <View style={styles.section}>
-            <Pressable
-              style={[styles.sectionHeader, { justifyContent: "space-between" }]}
-              onPress={() => {
-                setAchievementsCollapsed(c => !c);
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }}
-            >
+            <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Achievements</Text>
-              <Feather name={achievementsCollapsed ? "chevron-down" : "chevron-up"} size={18} color={Colors.textMuted} />
-            </Pressable>
-            {!achievementsCollapsed && (
-              <View style={styles.achieveProgressList}>
-                {achievements.map(a => {
-                  const pct = a.threshold && a.threshold > 0 ? Math.min((a.current ?? 0) / a.threshold, 1) : 0;
-                  return (
-                    <View key={a.id} style={styles.achieveProgressRow}>
-                      <View style={[styles.achieveProgressIcon, a.unlocked && styles.achieveProgressIconUnlocked]}>
-                        <Text style={{ fontSize: 18 }}>
-                          {a.icon === "star" ? "⭐" : a.icon === "award" ? "🏆" : a.icon === "shield" ? "🛡️" : a.icon === "zap" ? "⚡" : a.icon === "medal" ? "🏅" : "🎖️"}
-                        </Text>
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                          <Text style={styles.achieveProgressTitle}>{a.title}</Text>
-                          {a.unlocked ? (
-                            <Pressable
-                              onPress={() => {
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                Share.share({ message: `I just unlocked the "${a.title}" achievement on The Dodge Club! 🏐 ${a.description}` });
-                              }}
-                              style={styles.achieveShareBtn}
-                            >
-                              <Feather name="share-2" size={12} color={Colors.primary} />
-                              <Text style={styles.achieveShareText}>Share</Text>
-                            </Pressable>
-                          ) : (
-                            <Text style={styles.achieveProgressCount}>
-                              {a.current ?? 0}/{a.threshold ?? 0}
-                            </Text>
-                          )}
-                        </View>
-                        <View style={styles.achieveProgressTrack}>
-                          <View style={[styles.achieveProgressFill, { width: `${Math.round(pct * 100)}%` }]} />
-                        </View>
-                        {!a.unlocked && (
-                          <Text style={styles.achieveProgressHint}>{a.description}</Text>
-                        )}
-                      </View>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.achieveRow}
+              style={styles.achieveScroll}
+            >
+              {achievements.map(a => {
+                const icon = ACHIEVE_ICONS[a.id] ?? "🎯";
+                return (
+                  <View key={a.id} style={[styles.achieveBadge, !a.unlocked && styles.achieveLocked]}>
+                    {a.unlocked && <View style={styles.unlockedDot} />}
+                    <View style={[styles.achieveIcon, a.unlocked && styles.achieveIconUnlocked]}>
+                      <Text style={{ fontSize: 22 }}>{icon}</Text>
                     </View>
-                  );
-                })}
-              </View>
-            )}
+                    <Text style={styles.achieveTitle}>{a.title}</Text>
+                    <Text style={styles.achieveDesc}>{a.label}</Text>
+                  </View>
+                );
+              })}
+            </ScrollView>
           </View>
         )}
 
@@ -1261,6 +1238,7 @@ export default function MemberScreen() {
                 ringsEarned={user.ringsEarned ?? 0}
                 skills={user.skills}
                 isElite={user.isElite ?? false}
+                achievements={achievements ?? []}
               />
             </View>
 
@@ -1843,35 +1821,6 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     gameCardTitle: { fontFamily: "Poppins_800ExtraBold", fontSize: 15, color: Colors.accent, marginBottom: 2 },
     gameCardSub: { fontFamily: "Inter_400Regular", fontSize: 12, color: "rgba(255,255,255,0.55)", marginTop: 1 },
 
-    achieveProgressList: { gap: 12 },
-    achieveProgressRow: {
-      flexDirection: "row", alignItems: "flex-start", gap: 12,
-      backgroundColor: Colors.surface, borderRadius: 14, padding: 14,
-      borderWidth: 1, borderColor: Colors.border,
-    },
-    achieveProgressIcon: {
-      width: 40, height: 40, borderRadius: 20,
-      backgroundColor: Colors.surface2,
-      alignItems: "center", justifyContent: "center", flexShrink: 0,
-    },
-    achieveProgressIconUnlocked: {
-      backgroundColor: `${Colors.accent}20`,
-      borderWidth: 1, borderColor: `${Colors.accent}40`,
-    },
-    achieveProgressTitle: { fontFamily: "Inter_700Bold", fontSize: 13, color: Colors.text },
-    achieveProgressCount: { fontFamily: "Inter_600SemiBold", fontSize: 12, color: Colors.textMuted },
-    achieveProgressTrack: {
-      height: 6, backgroundColor: Colors.surface2,
-      borderRadius: 3, overflow: "hidden", marginTop: 6,
-    },
-    achieveProgressFill: { height: "100%", backgroundColor: Colors.primary, borderRadius: 3 },
-    achieveProgressHint: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.textMuted, marginTop: 4 },
-    achieveShareBtn: {
-      flexDirection: "row", alignItems: "center", gap: 4,
-      backgroundColor: `${Colors.primary}15`,
-      paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8,
-    },
-    achieveShareText: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: Colors.primary },
 
     /* Referral code */
     referralCard: {
