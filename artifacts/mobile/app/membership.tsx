@@ -187,7 +187,7 @@ export default function GoEliteScreen() {
                 <Feather
                   name={perk.icon}
                   size={16}
-                  color={isElite ? "#FFD700" : Colors.textMuted}
+                  color={isElite ? Colors.primary : Colors.textMuted}
                 />
               </View>
               <Text style={[styles.perkText, isElite && styles.perkTextActive]}>
@@ -278,7 +278,7 @@ export default function GoEliteScreen() {
                   <Feather
                     name={row.elite ? "check" : "minus"}
                     size={16}
-                    color={row.elite ? "#FFD700" : Colors.textMuted}
+                    color={row.elite ? Colors.primary : Colors.textMuted}
                   />
                 </View>
               </View>
@@ -423,7 +423,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     statusActiveText: {
       fontFamily: "Inter_600SemiBold",
       fontSize: 15,
-      color: "#FFD700",
+      color: Colors.primary,
     },
     statusSince: {
       fontFamily: "Inter_400Regular",
@@ -482,7 +482,9 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       justifyContent: "center",
     },
     perkIconActive: {
-      backgroundColor: "rgba(255,215,0,0.12)",
+      backgroundColor: `${Colors.primary}18`,
+      borderWidth: 1,
+      borderColor: `${Colors.primary}30`,
     },
     perkText: {
       fontFamily: "Inter_400Regular",
@@ -499,7 +501,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       gap: 10,
     },
     upgradeBtn: {
-      backgroundColor: "#FFD700",
+      backgroundColor: "#0B3E1E",
       borderRadius: 14,
       paddingVertical: 16,
       flexDirection: "row",
@@ -513,7 +515,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     upgradeBtnText: {
       fontFamily: "Inter_700Bold",
       fontSize: 16,
-      color: "#000",
+      color: "#FFD700",
     },
     manageBtn: {
       backgroundColor: Colors.card,
@@ -535,9 +537,9 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       flexDirection: "row",
       alignItems: "center",
       gap: 8,
-      backgroundColor: "rgba(255,215,0,0.08)",
+      backgroundColor: `${Colors.primary}12`,
       borderWidth: 1,
-      borderColor: "rgba(255,215,0,0.25)",
+      borderColor: `${Colors.primary}30`,
       borderRadius: 12,
       paddingHorizontal: 14,
       paddingVertical: 10,
@@ -548,12 +550,12 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     xpBonusText: {
       fontFamily: "Inter_400Regular",
       fontSize: 13,
-      color: "rgba(255,255,255,0.75)",
+      color: Colors.text,
       flex: 1,
     },
     xpBonusHighlight: {
       fontFamily: "Inter_700Bold",
-      color: "#FFD700",
+      color: Colors.primary,
     },
     ctaNote: {
       fontFamily: "Inter_400Regular",
@@ -583,7 +585,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       paddingHorizontal: 16,
       paddingVertical: 10,
       borderBottomWidth: 1,
-      borderBottomColor: "rgba(255,255,255,0.06)",
+      borderBottomColor: Colors.border ?? "rgba(0,0,0,0.08)",
     },
     comparisonCol: {
       flex: 1,
@@ -597,7 +599,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       fontFamily: "Inter_600SemiBold",
     },
     comparisonColHeaderElite: {
-      color: "#FFD700",
+      color: Colors.primary,
       fontFamily: "Inter_700Bold",
     },
     comparisonRow: {
@@ -606,7 +608,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       paddingHorizontal: 16,
       paddingVertical: 12,
       borderBottomWidth: 1,
-      borderBottomColor: "rgba(255,255,255,0.04)",
+      borderBottomColor: Colors.border ?? "rgba(0,0,0,0.06)",
     },
     comparisonFeature: {
       fontFamily: "Inter_400Regular",

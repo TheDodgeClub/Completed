@@ -790,21 +790,18 @@ export default function MemberScreen() {
           </Pressable>
 
           <View style={styles.heroActions}>
-            <Pressable
-              style={({ pressed }) => [styles.editBtn, { opacity: pressed ? 0.8 : 1 }]}
-              onPress={() => setEditVisible(true)}
-            >
-              <Feather name="edit-2" size={14} color="#fff" />
-              <Text style={styles.editBtnText}>Edit</Text>
-            </Pressable>
-            <Pressable
-              style={({ pressed }) => [styles.membershipBtn, user.isElite && styles.membershipBtnElite, { opacity: pressed ? 0.85 : 1 }]}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/membership"); }}
-            >
-              <Text style={[styles.membershipBtnText, user.isElite && styles.membershipBtnTextElite]}>
-                {user.isElite ? "⭐ Elite" : "Go Elite"}
-              </Text>
-            </Pressable>
+            <View style={styles.heroActionsTopRow}>
+              <Pressable
+                style={({ pressed }) => [styles.editBtn, { opacity: pressed ? 0.8 : 1 }]}
+                onPress={() => setEditVisible(true)}
+              >
+                <Feather name="edit-2" size={14} color="#fff" />
+                <Text style={styles.editBtnText}>Edit</Text>
+              </Pressable>
+              <Pressable onPress={handleLogout} style={styles.logoutBtn}>
+                <Feather name="log-out" size={18} color="rgba(255,255,255,0.7)" />
+              </Pressable>
+            </View>
             {user.accountType !== "supporter" && (
               <Pressable
                 style={({ pressed }) => [styles.shareCardBtn, { opacity: pressed ? 0.8 : 1 }]}
@@ -814,8 +811,13 @@ export default function MemberScreen() {
                 <Text style={styles.shareCardBtnText}>My Card</Text>
               </Pressable>
             )}
-            <Pressable onPress={handleLogout} style={styles.logoutBtn}>
-              <Feather name="log-out" size={18} color="rgba(255,255,255,0.7)" />
+            <Pressable
+              style={({ pressed }) => [styles.membershipBtn, user.isElite && styles.membershipBtnElite, { opacity: pressed ? 0.85 : 1 }]}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/membership"); }}
+            >
+              <Text style={[styles.membershipBtnText, user.isElite && styles.membershipBtnTextElite]}>
+                {user.isElite ? "⭐ Elite" : "Go Elite"}
+              </Text>
             </Pressable>
           </View>
         </View>
@@ -845,22 +847,6 @@ export default function MemberScreen() {
         <Text style={styles.memberSince}>
           Member since {new Date(user.memberSince).toLocaleDateString("en-GB", { month: "long", year: "numeric" })}
         </Text>
-
-        {user.accountType !== "supporter" && user.skills && (() => {
-          const skills = user.skills!.split(",").filter(Boolean).map(s => s.trim()).slice(0, 3);
-          return skills.length > 0 ? (
-            <View style={styles.profileSkillsBlock}>
-              <Text style={styles.profileSkillsLabel}>SKILLS</Text>
-              <View style={styles.profileSkillsRow}>
-                {skills.map(skill => (
-                  <View key={skill} style={styles.profileSkillChip}>
-                    <Text style={styles.profileSkillChipText}>{skill}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          ) : null;
-        })()}
 
         {/* XP Progress — players / supporter-specific tier bar */}
         {user.accountType === "supporter" ? (() => {
@@ -920,6 +906,23 @@ export default function MemberScreen() {
             )}
           </View>
         )}
+
+        {/* Skills — below progress bar, left-aligned */}
+        {user.accountType !== "supporter" && user.skills && (() => {
+          const skills = user.skills!.split(",").filter(Boolean).map(s => s.trim()).slice(0, 3);
+          return skills.length > 0 ? (
+            <View style={styles.profileSkillsBlock}>
+              <Text style={styles.profileSkillsLabel}>SKILLS</Text>
+              <View style={styles.profileSkillsRow}>
+                {skills.map(skill => (
+                  <View key={skill} style={styles.profileSkillChip}>
+                    <Text style={styles.profileSkillChipText}>{skill}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : null;
+        })()}
       </LinearGradient>
 
       {/* ── Stats Bar ── */}
@@ -1384,7 +1387,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     heroTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 },
     avatarWrap: { position: "relative" },
     avatarCircle: {
-      width: 80, height: 80, borderRadius: 40,
+      width: 88, height: 88, borderRadius: 44,
       backgroundColor: "rgba(255,255,255,0.2)",
       alignItems: "center", justifyContent: "center",
       borderWidth: 3, borderColor: "rgba(255,255,255,0.4)",
@@ -1402,7 +1405,8 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       fontFamily: "Inter_600SemiBold", fontSize: 10,
       color: "rgba(255,255,255,0.7)", textAlign: "center", marginTop: 4,
     },
-    heroActions: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 },
+    heroActions: { flexDirection: "column", alignItems: "flex-end", gap: 6, marginTop: 4 },
+    heroActionsTopRow: { flexDirection: "row", alignItems: "center", gap: 8 },
     themeToggleBtn: {
       width: 34, height: 34, borderRadius: 17,
       backgroundColor: "rgba(255,255,255,0.12)",
@@ -1440,13 +1444,13 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       borderRadius: 8, borderWidth: 1, borderColor: `${Colors.accent}40`,
     },
     roleBadgeText: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: Colors.accent },
-    profileSkillsBlock: { marginBottom: 10, alignItems: "center" },
+    profileSkillsBlock: { marginTop: 14, alignItems: "flex-start" },
     profileSkillsLabel: {
       fontFamily: "Inter_700Bold", fontSize: 9,
       color: "rgba(255,255,255,0.45)", letterSpacing: 1.2,
       textTransform: "uppercase", marginBottom: 6,
     },
-    profileSkillsRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, justifyContent: "center" },
+    profileSkillsRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, justifyContent: "flex-start" },
     profileSkillChip: {
       backgroundColor: "rgba(255,255,255,0.12)",
       borderRadius: 12,
