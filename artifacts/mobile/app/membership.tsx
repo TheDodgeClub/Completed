@@ -242,11 +242,15 @@ export default function GoEliteScreen() {
                   ]}
                   onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSelectedPerk(i); resetPerkTimer(); }}
                 >
-                  <Feather name={perk.icon} size={15} color={active ? "#FFD700" : Colors.textMuted} />
-                  <Text style={[styles.perkTabLabel, active && styles.perkTabLabelActive]}>{perk.label}</Text>
+                  <Feather name={perk.icon} size={18} color={active ? "#FFD700" : Colors.textMuted} />
                 </Pressable>
               );
             })}
+          </View>
+          <View style={styles.perkDots}>
+            {ELITE_PERKS.map((_, i) => (
+              <View key={i} style={[styles.perkDot, selectedPerk === i && styles.perkDotActive]} />
+            ))}
           </View>
           <View style={[styles.perkDetail, isElite && styles.perkDetailActive]}>
             <Feather name={ELITE_PERKS[selectedPerk].icon} size={28} color={isElite ? "#FFD700" : Colors.textMuted} style={{ marginBottom: 8 }} />
@@ -573,14 +577,21 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       borderColor: "#FFD700",
       backgroundColor: "rgba(255,215,0,0.08)",
     },
-    perkTabLabel: {
-      fontFamily: "Inter_500Medium",
-      fontSize: 11,
-      color: Colors.textMuted,
-      textAlign: "center",
+    perkDots: {
+      flexDirection: "row",
+      justifyContent: "center",
+      gap: 5,
+      marginTop: 2,
     },
-    perkTabLabelActive: {
-      color: "#FFD700",
+    perkDot: {
+      width: 5,
+      height: 5,
+      borderRadius: 3,
+      backgroundColor: Colors.border,
+    },
+    perkDotActive: {
+      backgroundColor: "#FFD700",
+      width: 14,
     },
     perkDetail: {
       alignItems: "center",
