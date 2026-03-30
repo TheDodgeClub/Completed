@@ -166,10 +166,14 @@ export default function GoEliteScreen() {
             Unlock exclusive perks and show the club you're all in
           </Text>
           {!isElite && (
-            <View style={[styles.xpBonusRow, { marginTop: 14, backgroundColor: "rgba(255,193,7,0.1)", borderColor: "rgba(255,193,7,0.3)" }]}>
+            <Pressable
+              style={({ pressed }) => [styles.xpBonusRow, { marginTop: 14, backgroundColor: "rgba(255,193,7,0.1)", borderColor: "rgba(255,193,7,0.3)", opacity: pressed ? 0.8 : 1 }]}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); handleCheckout(); }}
+            >
               <Text style={styles.xpBonusIcon}>⚡</Text>
-              <Text style={[styles.xpBonusText, { color: "rgba(255,255,255,0.85)" }]}>Join today for a <Text style={[styles.xpBonusHighlight, { color: "#FFC107" }]}>500 XP</Text> one time bonus</Text>
-            </View>
+              <Text style={[styles.xpBonusText, { color: "rgba(255,255,255,0.85)", flex: 1 }]}>Join today for a <Text style={[styles.xpBonusHighlight, { color: "#FFC107" }]}>500 XP</Text> one time bonus</Text>
+              <Feather name="chevron-right" size={14} color="rgba(255,193,7,0.7)" />
+            </Pressable>
           )}
         </LinearGradient>
 
@@ -206,19 +210,7 @@ export default function GoEliteScreen() {
               </Text>
             )}
           </View>
-        ) : (
-          <View style={styles.statusCard}>
-            <View style={styles.statusRow}>
-              <View style={styles.freeBadge}>
-                <Text style={styles.freeBadgeText}>FREE</Text>
-              </View>
-              <Text style={styles.statusFreeText}>Standard membership</Text>
-            </View>
-            <Text style={styles.statusFreeHint}>
-              Upgrade to Elite to unlock all the perks below
-            </Text>
-          </View>
-        )}
+        ) : null}
 
         {/* Perks List */}
         <View style={styles.perksSection}>
