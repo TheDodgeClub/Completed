@@ -506,17 +506,14 @@ export default function HomeScreen() {
             </Pressable>
           </View>
 
-          {/* ══════════ GO ELITE BANNER (non-Elite users only) ══════════ */}
+          {/* ══════════ GO ELITE BADGE (non-Elite users only) ══════════ */}
           {!user?.isElite && (
             <Pressable
-              style={({ pressed }) => [styles.goEliteBanner, { opacity: pressed ? 0.88 : 1 }]}
+              style={({ pressed }) => [styles.goEliteBadge, { opacity: pressed ? 0.8 : 1 }]}
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/membership"); }}
             >
-              <Text style={styles.goEliteBannerStar}>E</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.goEliteBannerTitle}>Go Elite — Unlock everything</Text>
-              </View>
-              <Feather name="chevron-right" size={16} color="#FFD700" />
+              <Text style={styles.goEliteBadgeText}>E</Text>
+              <Text style={styles.goEliteBadgeLabel}>Go Elite</Text>
             </Pressable>
           )}
 
@@ -947,29 +944,28 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       gap: 8,
     },
 
-    /* ── Go Elite Banner ── */
-    goEliteBanner: {
-      backgroundColor: "#1A4D2E",
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: "#2A6B40",
+    /* ── Go Elite Badge ── */
+    goEliteBadge: {
+      alignSelf: "flex-start" as const,
       flexDirection: "row" as const,
       alignItems: "center" as const,
-      paddingHorizontal: 12,
-      paddingVertical: 7,
-      gap: 8,
+      backgroundColor: "#1A4D2E",
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: "#2A6B40",
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      gap: 6,
     },
-    goEliteBannerStar: { fontSize: 13, fontFamily: "Poppins_800ExtraBold", color: "#FFD700" },
-    goEliteBannerTitle: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 13,
-      color: "rgba(255,215,0,0.9)",
-    },
-    goEliteBannerSub: {
-      fontFamily: "Inter_400Regular",
+    goEliteBadgeText: {
+      fontFamily: "Poppins_800ExtraBold",
       fontSize: 12,
-      color: "rgba(255,215,0,0.65)",
-      marginTop: 1,
+      color: "#FFD700",
+    },
+    goEliteBadgeLabel: {
+      fontFamily: "Inter_600SemiBold",
+      fontSize: 12,
+      color: "#FFD700",
     },
 
     /* ── Quick Actions Strip ── */
