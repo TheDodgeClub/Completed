@@ -229,7 +229,7 @@ export default function GoEliteScreen() {
         {/* Perks Tabs */}
         <View style={styles.perksSection}>
           <Text style={styles.perksTitle}>What you get</Text>
-          <View style={styles.perkTabsRow}>
+          <View style={styles.perkTabsGrid}>
             {ELITE_PERKS.map((perk, i) => {
               const active = selectedPerk === i;
               return (
@@ -238,24 +238,15 @@ export default function GoEliteScreen() {
                   style={({ pressed }) => [
                     styles.perkTab,
                     active && styles.perkTabActive,
-                    { opacity: pressed ? 0.8 : 1 },
+                    { opacity: pressed ? 0.85 : 1 },
                   ]}
                   onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSelectedPerk(i); resetPerkTimer(); }}
                 >
-                  <Feather name={perk.icon} size={18} color={active ? "#FFD700" : Colors.textMuted} />
+                  <Feather name={perk.icon} size={16} color={active ? "#fff" : Colors.textMuted} />
+                  <Text style={[styles.perkTabLabel, active && styles.perkTabLabelActive]} numberOfLines={1}>{perk.label}</Text>
                 </Pressable>
               );
             })}
-          </View>
-          <View style={styles.perkDots}>
-            {ELITE_PERKS.map((_, i) => (
-              <View key={i} style={[styles.perkDot, selectedPerk === i && styles.perkDotActive]} />
-            ))}
-          </View>
-          <View style={[styles.perkDetail, isElite && styles.perkDetailActive]}>
-            <Feather name={ELITE_PERKS[selectedPerk].icon} size={28} color={isElite ? "#FFD700" : Colors.textMuted} style={{ marginBottom: 8 }} />
-            <Text style={[styles.perkDetailTitle, isElite && styles.perkDetailTitleActive]}>{ELITE_PERKS[selectedPerk].label}</Text>
-            <Text style={styles.perkDetailDesc}>{ELITE_PERKS[selectedPerk].desc}</Text>
           </View>
         </View>
 
@@ -556,73 +547,36 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       color: Colors.text,
       marginBottom: 4,
     },
-    perkTabsRow: {
+    perkTabsGrid: {
       flexDirection: "row",
-      gap: 4,
-      paddingBottom: 4,
+      flexWrap: "wrap",
+      gap: 6,
     },
     perkTab: {
-      flex: 1,
+      width: "22%",
+      flexGrow: 1,
       alignItems: "center",
       justifyContent: "center",
-      gap: 4,
+      gap: 5,
+      paddingVertical: 10,
       paddingHorizontal: 4,
-      paddingVertical: 8,
       borderRadius: 10,
       borderWidth: 1,
       borderColor: Colors.border,
       backgroundColor: Colors.card,
     },
     perkTabActive: {
-      borderColor: "#FFD700",
-      backgroundColor: "rgba(255,215,0,0.08)",
+      borderColor: Colors.primary,
+      backgroundColor: Colors.primary,
     },
-    perkDots: {
-      flexDirection: "row",
-      justifyContent: "center",
-      gap: 5,
-      marginTop: 2,
-    },
-    perkDot: {
-      width: 5,
-      height: 5,
-      borderRadius: 3,
-      backgroundColor: Colors.border,
-    },
-    perkDotActive: {
-      backgroundColor: "#FFD700",
-      width: 14,
-    },
-    perkDetail: {
-      alignItems: "center",
-      borderRadius: 14,
-      borderWidth: 1,
-      borderColor: Colors.border,
-      backgroundColor: Colors.card,
-      paddingHorizontal: 20,
-      paddingVertical: 20,
-      marginTop: 4,
-    },
-    perkDetailActive: {
-      borderColor: "rgba(255,215,0,0.25)",
-      backgroundColor: "rgba(255,215,0,0.06)",
-    },
-    perkDetailTitle: {
-      fontFamily: "Inter_700Bold",
-      fontSize: 16,
-      color: Colors.text,
-      textAlign: "center",
-      marginBottom: 6,
-    },
-    perkDetailTitleActive: {
-      color: "#FFD700",
-    },
-    perkDetailDesc: {
-      fontFamily: "Inter_400Regular",
-      fontSize: 13,
+    perkTabLabel: {
+      fontFamily: "Inter_500Medium",
+      fontSize: 10,
       color: Colors.textMuted,
       textAlign: "center",
-      lineHeight: 20,
+    },
+    perkTabLabelActive: {
+      color: "#fff",
     },
     ctaSection: {
       marginHorizontal: 16,
