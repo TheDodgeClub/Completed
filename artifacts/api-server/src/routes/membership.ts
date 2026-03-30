@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { getUncachableStripeClient } from "../stripeClient";
+import { getUncachableStripeClient, getStripePublishableKey } from "../stripeClient";
 import { logger } from "../lib/logger";
 import { activateElite } from "../services/activateElite";
 
@@ -115,6 +115,7 @@ router.post("/subscription-intent", requireAuth, async (req: any, res) => {
 
   try {
     const stripe = await getUncachableStripeClient();
+    const publishableKey = await getStripePublishableKey();
 
     let customerId = user.stripeCustomerId;
     if (!customerId) {
@@ -140,18 +141,20 @@ router.post("/subscription-intent", requireAuth, async (req: any, res) => {
     const paymentIntent = invoice?.payment_intent as any;
 
     if (!paymentIntent?.client_secret) {
+      logger.error({ subscriptionId: subscription.id, invoiceId: invoice?.id }, "subscription-intent: payment_intent missing from invoice");
       res.status(500).json({ error: "Could not create payment intent" });
       return;
     }
 
     res.json({
       clientSecret: paymentIntent.client_secret,
-      publishableKey: process.env.STRIPE_PUBLISHABLE_KEY ?? "",
+      publishableKey,
       subscriptionId: subscription.id,
     });
   } catch (err: any) {
+    const msg = err?.message ?? "Stripe error";
     logger.error({ err }, "membership/subscription-intent error");
-    res.status(500).json({ error: err.message ?? "Stripe error" });
+    res.status(500).json({ error: msg });
   }
 });
 
