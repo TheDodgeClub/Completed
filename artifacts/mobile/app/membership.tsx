@@ -370,10 +370,10 @@ export default function GoEliteScreen() {
                 </Text>
               </View>
             )}
-            {["Early ticket access", "Double XP bonus", "15% off tickets", "10% off merch", "Golden Elite Player Card", "Elite Member Badge on profile"].map(perk => (
-              <View key={perk} style={styles.celebrationPerkRow}>
+            {ELITE_PERKS.map(perk => (
+              <View key={perk.label} style={styles.celebrationPerkRow}>
                 <Feather name="check" size={14} color="#FFD700" />
-                <Text style={styles.celebrationPerkText}>{perk}</Text>
+                <Text style={styles.celebrationPerkText}>{perk.desc}</Text>
               </View>
             ))}
             <Pressable
