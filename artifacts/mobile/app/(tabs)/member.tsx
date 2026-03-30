@@ -1281,12 +1281,15 @@ export default function MemberScreen() {
                 </Text>
               </View>
             )}
-            <Text style={styles.celebrationPerksTitle}>What you've unlocked</Text>
+            <Text style={styles.celebrationPerksTitle}>Your unlocks</Text>
             {[
-              "Elite badge on profile & player card",
-              "Double XP at every event",
-              "Priority spot reservation",
-              "VIP check-in lane",
+              "Get access to event tickets before general sale opens — never miss out.",
+              "Earn XP twice as fast at every event and climb the leaderboard faster.",
+              "Save 15% on every event ticket you purchase.",
+              "10% discount across all club merchandise, any time.",
+              "First access to new merch drops before they go on sale to everyone else.",
+              "Unlock an exclusive golden edition of your player card to show off.",
+              "A gold Elite badge on your profile and player card that sets you apart.",
             ].map(perk => (
               <View key={perk} style={styles.celebrationPerkRow}>
                 <Feather name="check" size={14} color="#FFD700" />
