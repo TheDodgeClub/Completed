@@ -14,6 +14,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Share,
+  AppState,
 } from "react-native";
 import QRCode from "react-native-qrcode-svg";
 import * as Clipboard from "expo-clipboard";
@@ -542,6 +543,16 @@ export default function MemberScreen() {
       setCelebrationVisible(true);
     }
   }, [user?.pendingEliteCelebration]);
+
+  // Refresh user profile when app returns to foreground so Elite state is current
+  React.useEffect(() => {
+    const sub = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "active") {
+        refreshUser();
+      }
+    });
+    return () => sub.remove();
+  }, [refreshUser]);
 
   const handleAckCelebration = React.useCallback(async () => {
     setCelebrationVisible(false);

@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db, usersTable, attendanceTable, eventsTable, awardsTable, eventRegistrationsTable, postCommentsTable, postsTable, userReportsTable, userBlocksTable } from "@workspace/db";
 import { eq, gt, desc, lte, isNotNull, and, ne } from "drizzle-orm";
+import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
@@ -688,6 +689,15 @@ router.get("/me/blocked", async (req, res) => {
     username: b.blocked.username ?? null,
     blockedAt: b.createdAt.toISOString(),
   })));
+});
+
+/* POST /api/users/me/ack-elite-celebration — acknowledge Elite celebration (spec-aligned alias) */
+router.post("/me/ack-elite-celebration", async (req, res) => {
+  const userId = req.session?.userId;
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+  await db.update(usersTable).set({ pendingEliteCelebration: false, pendingEliteXpAwarded: false }).where(eq(usersTable.id, userId));
+  logger.info({ userId }, "[users] ack-elite-celebration");
+  res.json({ ok: true });
 });
 
 export default router;

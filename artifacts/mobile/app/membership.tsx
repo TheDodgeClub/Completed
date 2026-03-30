@@ -16,6 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import * as WebBrowser from "expo-web-browser";
 import { useColors } from "@/context/ThemeContext";
+import { useAuth } from "@/context/AuthContext";
 import {
   getMembershipStatus,
   createMembershipCheckout,
@@ -37,6 +38,7 @@ export default function GoEliteScreen() {
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
+  const { refreshUser } = useAuth();
 
   const { data: status, isLoading, refetch } = useQuery({
     queryKey: ["membershipStatus"],
@@ -56,8 +58,8 @@ export default function GoEliteScreen() {
         showTitle: false,
         enableBarCollapsing: true,
       });
-      // Browser closed — check if payment succeeded
-      await refetch();
+      // Browser closed — refresh both membership status and user profile (triggers celebration modal if Elite was granted)
+      await Promise.all([refetch(), refreshUser()]);
     } catch (err: any) {
       Alert.alert("Error", err.message ?? "Could not open checkout. Please try again.");
     } finally {
