@@ -960,11 +960,15 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     goEliteBadgeText: {
       fontFamily: "Poppins_800ExtraBold",
       fontSize: 13,
+      lineHeight: 18,
+      includeFontPadding: false,
       color: "#FFD700",
     },
     goEliteBadgeLabel: {
       fontFamily: "Inter_600SemiBold",
       fontSize: 13,
+      lineHeight: 18,
+      includeFontPadding: false,
       color: "#FFD700",
     },
 
