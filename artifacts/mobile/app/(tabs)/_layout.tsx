@@ -12,6 +12,7 @@ import { useAuth } from "@/context/AuthContext";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useAnnouncements } from "@/hooks/useAnnouncements";
 import * as Haptics from "expo-haptics";
+import { SignupXPOverlay } from "@/components/SignupXPOverlay";
 
 function HeaderControls() {
   const { isDark, toggleTheme } = useTheme();
@@ -167,8 +168,12 @@ function ClassicTabLayout() {
 }
 
 export default function TabLayout() {
-  if (isLiquidGlassAvailable()) {
-    return <NativeTabLayout />;
-  }
-  return <ClassicTabLayout />;
+  const { justRegistered, clearJustRegistered } = useAuth();
+
+  return (
+    <>
+      {isLiquidGlassAvailable() ? <NativeTabLayout /> : <ClassicTabLayout />}
+      <SignupXPOverlay visible={justRegistered} onDismiss={clearJustRegistered} />
+    </>
+  );
 }

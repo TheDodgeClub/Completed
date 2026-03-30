@@ -14,6 +14,7 @@ type AuthState = {
   token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  justRegistered: boolean;
 };
 
 type AuthContextType = AuthState & {
@@ -21,6 +22,7 @@ type AuthContextType = AuthState & {
   register: (email: string, password: string, name: string, accountType?: "player" | "supporter", referralCode?: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  clearJustRegistered: () => void;
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -31,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     token: null,
     isLoading: true,
     isAuthenticated: false,
+    justRegistered: false,
   });
 
   useEffect(() => {
@@ -52,17 +55,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     const data = await apiLogin(email, password);
-    setState({ user: data.user, token: data.token, isLoading: false, isAuthenticated: true });
+    setState({ user: data.user, token: data.token, isLoading: false, isAuthenticated: true, justRegistered: false });
   };
 
   const register = async (email: string, password: string, name: string, accountType: "player" | "supporter" = "player", referralCode?: string) => {
     const data = await apiRegister(email, password, name, accountType, referralCode);
-    setState({ user: data.user, token: data.token, isLoading: false, isAuthenticated: true });
+    setState({ user: data.user, token: data.token, isLoading: false, isAuthenticated: true, justRegistered: true });
+  };
+
+  const clearJustRegistered = () => {
+    setState(s => ({ ...s, justRegistered: false }));
   };
 
   const logout = async () => {
     await apiLogout();
-    setState({ user: null, token: null, isLoading: false, isAuthenticated: false });
+    setState({ user: null, token: null, isLoading: false, isAuthenticated: false, justRegistered: false });
   };
 
   const refreshUser = async () => {
@@ -73,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ ...state, login, register, logout, refreshUser }}>
+    <AuthContext.Provider value={{ ...state, login, register, logout, refreshUser, clearJustRegistered }}>
       {children}
     </AuthContext.Provider>
   );
