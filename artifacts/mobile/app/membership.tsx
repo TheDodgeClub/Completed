@@ -34,13 +34,13 @@ const WebStripeModal =
     : null;
 
 const ELITE_PERKS = [
-  { icon: "clock" as const, label: "Early Tickets", desc: "Get access to event tickets before general sale opens — never miss out." },
-  { icon: "zap" as const, label: "Double XP", desc: "Earn XP twice as fast at every event and climb the leaderboard faster." },
-  { icon: "tag" as const, label: "15% Off Tickets", desc: "Save 15% on every event ticket you purchase." },
-  { icon: "shopping-bag" as const, label: "10% Off Merch", desc: "10% discount across all club merchandise, any time." },
-  { icon: "package" as const, label: "Merch Drops", desc: "First access to new merch drops before they go on sale to everyone else." },
-  { icon: "award" as const, label: "Golden Card", desc: "Unlock an exclusive golden edition of your player card to show off." },
-  { icon: "shield" as const, label: "Elite Badge", desc: "A gold Elite badge on your profile and player card that sets you apart." },
+  { icon: "clock" as const, label: "Early Tix", desc: "Get access to event tickets before general sale opens — never miss out." },
+  { icon: "zap" as const, label: "2× XP", desc: "Earn XP twice as fast at every event and climb the leaderboard faster." },
+  { icon: "tag" as const, label: "15% Off", desc: "Save 15% on every event ticket you purchase." },
+  { icon: "shopping-bag" as const, label: "10% Merch", desc: "10% discount across all club merchandise, any time." },
+  { icon: "package" as const, label: "Drops", desc: "First access to new merch drops before they go on sale to everyone else." },
+  { icon: "award" as const, label: "Gold Card", desc: "Unlock an exclusive golden edition of your player card to show off." },
+  { icon: "shield" as const, label: "Badge", desc: "A gold Elite badge on your profile and player card that sets you apart." },
 ];
 
 export default function GoEliteScreen() {
@@ -50,7 +50,20 @@ export default function GoEliteScreen() {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
   const [selectedPerk, setSelectedPerk] = useState(0);
+  const perkTimerRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
   const { user, refreshUser } = useAuth();
+
+  const resetPerkTimer = React.useCallback(() => {
+    if (perkTimerRef.current) clearInterval(perkTimerRef.current);
+    perkTimerRef.current = setInterval(() => {
+      setSelectedPerk(p => (p + 1) % ELITE_PERKS.length);
+    }, 2500);
+  }, []);
+
+  React.useEffect(() => {
+    resetPerkTimer();
+    return () => { if (perkTimerRef.current) clearInterval(perkTimerRef.current); };
+  }, [resetPerkTimer]);
   const [celebrationVisible, setCelebrationVisible] = useState(false);
   const [webEliteModal, setWebEliteModal] = useState<{
     clientSecret: string;
@@ -216,7 +229,7 @@ export default function GoEliteScreen() {
         {/* Perks Tabs */}
         <View style={styles.perksSection}>
           <Text style={styles.perksTitle}>What you get</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.perkTabsRow}>
+          <View style={styles.perkTabsRow}>
             {ELITE_PERKS.map((perk, i) => {
               const active = selectedPerk === i;
               return (
@@ -227,14 +240,14 @@ export default function GoEliteScreen() {
                     active && styles.perkTabActive,
                     { opacity: pressed ? 0.8 : 1 },
                   ]}
-                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSelectedPerk(i); }}
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setSelectedPerk(i); resetPerkTimer(); }}
                 >
-                  <Feather name={perk.icon} size={18} color={active ? "#FFD700" : Colors.textMuted} />
+                  <Feather name={perk.icon} size={15} color={active ? "#FFD700" : Colors.textMuted} />
                   <Text style={[styles.perkTabLabel, active && styles.perkTabLabelActive]}>{perk.label}</Text>
                 </Pressable>
               );
             })}
-          </ScrollView>
+          </View>
           <View style={[styles.perkDetail, isElite && styles.perkDetailActive]}>
             <Feather name={ELITE_PERKS[selectedPerk].icon} size={28} color={isElite ? "#FFD700" : Colors.textMuted} style={{ marginBottom: 8 }} />
             <Text style={[styles.perkDetailTitle, isElite && styles.perkDetailTitleActive]}>{ELITE_PERKS[selectedPerk].label}</Text>
@@ -540,20 +553,21 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       marginBottom: 4,
     },
     perkTabsRow: {
-      gap: 8,
+      flexDirection: "row",
+      gap: 4,
       paddingBottom: 4,
     },
     perkTab: {
+      flex: 1,
       alignItems: "center",
       justifyContent: "center",
-      gap: 6,
-      paddingHorizontal: 14,
-      paddingVertical: 10,
-      borderRadius: 12,
+      gap: 4,
+      paddingHorizontal: 4,
+      paddingVertical: 8,
+      borderRadius: 10,
       borderWidth: 1,
       borderColor: Colors.border,
       backgroundColor: Colors.card,
-      minWidth: 72,
     },
     perkTabActive: {
       borderColor: "#FFD700",
