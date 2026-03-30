@@ -155,7 +155,7 @@ export default function GoEliteScreen() {
         {/* Hero */}
         <LinearGradient colors={["#1A1000", "#3D2800"]} style={styles.hero}>
           <View style={styles.eliteStar}>
-            <Text style={styles.eliteStarText}>⭐</Text>
+            <Text style={styles.eliteStarText}>E</Text>
           </View>
           <Text style={styles.heroTitle}>Go Elite</Text>
           <Text style={styles.heroPrice}>
@@ -175,7 +175,7 @@ export default function GoEliteScreen() {
           <View style={[styles.statusCard, styles.statusCardElite]}>
             <View style={styles.statusRow}>
               <View style={styles.eliteBadge}>
-                <Text style={styles.eliteBadgeText}>⭐ ELITE</Text>
+                <Text style={styles.eliteBadgeText}>E  ELITE</Text>
               </View>
               <Text style={styles.statusActiveText}>Active</Text>
             </View>
@@ -269,7 +269,7 @@ export default function GoEliteScreen() {
                   <ActivityIndicator color="#000" size="small" />
                 ) : (
                   <>
-                    <Text style={styles.eliteStarSmall}>⭐</Text>
+                    <Text style={styles.eliteStarSmall}>E</Text>
                     <Text style={styles.upgradeBtnText}>Go Elite — £9.99/month</Text>
                   </>
                 )}
@@ -337,7 +337,7 @@ export default function GoEliteScreen() {
       <Modal visible={celebrationVisible} transparent animationType="fade" onRequestClose={handleAckCelebration}>
         <View style={styles.celebrationOverlay}>
           <View style={styles.celebrationCard}>
-            <Text style={styles.celebrationStar}>⭐</Text>
+            <Text style={styles.celebrationStar}>E</Text>
             <Text style={styles.celebrationTitle}>
               {user?.pendingEliteXpAwarded ? "You're Elite!" : "Welcome Back, Elite!"}
             </Text>
@@ -410,7 +410,10 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       marginBottom: 4,
     },
     eliteStarText: {
-      fontSize: 48,
+      fontSize: 52,
+      fontFamily: "Poppins_800ExtraBold",
+      color: "#FFD700",
+      letterSpacing: -2,
     },
     heroTitle: {
       fontFamily: "Poppins_800ExtraBold",
@@ -556,7 +559,9 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       gap: 8,
     },
     eliteStarSmall: {
-      fontSize: 18,
+      fontSize: 16,
+      fontFamily: "Inter_700Bold",
+      color: "#000",
     },
     upgradeBtnText: {
       fontFamily: "Inter_700Bold",
@@ -680,7 +685,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       borderWidth: 1,
       borderColor: "rgba(255,215,0,0.25)",
     },
-    celebrationStar: { fontSize: 52, marginBottom: 12 },
+    celebrationStar: { fontSize: 64, fontFamily: "Poppins_800ExtraBold", color: "#FFD700", letterSpacing: -2, marginBottom: 12 },
     celebrationTitle: {
       fontFamily: "Inter_700Bold",
       fontSize: 24,

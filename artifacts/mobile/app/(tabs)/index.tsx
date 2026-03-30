@@ -463,7 +463,7 @@ export default function HomeScreen() {
             style={({ pressed }) => [styles.goEliteBanner, { opacity: pressed ? 0.88 : 1 }]}
             onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/membership"); }}
           >
-            <Text style={styles.goEliteBannerStar}>⭐</Text>
+            <Text style={styles.goEliteBannerStar}>E</Text>
             <View style={{ flex: 1 }}>
               <Text style={styles.goEliteBannerTitle}>Go Elite</Text>
               <Text style={styles.goEliteBannerSub}>£9.99/mo — exclusive perks & priority access</Text>
@@ -963,7 +963,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       paddingVertical: 13,
       gap: 10,
     },
-    goEliteBannerStar: { fontSize: 22 },
+    goEliteBannerStar: { fontSize: 20, fontFamily: "Poppins_800ExtraBold", color: "#FFD700" },
     goEliteBannerTitle: {
       fontFamily: "Inter_700Bold",
       fontSize: 14,

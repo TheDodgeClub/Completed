@@ -785,7 +785,7 @@ export default function MemberScreen() {
             </View>
             {user.isElite && (
               <View style={styles.avatarEliteSticker}>
-                <Text style={styles.avatarEliteStickerText}>⭐</Text>
+                <Text style={styles.avatarEliteStickerText}>E</Text>
               </View>
             )}
             <Text style={styles.avatarChangeLabel}>{uploadingAvatar ? "Uploading..." : "Change"}</Text>
@@ -818,7 +818,7 @@ export default function MemberScreen() {
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/membership"); }}
             >
               <Text style={[styles.membershipBtnText, user.isElite && styles.membershipBtnTextElite]}>
-                {user.isElite ? "⭐ Elite" : "Go Elite"}
+                {user.isElite ? "E  Elite" : "Go Elite"}
               </Text>
             </Pressable>
           </View>
@@ -838,7 +838,7 @@ export default function MemberScreen() {
             )}
             {user.isElite && (
               <View style={styles.eliteMemberBadge}>
-                <Text style={styles.eliteMemberBadgeText}>⭐ ELITE</Text>
+                <Text style={styles.eliteMemberBadgeText}>E  ELITE</Text>
               </View>
             )}
           </View>
@@ -1256,7 +1256,7 @@ export default function MemberScreen() {
       <Modal visible={celebrationVisible} transparent animationType="fade" onRequestClose={handleAckCelebration}>
         <View style={styles.celebrationOverlay}>
           <View style={styles.celebrationCard}>
-            <Text style={styles.celebrationStar}>⭐</Text>
+            <Text style={styles.celebrationStar}>E</Text>
             <Text style={styles.celebrationTitle}>
               {user?.pendingEliteXpAwarded ? "You're Elite!" : "Welcome Back, Elite!"}
             </Text>
@@ -1965,6 +1965,8 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     },
     avatarEliteStickerText: {
       fontSize: 13,
+      fontFamily: "Poppins_800ExtraBold",
+      color: "#000",
       lineHeight: 15,
     },
 
@@ -1987,8 +1989,10 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       gap: 10,
     },
     celebrationStar: {
-      fontSize: 56,
-      lineHeight: 64,
+      fontSize: 64,
+      fontFamily: "Poppins_800ExtraBold",
+      color: "#FFD700",
+      letterSpacing: -2,
     },
     celebrationTitle: {
       fontFamily: "Poppins_800ExtraBold",

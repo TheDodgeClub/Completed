@@ -115,7 +115,7 @@ const PlayerCard = forwardRef<View, Props>(function PlayerCard(
             </View>
             {isElite && (
               <View style={styles.eliteBadge}>
-                <Text style={styles.eliteBadgeText}>⭐ ELITE</Text>
+                <Text style={styles.eliteBadgeText}>E  ELITE</Text>
               </View>
             )}
           </View>
