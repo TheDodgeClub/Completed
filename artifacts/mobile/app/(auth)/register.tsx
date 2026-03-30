@@ -150,6 +150,12 @@ export default function RegisterScreen() {
         style={{ flex: 1, backgroundColor: Colors.background }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
+        <View style={{ flex: 1 }}>
+          <View style={[styles.stepHeader, { paddingTop: insets.top + 8 }]}>
+            <Pressable style={styles.headerBackBtn} onPress={() => setStep(1)} hitSlop={12}>
+              <Feather name="arrow-left" size={22} color={Colors.text} />
+            </Pressable>
+          </View>
         <ScrollView
           contentContainerStyle={[styles.container2, { paddingBottom: insets.bottom + 32 }]}
           keyboardShouldPersistTaps="handled"
@@ -278,11 +284,8 @@ export default function RegisterScreen() {
             )}
           </Pressable>
 
-          <Pressable style={styles.backBtn} onPress={() => setStep(1)}>
-            <Feather name="arrow-left" size={16} color={Colors.primary} />
-            <Text style={styles.backBtnText}>Back</Text>
-          </Pressable>
         </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     );
   }
@@ -293,6 +296,12 @@ export default function RegisterScreen() {
         style={{ flex: 1, backgroundColor: Colors.background }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
+        <View style={{ flex: 1 }}>
+          <View style={[styles.stepHeader, { paddingTop: insets.top + 8 }]}>
+            <Pressable style={styles.headerBackBtn} onPress={() => setStep(2)} hitSlop={12}>
+              <Feather name="arrow-left" size={22} color={Colors.text} />
+            </Pressable>
+          </View>
         <ScrollView
           contentContainerStyle={[styles.container2, { paddingBottom: insets.bottom + 32 }]}
           keyboardShouldPersistTaps="handled"
@@ -358,11 +367,8 @@ export default function RegisterScreen() {
             )}
           </Pressable>
 
-          <Pressable style={styles.backBtn} onPress={() => setStep(2)}>
-            <Feather name="arrow-left" size={16} color={Colors.primary} />
-            <Text style={styles.backBtnText}>Back</Text>
-          </Pressable>
         </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     );
   }
@@ -779,18 +785,19 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       alignItems: "center",
       justifyContent: "center",
     },
-    backBtn: {
-      flexDirection: "row",
+    stepHeader: {
+      paddingHorizontal: 16,
+      paddingBottom: 4,
+    },
+    headerBackBtn: {
+      width: 42,
+      height: 42,
+      borderRadius: 21,
+      backgroundColor: Colors.surface,
+      borderWidth: 1,
+      borderColor: Colors.border,
       alignItems: "center",
       justifyContent: "center",
-      gap: 6,
-      marginTop: 20,
-      paddingVertical: 12,
-    },
-    backBtnText: {
-      fontFamily: "Inter_600SemiBold",
-      fontSize: 15,
-      color: Colors.primary,
     },
     skillsGrid: {
       flexDirection: "row",
