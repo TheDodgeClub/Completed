@@ -45,7 +45,7 @@ import {
   Ticket,
   BlockedUser,
 } from "@/lib/api";
-import { getToken } from "@/lib/api";
+import { getToken, checkUsernameAvailable } from "@/lib/api";
 import { useAnnouncements } from "@/hooks/useAnnouncements";
 import { captureRef } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
@@ -258,6 +258,10 @@ function EditProfileModal({
     user?.skills ? user.skills.split(",").filter(Boolean).map((s: string) => s.trim()) : []
   );
   const [saving, setSaving] = React.useState(false);
+  const [usernameChecking, setUsernameChecking] = React.useState(false);
+  const [usernameError, setUsernameError] = React.useState("");
+  const [usernameOk, setUsernameOk] = React.useState(false);
+  const usernameTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const isPlayer = (user?.accountType ?? "player") !== "supporter";
 
   React.useEffect(() => {
@@ -265,11 +269,45 @@ function EditProfileModal({
       setName(user?.name ?? "");
       setUsername(user?.username ?? "");
       setBio(user?.bio ?? "");
+      setUsernameError("");
+      setUsernameOk(false);
       setSelectedSkills(
         user?.skills ? user.skills.split(",").filter(Boolean).map((s: string) => s.trim()) : []
       );
     }
   }, [visible, user]);
+
+  React.useEffect(() => {
+    if (usernameTimer.current) clearTimeout(usernameTimer.current);
+    const trimmed = username.trim().replace(/^@/, "");
+    if (!trimmed || trimmed === (user?.username ?? "")) {
+      setUsernameError("");
+      setUsernameOk(false);
+      setUsernameChecking(false);
+      return;
+    }
+    setUsernameChecking(true);
+    setUsernameError("");
+    setUsernameOk(false);
+    usernameTimer.current = setTimeout(async () => {
+      try {
+        const result = await checkUsernameAvailable(trimmed);
+        if (!result.available) {
+          setUsernameError(result.message ?? "Username already taken");
+          setUsernameOk(false);
+        } else {
+          setUsernameError("");
+          setUsernameOk(true);
+        }
+      } catch {
+        setUsernameError("");
+        setUsernameOk(false);
+      } finally {
+        setUsernameChecking(false);
+      }
+    }, 600);
+    return () => { if (usernameTimer.current) clearTimeout(usernameTimer.current); };
+  }, [username, user?.username]);
 
   const toggleSkill = (skill: string) => {
     setSelectedSkills(prev =>
@@ -296,8 +334,8 @@ function EditProfileModal({
               <Text style={styles.modalCancelText}>Cancel</Text>
             </Pressable>
             <Text style={styles.modalTitle}>Edit Profile</Text>
-            <Pressable onPress={handleSave} disabled={saving} style={styles.modalSaveBtn}>
-              <Text style={[styles.modalSaveText, saving && { opacity: 0.5 }]}>
+            <Pressable onPress={handleSave} disabled={saving || usernameChecking || !!usernameError} style={styles.modalSaveBtn}>
+              <Text style={[styles.modalSaveText, (saving || usernameChecking || !!usernameError) && { opacity: 0.4 }]}>
                 {saving ? "Saving..." : "Save"}
               </Text>
             </Pressable>
@@ -317,15 +355,28 @@ function EditProfileModal({
             </View>
             <View style={styles.fieldGroup}>
               <Text style={styles.fieldLabel}>Username</Text>
-              <TextInput
-                style={styles.fieldInput}
-                value={username}
-                onChangeText={setUsername}
-                placeholder="@username"
-                placeholderTextColor={Colors.textMuted}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
+              <View style={styles.usernameInputRow}>
+                <TextInput
+                  style={[styles.fieldInput, { flex: 1, marginBottom: 0, paddingRight: 46 }, usernameError ? { borderColor: "#FF6B6B", backgroundColor: "rgba(255,107,107,0.05)" } : usernameOk ? { borderColor: "#4CAF50" } : undefined]}
+                  value={username}
+                  onChangeText={setUsername}
+                  placeholder="@username"
+                  placeholderTextColor={Colors.textMuted}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <View style={styles.usernameInputIcon} pointerEvents="none">
+                  {usernameChecking && <ActivityIndicator size="small" color={Colors.textMuted} />}
+                  {!usernameChecking && usernameOk && <Feather name="check-circle" size={18} color="#4CAF50" />}
+                  {!usernameChecking && !!usernameError && <Feather name="alert-circle" size={18} color="#FF6B6B" />}
+                </View>
+              </View>
+              {!!usernameError && (
+                <Text style={styles.usernameErrorText}>{usernameError}</Text>
+              )}
+              {!usernameError && usernameOk && (
+                <Text style={styles.usernameOkText}>@{username.trim().replace(/^@/, "")} is available</Text>
+              )}
             </View>
             <View style={styles.fieldGroup}>
               <Text style={styles.fieldLabel}>Bio</Text>
@@ -1645,6 +1696,10 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       borderWidth: 1, borderColor: Colors.border,
     },
     fieldInputMultiline: { minHeight: 100, textAlignVertical: "top" },
+    usernameInputRow: { flexDirection: "row", alignItems: "center" },
+    usernameInputIcon: { position: "absolute", right: 14, top: 0, bottom: 0, justifyContent: "center", alignItems: "center", width: 32 },
+    usernameErrorText: { fontFamily: "Inter_400Regular", fontSize: 13, color: "#FF6B6B", marginTop: 6, paddingHorizontal: 4 },
+    usernameOkText: { fontFamily: "Inter_400Regular", fontSize: 13, color: "#4CAF50", marginTop: 6, paddingHorizontal: 4 },
     fieldHint: { fontFamily: "Inter_400Regular", fontSize: 12, color: Colors.textMuted, marginTop: -4, marginBottom: 10 },
     editSkillsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
     editSkillChip: {

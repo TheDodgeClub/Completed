@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, usersTable, attendanceTable, eventsTable, awardsTable, eventRegistrationsTable, postCommentsTable, postsTable, userReportsTable, userBlocksTable } from "@workspace/db";
-import { eq, gt, desc, lte, isNotNull, and } from "drizzle-orm";
+import { eq, gt, desc, lte, isNotNull, and, ne } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -92,6 +92,21 @@ function toProfile(user: typeof usersTable.$inferSelect, stats: Awaited<ReturnTy
     ...stats,
   };
 }
+
+/* GET /api/users/check-username?username=... — authenticated, excludes caller */
+router.get("/check-username", async (req: any, res) => {
+  const callerId: number | undefined = req.session?.userId;
+  if (!callerId) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const raw = (req.query.username as string | undefined) ?? "";
+  const username = raw.trim().toLowerCase().replace(/^@/, "");
+  if (!username || username.length < 2) { res.json({ available: false, message: "Username too short" }); return; }
+  if (!/^[a-z0-9_]{2,30}$/.test(username)) { res.json({ available: false, message: "Only letters, numbers and underscores" }); return; }
+  const existing = await db.query.usersTable.findFirst({
+    where: and(eq(usersTable.username, username), ne(usersTable.id, callerId)),
+    columns: { id: true },
+  });
+  res.json({ available: !existing });
+});
 
 /* GET /api/users/leaderboard — top 5 members by XP */
 router.get("/leaderboard", async (_req, res) => {

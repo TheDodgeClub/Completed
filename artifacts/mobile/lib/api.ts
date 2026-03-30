@@ -193,6 +193,10 @@ export async function checkEmailExists(email: string): Promise<boolean> {
   return data.exists;
 }
 
+export async function checkUsernameAvailable(username: string): Promise<{ available: boolean; message?: string }> {
+  return apiFetch<{ available: boolean; message?: string }>(`/users/check-username?username=${encodeURIComponent(username.trim().replace(/^@/, ""))}`);
+}
+
 export async function register(email: string, password: string, name: string, accountType: "player" | "supporter" = "player", referralCode?: string) {
   const data = await apiFetch<{ user: UserProfile; token: string }>("/auth/register", {
     method: "POST",
