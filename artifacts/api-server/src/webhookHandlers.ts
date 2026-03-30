@@ -84,7 +84,7 @@ export class WebhookHandlers {
       const sub = event.data.object as { id: string; metadata: Record<string, string> };
       const userId = sub.metadata?.userId ? Number(sub.metadata.userId) : null;
       if (userId) {
-        await deactivateElite(userId).catch((err: unknown) =>
+        await deactivateElite(userId, { clearStripeSubscription: true }).catch((err: unknown) =>
           logger.error({ err, userId }, "elite deactivate error"),
         );
         logger.info({ userId, subscriptionId: sub.id }, "Elite membership cancelled");

@@ -108,7 +108,7 @@ export async function activateElite(userId: number): Promise<{ xpAwarded: boolea
 
   const updates: Partial<typeof usersTable.$inferInsert> = {
     isElite: true,
-    eliteSince: user.eliteSince ?? new Date(),
+    eliteSince: new Date(),
     pendingEliteCelebration: true,
     pendingEliteXpAwarded: xpAwarded,
   };
@@ -128,10 +128,18 @@ export async function activateElite(userId: number): Promise<{ xpAwarded: boolea
   return { xpAwarded };
 }
 
-export async function deactivateElite(userId: number): Promise<void> {
-  await db
-    .update(usersTable)
-    .set({ isElite: false, stripeSubscriptionId: null, pendingEliteCelebration: false, pendingEliteXpAwarded: false })
-    .where(eq(usersTable.id, userId));
-  logger.info({ userId }, "[activateElite] Elite deactivated");
+export async function deactivateElite(
+  userId: number,
+  options: { clearStripeSubscription?: boolean } = {},
+): Promise<void> {
+  const updates: Partial<typeof usersTable.$inferInsert> = {
+    isElite: false,
+    pendingEliteCelebration: false,
+    pendingEliteXpAwarded: false,
+  };
+  if (options.clearStripeSubscription) {
+    updates.stripeSubscriptionId = null;
+  }
+  await db.update(usersTable).set(updates).where(eq(usersTable.id, userId));
+  logger.info({ userId, clearStripeSubscription: options.clearStripeSubscription ?? false }, "[activateElite] Elite deactivated");
 }

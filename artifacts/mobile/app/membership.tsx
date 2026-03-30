@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  Modal,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -21,6 +22,7 @@ import {
   getMembershipStatus,
   createMembershipCheckout,
   createBillingPortalSession,
+  ackEliteCelebration,
 } from "@/lib/api";
 
 const ELITE_PERKS = [
@@ -38,7 +40,20 @@ export default function GoEliteScreen() {
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
-  const { refreshUser } = useAuth();
+  const { user, refreshUser } = useAuth();
+  const [celebrationVisible, setCelebrationVisible] = useState(false);
+
+  React.useEffect(() => {
+    if (user?.pendingEliteCelebration) {
+      setCelebrationVisible(true);
+    }
+  }, [user?.pendingEliteCelebration]);
+
+  const handleAckCelebration = React.useCallback(async () => {
+    setCelebrationVisible(false);
+    try { await ackEliteCelebration(); } catch { /* ignore */ }
+    refreshUser();
+  }, [refreshUser]);
 
   const { data: status, isLoading, refetch } = useQuery({
     queryKey: ["membershipStatus"],
@@ -271,6 +286,47 @@ export default function GoEliteScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Elite Celebration Modal — shown immediately after checkout if Elite was granted */}
+      <Modal visible={celebrationVisible} transparent animationType="fade" onRequestClose={handleAckCelebration}>
+        <View style={styles.celebrationOverlay}>
+          <View style={styles.celebrationCard}>
+            <Text style={styles.celebrationStar}>⭐</Text>
+            <Text style={styles.celebrationTitle}>
+              {user?.pendingEliteXpAwarded ? "You're Elite!" : "Welcome Back, Elite!"}
+            </Text>
+            <Text style={styles.celebrationSub}>
+              {user?.pendingEliteXpAwarded
+                ? "Welcome to the top tier of The Dodge Club. Your Elite badge is now live."
+                : "Your Elite membership is active again. All your perks are back — see you on the court!"}
+            </Text>
+            {user?.pendingEliteXpAwarded ? (
+              <View style={styles.celebrationXpBox}>
+                <Text style={styles.celebrationXpValue}>+500 XP</Text>
+                <Text style={styles.celebrationXpLabel}>Elite Welcome Bonus</Text>
+              </View>
+            ) : (
+              <View style={[styles.celebrationXpBox, { backgroundColor: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)" }]}>
+                <Text style={[styles.celebrationXpLabel, { fontSize: 13, paddingHorizontal: 8 }]}>
+                  The one-time XP bonus was already awarded on your first Elite activation — your rank is intact!
+                </Text>
+              </View>
+            )}
+            {["Elite badge on profile & player card", "Double XP at every event", "Priority spot reservation", "VIP check-in lane"].map(perk => (
+              <View key={perk} style={styles.celebrationPerkRow}>
+                <Feather name="check" size={14} color="#FFD700" />
+                <Text style={styles.celebrationPerkText}>{perk}</Text>
+              </View>
+            ))}
+            <Pressable
+              style={({ pressed }) => [styles.celebrationBtn, { opacity: pressed ? 0.88 : 1 }]}
+              onPress={() => { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); handleAckCelebration(); }}
+            >
+              <Text style={styles.celebrationBtnText}>Let's Go! 🎉</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -556,6 +612,98 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       fontFamily: "Inter_400Regular",
       fontSize: 13,
       color: Colors.text,
+    },
+
+    /* Celebration modal */
+    celebrationOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.85)",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 20,
+    },
+    celebrationCard: {
+      backgroundColor: "#151515",
+      borderRadius: 20,
+      padding: 28,
+      width: "100%",
+      maxWidth: 380,
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: "rgba(255,215,0,0.25)",
+    },
+    celebrationStar: { fontSize: 52, marginBottom: 12 },
+    celebrationTitle: {
+      fontFamily: "Inter_700Bold",
+      fontSize: 24,
+      color: "#FFD700",
+      letterSpacing: 1,
+      marginBottom: 8,
+      textAlign: "center",
+    },
+    celebrationSub: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 14,
+      color: "rgba(255,255,255,0.7)",
+      textAlign: "center",
+      marginBottom: 16,
+      lineHeight: 20,
+    },
+    celebrationXpBox: {
+      backgroundColor: "rgba(255,215,0,0.08)",
+      borderWidth: 1,
+      borderColor: "rgba(255,215,0,0.3)",
+      borderRadius: 10,
+      padding: 16,
+      alignItems: "center",
+      width: "100%",
+      marginBottom: 20,
+    },
+    celebrationXpValue: {
+      fontFamily: "Inter_700Bold",
+      fontSize: 30,
+      color: "#FFD700",
+    },
+    celebrationXpLabel: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 12,
+      color: "rgba(255,255,255,0.45)",
+      marginTop: 4,
+      textAlign: "center",
+    },
+    celebrationPerksTitle: {
+      fontFamily: "Inter_700Bold",
+      fontSize: 13,
+      color: "rgba(255,255,255,0.5)",
+      letterSpacing: 1,
+      marginBottom: 10,
+      alignSelf: "flex-start",
+    },
+    celebrationPerkRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      width: "100%",
+      paddingVertical: 5,
+    },
+    celebrationPerkText: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 14,
+      color: "rgba(255,255,255,0.8)",
+    },
+    celebrationBtn: {
+      marginTop: 20,
+      backgroundColor: "#FFD700",
+      borderRadius: 14,
+      paddingVertical: 14,
+      paddingHorizontal: 40,
+      width: "100%",
+      alignItems: "center",
+    },
+    celebrationBtnText: {
+      fontFamily: "Inter_700Bold",
+      fontSize: 16,
+      color: "#000",
     },
   });
 }
