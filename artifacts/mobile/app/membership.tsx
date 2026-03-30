@@ -165,6 +165,12 @@ export default function GoEliteScreen() {
           <Text style={styles.heroSub}>
             Unlock exclusive perks and show the club you're all in
           </Text>
+          {!isElite && (
+            <View style={[styles.xpBonusRow, { marginTop: 14, backgroundColor: "rgba(255,193,7,0.1)", borderColor: "rgba(255,193,7,0.3)" }]}>
+              <Text style={styles.xpBonusIcon}>⚡</Text>
+              <Text style={[styles.xpBonusText, { color: "rgba(255,255,255,0.85)" }]}>Join today and get a one-time <Text style={[styles.xpBonusHighlight, { color: "#FFC107" }]}>+500 XP</Text> Elite welcome bonus</Text>
+            </View>
+          )}
         </LinearGradient>
 
         {/* Status Card */}
@@ -257,10 +263,6 @@ export default function GoEliteScreen() {
             </View>
           ) : (
             <View style={styles.ctaSection}>
-              <View style={styles.xpBonusRow}>
-                <Text style={styles.xpBonusIcon}>⚡</Text>
-                <Text style={styles.xpBonusText}>Join today and get a one-time <Text style={styles.xpBonusHighlight}>+500 XP</Text> Elite welcome bonus</Text>
-              </View>
               <Pressable
                 style={({ pressed }) => [styles.upgradeBtn, { opacity: pressed ? 0.9 : 1 }]}
                 disabled={checkoutLoading}
