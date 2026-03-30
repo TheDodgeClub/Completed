@@ -499,7 +499,7 @@ router.post("/free", requireAuth, async (req: any, res) => {
 /* POST /api/tickets/gift */
 router.post("/gift", requireAuth, async (req: any, res) => {
   const gifterId = req.session.userId;
-  const { eventId, recipientEmail } = req.body as { eventId?: number; recipientEmail?: string };
+  const { eventId, recipientEmail, native } = req.body as { eventId?: number; recipientEmail?: string; native?: boolean };
   if (!eventId || !recipientEmail) { res.status(400).json({ error: "eventId and recipientEmail are required" }); return; }
   const [event] = await db.select().from(eventsTable).where(eq(eventsTable.id, eventId)).limit(1);
   if (!event) { res.status(404).json({ error: "Event not found" }); return; }
@@ -543,6 +543,23 @@ router.post("/gift", requireAuth, async (req: any, res) => {
       return;
     }
 
+    // Native — return a PaymentIntent for in-app PaymentSheet
+    if (native) {
+      const stripe = await getUncachableStripeClient();
+      const productName = `${event.title}${giftTicketType ? ` — ${giftTicketType.name}` : ""} (Gift)`;
+      const pi = await stripe.paymentIntents.create({
+        amount: giftPricePence,
+        currency: "gbp",
+        ...(event.stripePriceId ? {} : {}),
+        metadata: { isGift: "true", gifterId: String(gifterId), recipientId: String(recipient.id), eventId: String(eventId), gifterName, ...(giftTicketType ? { ticketTypeId: String(giftTicketType.id) } : {}), productName },
+        description: `Gift ticket: ${productName}`,
+        receipt_email: gifter?.email ?? undefined,
+      });
+      const publishableKey = await getStripePublishableKey();
+      res.json({ clientSecret: pi.client_secret, paymentIntentId: pi.id, publishableKey });
+      return;
+    }
+
     const stripe = await getUncachableStripeClient();
     const lineItems = event.stripePriceId
       ? [{ price: event.stripePriceId, quantity: 1 }]
@@ -571,6 +588,22 @@ router.post("/gift", requireAuth, async (req: any, res) => {
     return;
   }
 
+  // Native — return a PaymentIntent for in-app PaymentSheet (unregistered recipient)
+  if (native) {
+    const stripe = await getUncachableStripeClient();
+    const productName = `${event.title}${giftTicketType ? ` — ${giftTicketType.name}` : ""} (Gift)`;
+    const pi = await stripe.paymentIntents.create({
+      amount: giftPricePence,
+      currency: "gbp",
+      metadata: { isGift: "true", gifterId: String(gifterId), recipientEmail: normalizedEmail, eventId: String(eventId), gifterName, ...(giftTicketType ? { ticketTypeId: String(giftTicketType.id) } : {}), productName },
+      description: `Gift ticket: ${productName}`,
+      receipt_email: gifter?.email ?? undefined,
+    });
+    const publishableKey = await getStripePublishableKey();
+    res.json({ clientSecret: pi.client_secret, paymentIntentId: pi.id, publishableKey });
+    return;
+  }
+
   const stripe = await getUncachableStripeClient();
   const lineItems = event.stripePriceId
     ? [{ price: event.stripePriceId, quantity: 1 }]
@@ -584,6 +617,46 @@ router.post("/gift", requireAuth, async (req: any, res) => {
     metadata: { giftTicket: "true", gifterId: String(gifterId), recipientEmail: normalizedEmail, eventId: String(eventId), gifterName, ...(giftTicketType ? { ticketTypeId: String(giftTicketType.id) } : {}) },
   });
   res.json({ checkoutUrl: session.url });
+});
+
+/* POST /api/tickets/confirm-gift-payment — fulfil a gift PaymentIntent after native PaymentSheet success */
+router.post("/confirm-gift-payment", requireAuth, async (req: any, res) => {
+  const callerId: number = req.session.userId;
+  const { paymentIntentId } = req.body as { paymentIntentId?: string };
+  if (!paymentIntentId) { res.status(400).json({ error: "paymentIntentId required" }); return; }
+
+  const stripe = await getUncachableStripeClient();
+  let pi: any;
+  try { pi = await stripe.paymentIntents.retrieve(paymentIntentId); } catch { res.status(400).json({ error: "Payment intent not found" }); return; }
+  if (pi.status !== "succeeded") { res.status(402).json({ error: "Payment has not succeeded" }); return; }
+
+  const meta = pi.metadata ?? {};
+  if (meta.isGift !== "true") { res.status(400).json({ error: "Not a gift payment intent" }); return; }
+  if (String(callerId) !== meta.gifterId) { res.status(403).json({ error: "Forbidden" }); return; }
+
+  const eventId = Number(meta.eventId);
+  const gifterName: string = meta.gifterName ?? "A Dodge Club member";
+  const ticketTypeId = meta.ticketTypeId ? Number(meta.ticketTypeId) : null;
+  const [event] = await db.select().from(eventsTable).where(eq(eventsTable.id, eventId)).limit(1);
+
+  // Idempotency: check if ticket already created for this PI
+  const [alreadyDone] = await db.select().from(ticketsTable).where(eq(ticketsTable.stripePaymentIntentId, paymentIntentId)).limit(1);
+  if (alreadyDone) { res.json({ gifted: true, ticket: alreadyDone }); return; }
+
+  if (meta.recipientId) {
+    const recipientId = Number(meta.recipientId);
+    const [ticket] = await db.insert(ticketsTable).values({ userId: recipientId, eventId, status: "paid", ticketCode: generateTicketCode(), amountPaid: pi.amount ?? 0, stripePaymentIntentId: paymentIntentId, ticketTypeId }).returning();
+    const [recipient] = await db.select().from(usersTable).where(eq(usersTable.id, recipientId)).limit(1);
+    if (recipient && event) sendGiftEmail({ toEmail: recipient.email, toName: recipient.name ?? recipient.email, gifterName, eventName: event.title, eventDate: event.date, eventLocation: event.location, ticketCode: ticket.ticketCode, eventConfig: event }).catch(console.error);
+    res.json({ gifted: true, ticket });
+  } else if (meta.recipientEmail) {
+    const normalizedEmail = meta.recipientEmail.toLowerCase();
+    const [ticket] = await db.insert(ticketsTable).values({ userId: callerId, eventId, status: "paid", ticketCode: generateTicketCode(), amountPaid: pi.amount ?? 0, stripePaymentIntentId: paymentIntentId, giftRecipientEmail: normalizedEmail, ticketTypeId }).returning();
+    if (event) sendGiftEmail({ toEmail: normalizedEmail, toName: normalizedEmail, gifterName, eventName: event.title, eventDate: event.date, eventLocation: event.location, ticketCode: ticket.ticketCode, eventConfig: event }).catch(console.error);
+    res.json({ gifted: true, ticket });
+  } else {
+    res.status(400).json({ error: "Missing recipient info in payment metadata" });
+  }
 });
 
 /* POST /api/tickets/payment-intent — mobile PaymentSheet flow */

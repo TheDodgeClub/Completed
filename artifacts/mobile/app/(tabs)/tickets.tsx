@@ -42,6 +42,8 @@ import {
   validateDiscountCode,
   getEventAttendees,
   giftTicket,
+  createGiftPaymentIntent,
+  confirmGiftPayment,
   Event,
   Ticket,
   TicketType,
@@ -153,10 +155,10 @@ export default function TicketsScreen() {
       return;
     }
 
-    // Paid — on native device builds use Stripe PaymentSheet; on web or Expo Go use Checkout redirect
+    // Paid — on native use Stripe PaymentSheet; on web use in-app Payment Element modal
     setBuyingEventId(event.id);
     try {
-      if (Platform.OS !== "web" && !isExpoGo) {
+      if (Platform.OS !== "web") {
         // Native PaymentSheet flow
         const result = await createPaymentIntent(event.id, checkoutData, ticketTypeId, discountCode, quantity);
 
@@ -276,24 +278,47 @@ export default function TicketsScreen() {
     const savedEventTitle = giftEvent.title;
     const savedEmail = giftEmail.trim();
     try {
-      const result = await giftTicket(giftEvent.id, savedEmail);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setGiftEvent(null);
-      setGiftEmail("");
-      if (result.checkoutUrl) {
-        if (Platform.OS === "web") {
+      if (Platform.OS !== "web") {
+        // Native — use in-app PaymentSheet (no browser redirect)
+        const pi = await createGiftPaymentIntent(giftEvent.id, savedEmail);
+        if (!pi.clientSecret) {
+          // Free gift — already created
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          setGiftEvent(null);
+          setGiftEmail("");
+          Alert.alert("Ticket Gifted!", `A ticket for ${savedEventTitle} has been sent to ${savedEmail}.`);
+          return;
+        }
+        const { error: initError } = await initPaymentSheet({
+          merchantDisplayName: "The Dodge Club",
+          paymentIntentClientSecret: pi.clientSecret,
+          defaultBillingDetails: {},
+          allowsDelayedPaymentMethods: false,
+          returnURL: "mobile://stripe-redirect",
+        });
+        if (initError) { Alert.alert("Error", initError.message ?? "Could not initialise payment"); return; }
+        const { error: presentError } = await presentPaymentSheet();
+        if (presentError) {
+          if (presentError.code !== "Canceled") Alert.alert("Payment Failed", presentError.message ?? "Your payment could not be completed.");
+          return;
+        }
+        await confirmGiftPayment(pi.paymentIntentId);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setGiftEvent(null);
+        setGiftEmail("");
+        Alert.alert("Ticket Gifted! 🎁", `A ticket for ${savedEventTitle} has been sent to ${savedEmail}.`);
+      } else {
+        // Web — open Stripe Checkout in a new tab
+        const result = await giftTicket(giftEvent.id, savedEmail);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        setGiftEvent(null);
+        setGiftEmail("");
+        if (result.checkoutUrl) {
           if (typeof window !== "undefined") window.open(result.checkoutUrl, "_blank");
           Alert.alert("Payment Link Opened", `Complete the payment in the new tab. Your friend will receive their ticket for ${savedEventTitle} by email once payment is confirmed.`);
         } else {
-          await WebBrowser.openBrowserAsync(result.checkoutUrl, {
-            presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
-            dismissButtonStyle: "done",
-            toolbarColor: "#0B5E2F",
-            controlsColor: "#FFD700",
-          });
+          Alert.alert("Ticket Gifted!", `A ticket for ${savedEventTitle} has been sent to ${savedEmail}.`);
         }
-      } else {
-        Alert.alert("Ticket Gifted!", `A ticket for ${savedEventTitle} has been sent to ${savedEmail}.`);
       }
     } catch (err: any) {
       Alert.alert("Error", err.message ?? "Could not gift ticket");

@@ -234,6 +234,14 @@ export async function giftTicket(eventId: number, recipientEmail: string): Promi
   return apiFetch(`/tickets/gift`, { method: "POST", body: JSON.stringify({ eventId, recipientEmail }) });
 }
 
+export async function createGiftPaymentIntent(eventId: number, recipientEmail: string): Promise<{ clientSecret?: string; paymentIntentId?: string; publishableKey?: string; gifted?: boolean; ticket?: any }> {
+  return apiFetch(`/tickets/gift`, { method: "POST", body: JSON.stringify({ eventId, recipientEmail, native: true }) });
+}
+
+export async function confirmGiftPayment(paymentIntentId: string): Promise<{ gifted: boolean; ticket: any }> {
+  return apiFetch(`/tickets/confirm-gift-payment`, { method: "POST", body: JSON.stringify({ paymentIntentId }) });
+}
+
 /* ---- users ---- */
 export async function getUserAttendance(userId: number): Promise<AttendanceRecord[]> {
   return apiFetch<AttendanceRecord[]>(`/users/${userId}/attendance`);
