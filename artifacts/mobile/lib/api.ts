@@ -617,6 +617,27 @@ export async function createMembershipCheckout(): Promise<{ url: string }> {
   return apiFetch<{ url: string }>("/membership/checkout", { method: "POST" });
 }
 
+export async function createMembershipSubscriptionIntent(): Promise<{
+  clientSecret: string;
+  publishableKey: string;
+  subscriptionId: string;
+}> {
+  return apiFetch<{ clientSecret: string; publishableKey: string; subscriptionId: string }>(
+    "/membership/subscription-intent",
+    { method: "POST" },
+  );
+}
+
+export async function confirmEliteSubscription(
+  subscriptionId: string,
+): Promise<{ isElite: boolean }> {
+  return apiFetch<{ isElite: boolean }>("/membership/confirm-subscription", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ subscriptionId }),
+  });
+}
+
 export async function createBillingPortalSession(): Promise<{ url: string }> {
   return apiFetch<{ url: string }>("/membership/portal", { method: "POST" });
 }

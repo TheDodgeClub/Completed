@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  Platform,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -21,9 +22,16 @@ import { useAuth } from "@/context/AuthContext";
 import {
   getMembershipStatus,
   createMembershipCheckout,
+  createMembershipSubscriptionIntent,
+  confirmEliteSubscription,
   createBillingPortalSession,
   ackEliteCelebration,
 } from "@/lib/api";
+
+const WebStripeModal =
+  Platform.OS === "web"
+    ? require("@/components/WebStripeModal.web").default
+    : null;
 
 const ELITE_PERKS = [
   { icon: "star" as const, label: "Elite badge on your profile & player card" },
@@ -42,6 +50,11 @@ export default function GoEliteScreen() {
   const [portalLoading, setPortalLoading] = useState(false);
   const { user, refreshUser } = useAuth();
   const [celebrationVisible, setCelebrationVisible] = useState(false);
+  const [webEliteModal, setWebEliteModal] = useState<{
+    clientSecret: string;
+    publishableKey: string;
+    subscriptionId: string;
+  } | null>(null);
 
   React.useEffect(() => {
     if (user?.pendingEliteCelebration) {
@@ -63,16 +76,26 @@ export default function GoEliteScreen() {
 
   const isElite = status?.isElite ?? false;
 
+  const handleWebEliteSuccess = useCallback(async () => {
+    const subId = webEliteModal?.subscriptionId;
+    setWebEliteModal(null);
+    if (subId) {
+      try { await confirmEliteSubscription(subId); } catch { /* webhook handles it */ }
+    }
+    await Promise.all([refetch(), refreshUser()]);
+  }, [webEliteModal, refetch, refreshUser]);
+
   const handleCheckout = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     setCheckoutLoading(true);
     try {
-      const data = await createMembershipCheckout();
-      if (typeof window !== "undefined") {
-        // Web — redirect in the same tab; Stripe sends user back to /?membership=success
-        window.location.href = data.url;
+      if (Platform.OS === "web") {
+        // Web — open in-app Payment Element modal (avoids iframe/redirect issues)
+        const data = await createMembershipSubscriptionIntent();
+        setWebEliteModal(data);
       } else {
-        // Native — in-app browser sheet
+        // Native — Stripe Checkout Session in-app browser sheet
+        const data = await createMembershipCheckout();
         await WebBrowser.openBrowserAsync(data.url, {
           presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
           showTitle: false,
@@ -92,9 +115,11 @@ export default function GoEliteScreen() {
     setPortalLoading(true);
     try {
       const data = await createBillingPortalSession();
-      if (typeof window !== "undefined") {
-        // Web — redirect in the same tab; Stripe sends user back to /
-        window.location.href = data.url;
+      if (Platform.OS === "web") {
+        // Web — open portal in new tab so user can return to the app after managing billing
+        window.open(data.url, "_blank", "noopener");
+        setPortalLoading(false);
+        return;
       } else {
         // Native — in-app browser sheet
         await WebBrowser.openBrowserAsync(data.url, {
@@ -296,6 +321,17 @@ export default function GoEliteScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* In-app Stripe Payment Element for Elite subscription (web only) */}
+      {Platform.OS === "web" && WebStripeModal && webEliteModal && (
+        <WebStripeModal
+          visible={!!webEliteModal}
+          clientSecret={webEliteModal.clientSecret}
+          publishableKey={webEliteModal.publishableKey}
+          onSuccess={handleWebEliteSuccess}
+          onClose={() => setWebEliteModal(null)}
+        />
+      )}
 
       {/* Elite Celebration Modal — shown immediately after checkout if Elite was granted */}
       <Modal visible={celebrationVisible} transparent animationType="fade" onRequestClose={handleAckCelebration}>
