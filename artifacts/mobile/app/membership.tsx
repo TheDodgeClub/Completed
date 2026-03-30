@@ -433,7 +433,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       fontSize: 14,
       color: "rgba(255,255,255,0.65)",
       textAlign: "center",
-      marginTop: 0,
+      marginTop: -6,
     },
     statusCard: {
       marginHorizontal: 16,
