@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { Platform } from "react-native";
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from "react";
+import { Platform, AppState, AppStateStatus } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   UserProfile,
@@ -36,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated: false,
     justRegistered: false,
   });
+  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
 
   useEffect(() => {
     (async () => {
@@ -64,6 +65,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setState(s => ({ ...s, isLoading: false }));
       }
     })();
+  }, []);
+
+  // Refresh user profile when the app comes back to the foreground (global — all tabs)
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", async (nextState: AppStateStatus) => {
+      if (appStateRef.current !== "active" && nextState === "active") {
+        try {
+          const user = await getMe();
+          setState(s => ({ ...s, user }));
+        } catch { /* ignore if not authenticated */ }
+      }
+      appStateRef.current = nextState;
+    });
+    return () => sub.remove();
   }, []);
 
   const login = async (email: string, password: string) => {

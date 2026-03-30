@@ -220,7 +220,7 @@ export function useResolveUserReport() {
 export function useGrantElite() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => fetchApi(`/api/admin/members/${id}/grant-elite`, { method: "POST" }),
+    mutationFn: (id: number) => fetchApi(`/api/admin/users/${id}/elite`, { method: "POST" }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["members"] }); },
   });
 }
@@ -228,7 +228,7 @@ export function useGrantElite() {
 export function useRevokeElite() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: number) => fetchApi(`/api/admin/members/${id}/revoke-elite`, { method: "POST" }),
+    mutationFn: (id: number) => fetchApi(`/api/admin/users/${id}/elite`, { method: "DELETE" }),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["members"] }); },
   });
 }
