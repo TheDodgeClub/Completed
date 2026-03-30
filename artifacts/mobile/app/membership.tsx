@@ -356,7 +356,7 @@ export default function GoEliteScreen() {
             <Text style={styles.celebrationSub}>
               {user?.pendingEliteXpAwarded
                 ? "Welcome to the top tier of The Dodge Club. Your Elite badge is now live."
-                : "Your Elite membership is active again. All your perks are back — see you on the court!"}
+                : "Your Elite membership is active again. All your perks are back."}
             </Text>
             {user?.pendingEliteXpAwarded ? (
               <View style={styles.celebrationXpBox}>
