@@ -34,13 +34,13 @@ const WebStripeModal =
     : null;
 
 const ELITE_PERKS = [
-  { icon: "clock" as const, label: "Early Tix", desc: "Get access to event tickets before general sale opens — never miss out." },
-  { icon: "zap" as const, label: "2× XP", desc: "Earn XP twice as fast at every event and climb the leaderboard faster." },
-  { icon: "tag" as const, label: "15% Off", desc: "Save 15% on every event ticket you purchase." },
-  { icon: "shopping-bag" as const, label: "10% Merch", desc: "10% discount across all club merchandise, any time." },
-  { icon: "package" as const, label: "Drops", desc: "First access to new merch drops before they go on sale to everyone else." },
-  { icon: "award" as const, label: "Gold Card", desc: "Unlock an exclusive golden edition of your player card to show off." },
-  { icon: "shield" as const, label: "Badge", desc: "A gold Elite badge on your profile and player card that sets you apart." },
+  { icon: "clock" as const, label: "Early Tix", desc: "Early access to event tickets" },
+  { icon: "zap" as const, label: "2× XP", desc: "Double XP at every event" },
+  { icon: "tag" as const, label: "15% Off", desc: "15% off all event tickets" },
+  { icon: "shopping-bag" as const, label: "10% Merch", desc: "10% off all club merch" },
+  { icon: "package" as const, label: "Drops", desc: "First access to new merch drops" },
+  { icon: "award" as const, label: "Gold Card", desc: "Golden Elite player card" },
+  { icon: "shield" as const, label: "Badge", desc: "Elite badge on profile & player card" },
 ];
 
 export default function GoEliteScreen() {
