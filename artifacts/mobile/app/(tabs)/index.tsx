@@ -457,16 +457,15 @@ export default function HomeScreen() {
           })()}
         </View>
 
-        {/* ══════════ GO ELITE BANNER (non-Elite members only) ══════════ */}
-        {isAuthenticated && user && !user.isElite && (
+        {/* ══════════ GO ELITE BANNER (non-Elite users only) ══════════ */}
+        {!user?.isElite && (
           <Pressable
             style={({ pressed }) => [styles.goEliteBanner, { opacity: pressed ? 0.88 : 1 }]}
             onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/membership"); }}
           >
             <Text style={styles.goEliteBannerStar}>E</Text>
             <View style={{ flex: 1 }}>
-              <Text style={styles.goEliteBannerTitle}>Go Elite</Text>
-              <Text style={styles.goEliteBannerSub}>£9.99/mo — exclusive perks & priority access</Text>
+              <Text style={styles.goEliteBannerTitle}>Go Elite — Unlock everything</Text>
             </View>
             <Feather name="chevron-right" size={16} color="#FFD700" />
           </Pressable>
@@ -966,7 +965,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     goEliteBannerStar: { fontSize: 20, fontFamily: "Poppins_800ExtraBold", color: "#FFD700" },
     goEliteBannerTitle: {
       fontFamily: "Inter_700Bold",
-      fontSize: 14,
+      fontSize: 15,
       color: "#FFD700",
     },
     goEliteBannerSub: {
