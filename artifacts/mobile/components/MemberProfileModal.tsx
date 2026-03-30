@@ -180,6 +180,11 @@ export function MemberProfileModal({ member, onClose }: {
                   <Text style={styles.levelText}>{levelName}</Text>
                 </View>
               )}
+              {(profile?.isElite ?? member.isElite) && (
+                <View style={styles.eliteBadge}>
+                  <Text style={styles.eliteBadgeText}>E  ELITE</Text>
+                </View>
+              )}
             </View>
           </LinearGradient>
 
@@ -372,6 +377,11 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       borderWidth: 1, borderColor: `${Colors.accent}50`,
     },
     levelText: { fontFamily: "Inter_700Bold", fontSize: 13, color: Colors.accent },
+    eliteBadge: {
+      backgroundColor: "#3D2800", borderRadius: 20, paddingHorizontal: 14, paddingVertical: 5,
+      borderWidth: 1, borderColor: "#FFD700",
+    },
+    eliteBadgeText: { fontFamily: "Inter_700Bold", fontSize: 13, color: "#FFD700", letterSpacing: 1 },
     profileBody: { padding: 24, gap: 16 },
     statsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
     statBox: {

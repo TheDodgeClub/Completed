@@ -358,6 +358,7 @@ export type MemberSummary = {
   skills: string | null;
   memberSince: string;
   accountType?: "player" | "supporter";
+  isElite?: boolean;
 };
 
 export async function listMembers(): Promise<MemberSummary[]> {
