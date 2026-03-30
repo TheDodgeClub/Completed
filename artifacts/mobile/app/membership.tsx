@@ -163,7 +163,7 @@ export default function GoEliteScreen() {
             £9.99<Text style={styles.heroPricePer}> / month</Text>
           </Text>
           <Text style={styles.heroSub}>Unlock all the perks</Text>
-          <Text style={[styles.heroSub, { fontSize: 13, opacity: 0.6, marginTop: 2 }]}>Cancel anytime</Text>
+          <Text style={[styles.heroSub, { fontSize: 13, opacity: 0.6 }]}>Cancel anytime</Text>
           {!isElite && (
             <Pressable
               style={({ pressed }) => [styles.xpBonusRow, { marginTop: 14, backgroundColor: "rgba(255,193,7,0.1)", borderColor: "rgba(255,193,7,0.3)", opacity: pressed ? 0.8 : 1 }]}
@@ -433,7 +433,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       fontSize: 14,
       color: "rgba(255,255,255,0.65)",
       textAlign: "center",
-      marginTop: 4,
+      marginTop: 0,
     },
     statusCard: {
       marginHorizontal: 16,
