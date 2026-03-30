@@ -784,7 +784,7 @@ export default function MemberScreen() {
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/membership"); }}
             >
               <Text style={[styles.membershipBtnText, user.isElite && styles.membershipBtnTextElite]}>
-                {user.isElite ? "⭐ Elite" : "Membership"}
+                {user.isElite ? "⭐ Elite" : "Go Elite"}
               </Text>
             </Pressable>
             {user.accountType !== "supporter" && (

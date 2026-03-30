@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -6,15 +6,15 @@ import {
   Pressable,
   StyleSheet,
   ActivityIndicator,
-  Linking,
-  Platform,
+  Alert,
 } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
+import * as WebBrowser from "expo-web-browser";
 import { useColors } from "@/context/ThemeContext";
 import {
   getMembershipStatus,
@@ -31,10 +31,12 @@ const ELITE_PERKS = [
   { icon: "shield" as const, label: "VIP check-in lane at the door" },
 ];
 
-export default function MembershipScreen() {
+export default function GoEliteScreen() {
   const insets = useSafeAreaInsets();
   const Colors = useColors();
   const styles = useMemo(() => makeStyles(Colors), [Colors]);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [portalLoading, setPortalLoading] = useState(false);
 
   const { data: status, isLoading, refetch } = useQuery({
     queryKey: ["membershipStatus"],
@@ -42,27 +44,45 @@ export default function MembershipScreen() {
     retry: false,
   });
 
-  const { mutate: checkout, isPending: checkoutLoading } = useMutation({
-    mutationFn: createMembershipCheckout,
-    onSuccess: async (data) => {
-      await Linking.openURL(data.url);
-    },
-    onError: (err: any) => {
-      console.warn("Checkout error:", err.message);
-    },
-  });
-
-  const { mutate: portal, isPending: portalLoading } = useMutation({
-    mutationFn: createBillingPortalSession,
-    onSuccess: async (data) => {
-      await Linking.openURL(data.url);
-    },
-    onError: (err: any) => {
-      console.warn("Portal error:", err.message);
-    },
-  });
-
   const isElite = status?.isElite ?? false;
+
+  const handleCheckout = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    setCheckoutLoading(true);
+    try {
+      const data = await createMembershipCheckout();
+      await WebBrowser.openBrowserAsync(data.url, {
+        presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+        showTitle: false,
+        enableBarCollapsing: true,
+      });
+      // Browser closed — check if payment succeeded
+      await refetch();
+    } catch (err: any) {
+      Alert.alert("Error", err.message ?? "Could not open checkout. Please try again.");
+    } finally {
+      setCheckoutLoading(false);
+    }
+  };
+
+  const handlePortal = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setPortalLoading(true);
+    try {
+      const data = await createBillingPortalSession();
+      await WebBrowser.openBrowserAsync(data.url, {
+        presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+        showTitle: false,
+        enableBarCollapsing: true,
+      });
+      // Browser closed — refresh status in case they cancelled
+      await refetch();
+    } catch (err: any) {
+      Alert.alert("Error", err.message ?? "Could not open billing portal. Please try again.");
+    } finally {
+      setPortalLoading(false);
+    }
+  };
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
@@ -81,16 +101,17 @@ export default function MembershipScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 32 }]}
       >
         {/* Hero */}
-        <LinearGradient
-          colors={["#1A1000", "#3D2800"]}
-          style={styles.hero}
-        >
+        <LinearGradient colors={["#1A1000", "#3D2800"]} style={styles.hero}>
           <View style={styles.eliteStar}>
             <Text style={styles.eliteStarText}>⭐</Text>
           </View>
-          <Text style={styles.heroTitle}>Elite Membership</Text>
-          <Text style={styles.heroPrice}>£9.99<Text style={styles.heroPricePer}> / month</Text></Text>
-          <Text style={styles.heroSub}>Unlock exclusive perks and show the club you're all in</Text>
+          <Text style={styles.heroTitle}>Go Elite</Text>
+          <Text style={styles.heroPrice}>
+            £9.99<Text style={styles.heroPricePer}> / month</Text>
+          </Text>
+          <Text style={styles.heroSub}>
+            Unlock exclusive perks and show the club you're all in
+          </Text>
         </LinearGradient>
 
         {/* Status Card */}
@@ -108,12 +129,21 @@ export default function MembershipScreen() {
             </View>
             {status?.eliteSince && (
               <Text style={styles.statusSince}>
-                Member since {new Date(status.eliteSince).toLocaleDateString("en-GB", { month: "long", year: "numeric" })}
+                Member since{" "}
+                {new Date(status.eliteSince).toLocaleDateString("en-GB", {
+                  month: "long",
+                  year: "numeric",
+                })}
               </Text>
             )}
             {status?.nextBillingDate && (
               <Text style={styles.statusBilling}>
-                Next billing: {new Date(status.nextBillingDate).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
+                Next billing:{" "}
+                {new Date(status.nextBillingDate).toLocaleDateString("en-GB", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })}
               </Text>
             )}
           </View>
@@ -125,7 +155,9 @@ export default function MembershipScreen() {
               </View>
               <Text style={styles.statusFreeText}>Standard membership</Text>
             </View>
-            <Text style={styles.statusFreeHint}>Upgrade to Elite to unlock all the perks below</Text>
+            <Text style={styles.statusFreeHint}>
+              Upgrade to Elite to unlock all the perks below
+            </Text>
           </View>
         )}
 
@@ -135,60 +167,62 @@ export default function MembershipScreen() {
           {ELITE_PERKS.map((perk) => (
             <View key={perk.label} style={styles.perkRow}>
               <View style={[styles.perkIcon, isElite && styles.perkIconActive]}>
-                <Feather name={perk.icon} size={16} color={isElite ? "#FFD700" : Colors.textMuted} />
+                <Feather
+                  name={perk.icon}
+                  size={16}
+                  color={isElite ? "#FFD700" : Colors.textMuted}
+                />
               </View>
-              <Text style={[styles.perkText, isElite && styles.perkTextActive]}>{perk.label}</Text>
+              <Text style={[styles.perkText, isElite && styles.perkTextActive]}>
+                {perk.label}
+              </Text>
             </View>
           ))}
         </View>
 
         {/* CTA */}
-        {isLoading ? null : isElite ? (
-          <View style={styles.ctaSection}>
-            <Pressable
-              style={({ pressed }) => [styles.manageBtn, { opacity: pressed ? 0.85 : 1 }]}
-              disabled={portalLoading}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                portal();
-              }}
-            >
-              {portalLoading ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <>
-                  <Feather name="settings" size={16} color="#fff" />
-                  <Text style={styles.manageBtnText}>Manage or Cancel Subscription</Text>
-                </>
-              )}
-            </Pressable>
-            <Text style={styles.ctaNote}>
-              You'll be taken to a secure Stripe portal to manage your billing.
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.ctaSection}>
-            <Pressable
-              style={({ pressed }) => [styles.upgradeBtn, { opacity: pressed ? 0.9 : 1 }]}
-              disabled={checkoutLoading}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-                checkout();
-              }}
-            >
-              {checkoutLoading ? (
-                <ActivityIndicator color="#000" size="small" />
-              ) : (
-                <>
-                  <Text style={styles.eliteStarSmall}>⭐</Text>
-                  <Text style={styles.upgradeBtnText}>Become Elite — £9.99/month</Text>
-                </>
-              )}
-            </Pressable>
-            <Text style={styles.ctaNote}>
-              Cancel anytime. Billed monthly via Stripe. Secure checkout.
-            </Text>
-          </View>
+        {!isLoading && (
+          isElite ? (
+            <View style={styles.ctaSection}>
+              <Pressable
+                style={({ pressed }) => [styles.manageBtn, { opacity: pressed ? 0.85 : 1 }]}
+                disabled={portalLoading}
+                onPress={handlePortal}
+              >
+                {portalLoading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <>
+                    <Feather name="settings" size={16} color="#fff" />
+                    <Text style={styles.manageBtnText}>Manage or Cancel Subscription</Text>
+                  </>
+                )}
+              </Pressable>
+              <Text style={styles.ctaNote}>
+                Opens a secure Stripe portal inside the app to manage your billing.
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.ctaSection}>
+              <Pressable
+                style={({ pressed }) => [styles.upgradeBtn, { opacity: pressed ? 0.9 : 1 }]}
+                disabled={checkoutLoading}
+                onPress={handleCheckout}
+              >
+                {checkoutLoading ? (
+                  <ActivityIndicator color="#000" size="small" />
+                ) : (
+                  <>
+                    <Text style={styles.eliteStarSmall}>⭐</Text>
+                    <Text style={styles.upgradeBtnText}>Go Elite — £9.99/month</Text>
+                  </>
+                )}
+              </Pressable>
+              <Text style={styles.ctaNote}>
+                Cancel anytime. Billed monthly via Stripe. Opens securely inside the app.
+              </Text>
+            </View>
+          )
         )}
 
         {/* Comparison table */}
@@ -272,7 +306,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     },
     heroTitle: {
       fontFamily: "Poppins_800ExtraBold",
-      fontSize: 28,
+      fontSize: 32,
       color: "#FFD700",
       textAlign: "center",
     },

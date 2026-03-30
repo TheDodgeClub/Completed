@@ -457,6 +457,21 @@ export default function HomeScreen() {
           })()}
         </View>
 
+        {/* ══════════ GO ELITE BANNER (non-Elite members only) ══════════ */}
+        {isAuthenticated && user && !user.isElite && (
+          <Pressable
+            style={({ pressed }) => [styles.goEliteBanner, { opacity: pressed ? 0.88 : 1 }]}
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/membership"); }}
+          >
+            <Text style={styles.goEliteBannerStar}>⭐</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.goEliteBannerTitle}>Go Elite</Text>
+              <Text style={styles.goEliteBannerSub}>£9.99/mo — exclusive perks & priority access</Text>
+            </View>
+            <Feather name="chevron-right" size={16} color="#FFD700" />
+          </Pressable>
+        )}
+
         <View style={styles.body}>
 
           {/* ══════════ AREA 2: QUICK ACTIONS STRIP ══════════ */}
@@ -931,6 +946,34 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     body: {
       padding: 20,
       gap: 8,
+    },
+
+    /* ── Go Elite Banner ── */
+    goEliteBanner: {
+      marginHorizontal: 16,
+      marginTop: 12,
+      marginBottom: 4,
+      backgroundColor: "rgba(255,215,0,0.08)",
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: "rgba(255,215,0,0.28)",
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      paddingHorizontal: 14,
+      paddingVertical: 13,
+      gap: 10,
+    },
+    goEliteBannerStar: { fontSize: 22 },
+    goEliteBannerTitle: {
+      fontFamily: "Inter_700Bold",
+      fontSize: 14,
+      color: "#FFD700",
+    },
+    goEliteBannerSub: {
+      fontFamily: "Inter_400Regular",
+      fontSize: 12,
+      color: "rgba(255,215,0,0.65)",
+      marginTop: 1,
     },
 
     /* ── Quick Actions Strip ── */
