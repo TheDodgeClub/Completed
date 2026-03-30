@@ -123,11 +123,11 @@ function VideoCard({ video, onPress }: { video: VideoClip; onPress: () => void }
   const isExternalLink = video.url.includes("youtube.com") || video.url.includes("youtu.be") || video.url.includes("vimeo.com");
   const resolvedUrl = resolveImageUrl(video.url) ?? video.url;
 
-  // Only create a native inline player — web autoplay is unreliable in iframes
-  const useInlinePlayer = !isExternalLink && Platform.OS !== "web";
+  const isNativeInline = !isExternalLink && Platform.OS !== "web";
+  const isWebInline = !isExternalLink && Platform.OS === "web";
 
-  const player = useVideoPlayer(useInlinePlayer ? resolvedUrl : null, (p) => {
-    if (!useInlinePlayer) return;
+  const player = useVideoPlayer(isNativeInline ? resolvedUrl : null, (p) => {
+    if (!isNativeInline) return;
     p.loop = true;
     p.muted = true;
     p.play();
@@ -135,7 +135,7 @@ function VideoCard({ video, onPress }: { video: VideoClip; onPress: () => void }
 
   // Ensure play() is called once the video source is ready (belt-and-suspenders on native)
   React.useEffect(() => {
-    if (!useInlinePlayer) return;
+    if (!isNativeInline) return;
     const sub = player.addListener("statusChange", ({ status }) => {
       if (status === "readyToPlay" && !videoReady) {
         setVideoReady(true);
@@ -143,7 +143,7 @@ function VideoCard({ video, onPress }: { video: VideoClip; onPress: () => void }
       }
     });
     return () => sub.remove();
-  }, [useInlinePlayer, player]);
+  }, [isNativeInline, player]);
 
   // Thumbnail: explicit admin-set > auto-generated (YouTube/Streamable) > null
   const thumbnailUri = video.thumbnailUrl
@@ -159,11 +159,17 @@ function VideoCard({ video, onPress }: { video: VideoClip; onPress: () => void }
     }
   }
 
+  const webVideoRef = React.useRef<any>(null);
+
   function toggleMute(e: any) {
     e.stopPropagation?.();
     const next = !muted;
     setMuted(next);
-    player.muted = next;
+    if (Platform.OS === "web") {
+      if (webVideoRef.current) webVideoRef.current.muted = next;
+    } else {
+      player.muted = next;
+    }
   }
 
   return (
@@ -183,7 +189,7 @@ function VideoCard({ video, onPress }: { video: VideoClip; onPress: () => void }
           <View style={[StyleSheet.absoluteFill, styles.videoThumbPlaceholder]} />
         )}
 
-        {useInlinePlayer ? (
+        {isNativeInline ? (
           /* Native inline video on top of thumbnail */
           <>
             <VideoView
@@ -200,8 +206,36 @@ function VideoCard({ video, onPress }: { video: VideoClip; onPress: () => void }
               <Feather name={muted ? "volume-x" : "volume-2"} size={12} color="#fff" />
             </Pressable>
           </>
+        ) : isWebInline ? (
+          /* Web inline video — raw <video> element with guaranteed autoplay */
+          <>
+            {/* @ts-ignore — web-only element */}
+            <video
+              ref={webVideoRef}
+              src={resolvedUrl}
+              autoPlay
+              muted
+              loop
+              playsInline
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+              }}
+            />
+            <Pressable
+              onPress={toggleMute}
+              style={styles.videoMuteBtn}
+              hitSlop={8}
+            >
+              <Feather name={muted ? "volume-x" : "volume-2"} size={12} color="#fff" />
+            </Pressable>
+          </>
         ) : (
-          /* Web / external: static thumbnail with play overlay */
+          /* External link (YouTube/Vimeo): static thumbnail with play overlay */
           <View style={styles.playOverlay}>
             <View style={styles.playCircle}>
               <Feather name="play" size={22} color="#fff" style={{ marginLeft: 3 }} />
