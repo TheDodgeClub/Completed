@@ -168,7 +168,7 @@ export default function GoEliteScreen() {
           {!isElite && (
             <View style={[styles.xpBonusRow, { marginTop: 14, backgroundColor: "rgba(255,193,7,0.1)", borderColor: "rgba(255,193,7,0.3)" }]}>
               <Text style={styles.xpBonusIcon}>⚡</Text>
-              <Text style={[styles.xpBonusText, { color: "rgba(255,255,255,0.85)" }]}>Join today and get a one-time <Text style={[styles.xpBonusHighlight, { color: "#FFC107" }]}>+500 XP</Text> Elite welcome bonus</Text>
+              <Text style={[styles.xpBonusText, { color: "rgba(255,255,255,0.85)" }]}>Join today for a <Text style={[styles.xpBonusHighlight, { color: "#FFC107" }]}>500 XP</Text> one time bonus</Text>
             </View>
           )}
         </LinearGradient>
