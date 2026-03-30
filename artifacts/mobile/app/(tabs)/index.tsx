@@ -457,20 +457,6 @@ export default function HomeScreen() {
           })()}
         </View>
 
-        {/* ══════════ GO ELITE BANNER (non-Elite users only) ══════════ */}
-        {!user?.isElite && (
-          <Pressable
-            style={({ pressed }) => [styles.goEliteBanner, { opacity: pressed ? 0.88 : 1 }]}
-            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/membership"); }}
-          >
-            <Text style={styles.goEliteBannerStar}>E</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.goEliteBannerTitle}>Go Elite — Unlock everything</Text>
-            </View>
-            <Feather name="chevron-right" size={16} color="#FFD700" />
-          </Pressable>
-        )}
-
         <View style={styles.body}>
 
           {/* ══════════ AREA 2: QUICK ACTIONS STRIP ══════════ */}
@@ -519,6 +505,20 @@ export default function HomeScreen() {
               <Text style={styles.quickActionLabel}>Mini Game</Text>
             </Pressable>
           </View>
+
+          {/* ══════════ GO ELITE BANNER (non-Elite users only) ══════════ */}
+          {!user?.isElite && (
+            <Pressable
+              style={({ pressed }) => [styles.goEliteBanner, { opacity: pressed ? 0.88 : 1 }]}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/membership"); }}
+            >
+              <Text style={styles.goEliteBannerStar}>E</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.goEliteBannerTitle}>Go Elite — Unlock everything</Text>
+              </View>
+              <Feather name="chevron-right" size={16} color="#FFD700" />
+            </Pressable>
+          )}
 
           {/* ══════════ AREA 2.5: COUNTDOWN ══════════ */}
           {nextEventCountdown && (
@@ -949,9 +949,6 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
 
     /* ── Go Elite Banner ── */
     goEliteBanner: {
-      marginHorizontal: 16,
-      marginTop: 10,
-      marginBottom: 2,
       backgroundColor: "#1A4D2E",
       borderRadius: 8,
       borderWidth: 1,
