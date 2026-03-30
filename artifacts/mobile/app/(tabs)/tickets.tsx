@@ -919,6 +919,10 @@ function UnifiedCheckoutSheet({
         : Math.max(0, selectedType.price - appliedCode.discountAmount))
     : null;
 
+  const isElite = !!user?.isElite;
+  // Elite 15% discount — applied per ticket type (server mirrors this calculation)
+  const elitePrice = (pence: number) => pence > 0 ? Math.round(pence * 0.85) : 0;
+
   const initialFormData = useMemo(() => {
     const init: Record<string, string> = {};
     for (const field of fields) {
@@ -1177,8 +1181,14 @@ function UnifiedCheckoutSheet({
   };
 
   const perTicketPence = (() => {
-    if (selectedType) return discountedPrice !== null ? discountedPrice : selectedType.price;
-    if (!hasActiveTypes && event.ticketPrice != null) return Math.round(event.ticketPrice * 100);
+    if (selectedType) {
+      const base = discountedPrice !== null ? discountedPrice : selectedType.price;
+      return isElite && base > 0 ? elitePrice(base) : base;
+    }
+    if (!hasActiveTypes && event.ticketPrice != null) {
+      const base = Math.round(event.ticketPrice * 100);
+      return isElite && base > 0 ? elitePrice(base) : base;
+    }
     return 0;
   })();
   const totalPence = perTicketPence * quantity;
@@ -1279,9 +1289,21 @@ function UnifiedCheckoutSheet({
                           )}
                         </View>
                         <View style={{ alignItems: "flex-end", marginLeft: 12 }}>
-                          <Text style={{ color: Colors.primary, fontSize: 18, fontWeight: "700" }}>
-                            {type.price === 0 ? "FREE" : `£${(type.price / 100).toFixed(2)}`}
-                          </Text>
+                          {isElite && type.price > 0 ? (
+                            <>
+                              <Text style={{ color: Colors.textMuted, fontSize: 12, textDecorationLine: "line-through" }}>
+                                £{(type.price / 100).toFixed(2)}
+                              </Text>
+                              <Text style={{ color: "#FFD700", fontSize: 18, fontWeight: "700" }}>
+                                £{(elitePrice(type.price) / 100).toFixed(2)}
+                              </Text>
+                              <Text style={{ color: "#FFD700", fontSize: 10, fontWeight: "600" }}>Elite Price</Text>
+                            </>
+                          ) : (
+                            <Text style={{ color: Colors.primary, fontSize: 18, fontWeight: "700" }}>
+                              {type.price === 0 ? "FREE" : `£${(type.price / 100).toFixed(2)}`}
+                            </Text>
+                          )}
                           {isSelected && (
                             <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center", marginTop: 6 }}>
                               <Feather name="check" size={12} color="#fff" />
@@ -1413,10 +1435,18 @@ function UnifiedCheckoutSheet({
                     <Text style={{ color: Colors.text, fontSize: 22, fontWeight: "700" }}>
                       {totalPence === 0 ? "FREE" : `£${(totalPence / 100).toFixed(2)}`}
                     </Text>
-                    {appliedCode && discountedPrice !== null && discountedPrice > 0 && (
+                    {(appliedCode && discountedPrice !== null && discountedPrice > 0) && (
                       <Text style={{ color: Colors.textSecondary, fontSize: 11, textDecorationLine: "line-through" }}>
                         £{(originalTotalPence / 100).toFixed(2)}
                       </Text>
+                    )}
+                    {isElite && selectedType && selectedType.price > 0 && !appliedCode && (
+                      <Text style={{ color: Colors.textSecondary, fontSize: 11, textDecorationLine: "line-through" }}>
+                        £{((selectedType.price * quantity) / 100).toFixed(2)}
+                      </Text>
+                    )}
+                    {isElite && selectedType && selectedType.price > 0 && (
+                      <Text style={{ color: "#FFD700", fontSize: 11, fontWeight: "600" }}>Elite 15% discount applied</Text>
                     )}
                     {quantity > 1 && perTicketPence > 0 && (
                       <Text style={{ color: Colors.textMuted, fontSize: 11, marginTop: 2 }}>

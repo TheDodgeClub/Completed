@@ -167,6 +167,15 @@ router.post("/checkout", requireAuth, async (req: any, res) => {
     }
   }
 
+  // Apply Elite member 15% discount
+  let eliteDiscountApplied = false;
+  if (finalAmountPence > 0) {
+    const [purchaser] = await db.select({ isElite: usersTable.isElite }).from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+    if (purchaser?.isElite) {
+      finalAmountPence = Math.round(finalAmountPence * 0.85);
+      eliteDiscountApplied = true;
+    }
+  }
   // If free (after discount or originally free), issue immediately
   if (finalAmountPence === 0) {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
@@ -241,11 +250,11 @@ router.post("/checkout", requireAuth, async (req: any, res) => {
     checkoutData: checkoutData ?? null,
     ticketTypeId: resolvedTicketTypeId,
     discountCodeId: discountCodeRecord?.id ?? null,
-    originalAmountPaid: discountCodeRecord ? baseAmountPence : null,
+    originalAmountPaid: (discountCodeRecord || eliteDiscountApplied) ? baseAmountPence : null,
   }).returning();
 
   // Build Stripe session line items — use unit_amount override when discount applied or using ticket type with custom price
-  const needsCustomAmount = !!discountCodeRecord || (resolvedTicketTypeId !== null && resolvedStripeProductId);
+  const needsCustomAmount = !!discountCodeRecord || eliteDiscountApplied || (resolvedTicketTypeId !== null && resolvedStripeProductId);
 
   let lineItems: any[];
   if (needsCustomAmount || !resolvedStripePriceId) {
@@ -734,6 +743,15 @@ router.post("/payment-intent", requireAuth, async (req: any, res) => {
     }
   }
 
+  // Apply Elite member 15% discount
+  let eliteDiscountApplied = false;
+  if (finalAmountPence > 0) {
+    const [purchaser] = await db.select({ isElite: usersTable.isElite }).from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+    if (purchaser?.isElite) {
+      finalAmountPence = Math.round(finalAmountPence * 0.85);
+      eliteDiscountApplied = true;
+    }
+  }
   // If free (after discount or originally free), issue immediately
   if (finalAmountPence === 0) {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
