@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { BrowserMultiFormatReader } from "@zxing/browser";
+import jsQR from "jsqr";
 import {
   loginAdmin, getMe, getActiveEvents, scanCheckIn, scanTicketCheckIn, getCheckinStats,
   clearToken, type AdminUser, type ActiveEvent, type CheckInResult, type CheckInStats,
@@ -366,15 +366,18 @@ function ScannerOverlay({ event, onClose, onResult }: {
   onResult: (r: ResultState) => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [result, setResult] = useState<ResultState>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [manualId, setManualId] = useState("");
   const [processing, setProcessing] = useState(false);
 
-  // Use refs for mutable state so camera effect is never restarted after mount
+  // Refs so scan loop never restarts due to state changes
   const processingRef = useRef(false);
   const lastScannedRef = useRef<string | null>(null);
   const resultTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rafRef = useRef<number>(0);
+  const streamRef = useRef<MediaStream | null>(null);
   const eventIdRef = useRef(event.id);
   const onResultRef = useRef(onResult);
   useEffect(() => { eventIdRef.current = event.id; }, [event.id]);
@@ -437,31 +440,53 @@ function ScannerOverlay({ event, onClose, onResult }: {
     };
   }, [processUserId, processTicketCode]);
 
-  // Camera starts once on mount, never restarts
+  // Camera + jsQR frame loop — starts once on mount, never restarts
   useEffect(() => {
-    const reader = new BrowserMultiFormatReader(undefined, { delayBetweenScanAttempts: 300 });
-    if (videoRef.current) {
-      reader.decodeFromConstraints(
-        { video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } } },
-        videoRef.current,
-        (res, err) => {
-          if (res) handleQRValueRef.current(res.getText());
-          if (err && !(
-            err?.name === "NotFoundException" ||
-            err?.message?.includes("No MultiFormat") ||
-            err?.message?.includes("Barcode") ||
-            err?.message?.includes("No code found")
-          )) {
-            setCameraError("Camera unavailable — use manual entry");
-          }
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) return;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) return;
+
+    let active = true;
+
+    function scanFrame() {
+      if (!active || !video || !canvas || !ctx) return;
+      if (video.readyState >= video.HAVE_ENOUGH_DATA && video.videoWidth > 0) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+          inversionAttempts: "dontInvert",
+        });
+        if (code?.data) {
+          handleQRValueRef.current(code.data);
         }
-      ).catch(() => setCameraError("Camera unavailable — use manual entry"));
+      }
+      rafRef.current = requestAnimationFrame(scanFrame);
     }
+
+    navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false,
+    }).then(stream => {
+      if (!active) { stream.getTracks().forEach(t => t.stop()); return; }
+      streamRef.current = stream;
+      video.srcObject = stream;
+      video.play().then(() => { rafRef.current = requestAnimationFrame(scanFrame); });
+    }).catch(() => {
+      if (active) setCameraError("Camera unavailable — use manual entry below");
+    });
+
     return () => {
-      BrowserMultiFormatReader.releaseAllStreams();
+      active = false;
+      cancelAnimationFrame(rafRef.current);
+      streamRef.current?.getTracks().forEach(t => t.stop());
+      if (video) video.srcObject = null;
       if (resultTimerRef.current) clearTimeout(resultTimerRef.current);
     };
-  }, []); // empty — camera starts once and stays running
+  }, []); // empty — runs once on mount
 
   function handleManualSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -498,6 +523,7 @@ function ScannerOverlay({ event, onClose, onResult }: {
       {/* Camera view */}
       <div className="relative flex-1 overflow-hidden bg-black">
         <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover" muted playsInline />
+        <canvas ref={canvasRef} className="hidden" />
 
         {/* Corner viewfinder */}
         {!result && !cameraError && (
