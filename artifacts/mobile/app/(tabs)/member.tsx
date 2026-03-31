@@ -804,14 +804,6 @@ export default function MemberScreen() {
                 <Feather name="log-out" size={18} color="rgba(255,255,255,0.7)" />
               </Pressable>
             </View>
-            <Pressable
-              style={({ pressed }) => [styles.membershipBtn, user.isElite && styles.membershipBtnElite, { opacity: pressed ? 0.85 : 1 }]}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/membership"); }}
-            >
-              <Text style={[styles.membershipBtnText, user.isElite && styles.membershipBtnTextElite]}>
-                {user.isElite ? "E  Elite" : "Go Elite"}
-              </Text>
-            </Pressable>
           </View>
         </View>
 
@@ -895,35 +887,22 @@ export default function MemberScreen() {
           </View>
         )}
 
-        {/* Skills + My Card row */}
-        {user.accountType !== "supporter" && (
-          <View style={styles.profileSkillsBlock}>
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-              {user.skills && (() => {
-                const skills = user.skills!.split(",").filter(Boolean).map(s => s.trim()).slice(0, 3);
-                return skills.length > 0 ? (
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.profileSkillsLabel}>SKILLS</Text>
-                    <View style={styles.profileSkillsRow}>
-                      {skills.map(skill => (
-                        <View key={skill} style={styles.profileSkillChip}>
-                          <Text style={styles.profileSkillChipText}>{skill}</Text>
-                        </View>
-                      ))}
-                    </View>
+        {/* Skills row */}
+        {user.accountType !== "supporter" && user.skills && (() => {
+          const skills = user.skills!.split(",").filter(Boolean).map(s => s.trim()).slice(0, 3);
+          return skills.length > 0 ? (
+            <View style={styles.profileSkillsBlock}>
+              <Text style={styles.profileSkillsLabel}>SKILLS</Text>
+              <View style={styles.profileSkillsRow}>
+                {skills.map(skill => (
+                  <View key={skill} style={styles.profileSkillChip}>
+                    <Text style={styles.profileSkillChipText}>{skill}</Text>
                   </View>
-                ) : <View style={{ flex: 1 }} />;
-              })()}
-              <Pressable
-                style={({ pressed }) => [styles.shareCardBtn, { opacity: pressed ? 0.8 : 1 }]}
-                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setCardVisible(true); }}
-              >
-                <Feather name="share-2" size={14} color="#FFD700" />
-                <Text style={styles.shareCardBtnText}>My Card</Text>
-              </Pressable>
+                ))}
+              </View>
             </View>
-          </View>
-        )}
+          ) : null;
+        })()}
       </LinearGradient>
 
       {/* ── Stats Bar ── */}
@@ -1002,6 +981,27 @@ export default function MemberScreen() {
       )}
 
       <View style={styles.body}>
+        {/* ── Go Elite / My Card buttons ── */}
+        <View style={styles.profileActionRow}>
+          <Pressable
+            style={({ pressed }) => [styles.profileActionBtn, styles.profileActionBtnElite, { opacity: pressed ? 0.85 : 1, flex: 1 }]}
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/membership"); }}
+          >
+            <Text style={[styles.profileActionBtnText, user.isElite && { color: Colors.accent }]}>
+              {user.isElite ? "E  Elite" : "Go Elite"}
+            </Text>
+          </Pressable>
+          {user.accountType !== "supporter" && (
+            <Pressable
+              style={({ pressed }) => [styles.profileActionBtn, styles.profileActionBtnCard, { opacity: pressed ? 0.8 : 1, flex: 1 }]}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setCardVisible(true); }}
+            >
+              <Feather name="share-2" size={14} color={Colors.accent} />
+              <Text style={[styles.profileActionBtnText, { color: Colors.accent }]}>My Card</Text>
+            </Pressable>
+          )}
+        </View>
+
         {/* ── My Tickets ── */}
         <View style={styles.section}>
           <View style={[styles.sectionHeader, { justifyContent: "space-between" }]}>
@@ -1850,6 +1850,35 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       gap: 4,
     },
     eliteMemberBadgeText: { fontFamily: "Inter_700Bold", fontSize: 10, color: "#000", letterSpacing: 1 },
+    profileActionRow: {
+      flexDirection: "row" as const,
+      gap: 10,
+      marginHorizontal: 16,
+      marginTop: 16,
+      marginBottom: 4,
+    },
+    profileActionBtn: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+      gap: 6,
+      paddingVertical: 10,
+      borderRadius: 12,
+      borderWidth: 1,
+    },
+    profileActionBtnElite: {
+      backgroundColor: Colors.surface,
+      borderColor: Colors.border,
+    },
+    profileActionBtnCard: {
+      backgroundColor: Colors.accent + "15",
+      borderColor: Colors.accent + "40",
+    },
+    profileActionBtnText: {
+      fontFamily: "Inter_600SemiBold" as const,
+      fontSize: 13,
+      color: Colors.text,
+    },
     membershipBtn: {
       flexDirection: "row" as const,
       alignItems: "center" as const,
