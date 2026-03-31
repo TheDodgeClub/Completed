@@ -984,20 +984,20 @@ export default function MemberScreen() {
         {/* ── Go Elite / My Card buttons ── */}
         <View style={styles.profileActionRow}>
           <Pressable
-            style={({ pressed }) => [styles.profileActionBtn, styles.profileActionBtnElite, { opacity: pressed ? 0.85 : 1, flex: 1 }]}
+            style={({ pressed }) => [styles.profileActionBtn, { opacity: pressed ? 0.85 : 1, flex: 1 }]}
             onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/membership"); }}
           >
-            <Text style={[styles.profileActionBtnText, user.isElite && { color: Colors.accent }]}>
+            <Text style={styles.profileActionBtnText}>
               {user.isElite ? "E  Elite" : "Go Elite"}
             </Text>
           </Pressable>
           {user.accountType !== "supporter" && (
             <Pressable
-              style={({ pressed }) => [styles.profileActionBtn, styles.profileActionBtnCard, { opacity: pressed ? 0.8 : 1, flex: 1 }]}
+              style={({ pressed }) => [styles.profileActionBtn, { opacity: pressed ? 0.8 : 1, flex: 1 }]}
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setCardVisible(true); }}
             >
-              <Feather name="share-2" size={14} color={Colors.accent} />
-              <Text style={[styles.profileActionBtnText, { color: Colors.accent }]}>My Card</Text>
+              <Feather name="share-2" size={13} color={Colors.primary} />
+              <Text style={styles.profileActionBtnText}>My Card</Text>
             </Pressable>
           )}
         </View>
@@ -1852,32 +1852,27 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     eliteMemberBadgeText: { fontFamily: "Inter_700Bold", fontSize: 10, color: "#000", letterSpacing: 1 },
     profileActionRow: {
       flexDirection: "row" as const,
-      gap: 10,
+      gap: 8,
       marginHorizontal: 16,
-      marginTop: 16,
-      marginBottom: 4,
+      marginTop: 14,
+      marginBottom: 2,
     },
     profileActionBtn: {
       flexDirection: "row" as const,
       alignItems: "center" as const,
       justifyContent: "center" as const,
-      gap: 6,
-      paddingVertical: 10,
-      borderRadius: 12,
+      gap: 5,
+      paddingVertical: 7,
+      paddingHorizontal: 12,
+      borderRadius: 8,
       borderWidth: 1,
-    },
-    profileActionBtnElite: {
-      backgroundColor: Colors.surface,
-      borderColor: Colors.border,
-    },
-    profileActionBtnCard: {
-      backgroundColor: Colors.accent + "15",
-      borderColor: Colors.accent + "40",
+      borderColor: Colors.primary,
+      backgroundColor: Colors.primary + "15",
     },
     profileActionBtnText: {
       fontFamily: "Inter_600SemiBold" as const,
-      fontSize: 13,
-      color: Colors.text,
+      fontSize: 12,
+      color: Colors.primary,
     },
     membershipBtn: {
       flexDirection: "row" as const,
