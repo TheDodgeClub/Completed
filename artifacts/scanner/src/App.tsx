@@ -369,6 +369,7 @@ function ScannerOverlay({ event, onClose, onResult }: {
   const [result, setResult] = useState<ResultState>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [manualId, setManualId] = useState("");
+  const [processing, setProcessing] = useState(false);
 
   // Use refs for mutable state so camera effect is never restarted after mount
   const processingRef = useRef(false);
@@ -383,6 +384,7 @@ function ScannerOverlay({ event, onClose, onResult }: {
   const doCheckIn = useCallback(async (apiCall: () => Promise<CheckInResult>) => {
     if (processingRef.current) return;
     processingRef.current = true;
+    setProcessing(true);
     try {
       const res = await apiCall();
       const r: ResultState = res.alreadyCheckedIn
@@ -396,6 +398,7 @@ function ScannerOverlay({ event, onClose, onResult }: {
       onResultRef.current(r);
     } finally {
       processingRef.current = false;
+      setProcessing(false);
       if (resultTimerRef.current) clearTimeout(resultTimerRef.current);
       resultTimerRef.current = setTimeout(() => {
         setResult(null);
