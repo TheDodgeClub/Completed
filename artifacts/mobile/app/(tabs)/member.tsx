@@ -789,21 +789,29 @@ export default function MemberScreen() {
         <Text style={styles.memberName}>{user.name}</Text>
         {user.username && <Text style={styles.memberUsername}>@{user.username}</Text>}
 
-        {(user.accountType === "supporter" || user.isElite) && (
-          <View style={styles.badgeRow}>
-            {user.accountType === "supporter" && (
-              <View style={styles.supporterBadge}>
-                <Feather name="heart" size={12} color="#fff" />
-                <Text style={styles.supporterBadgeText}>SUPPORTER</Text>
-              </View>
-            )}
-            {user.isElite && (
-              <View style={styles.eliteMemberBadge}>
-                <Text style={styles.eliteMemberBadgeText}>E  ELITE</Text>
-              </View>
-            )}
-          </View>
-        )}
+        <View style={styles.badgeRow}>
+          {user.accountType === "supporter" && (
+            <View style={styles.supporterBadge}>
+              <Feather name="heart" size={12} color="#fff" />
+              <Text style={styles.supporterBadgeText}>SUPPORTER</Text>
+            </View>
+          )}
+          {user.isElite ? (
+            <Pressable
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/membership"); }}
+              style={({ pressed }) => [styles.eliteMemberBadge, { opacity: pressed ? 0.75 : 1 }]}
+            >
+              <Text style={styles.eliteMemberBadgeText}>E  ELITE</Text>
+            </Pressable>
+          ) : user.accountType !== "supporter" && (
+            <Pressable
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/membership"); }}
+              style={({ pressed }) => [styles.goElitePill, { opacity: pressed ? 0.75 : 1 }]}
+            >
+              <Text style={styles.goElitePillText}>Go Elite →</Text>
+            </Pressable>
+          )}
+        </View>
 
         {user.bio && <Text style={styles.memberBio}>{user.bio}</Text>}
 
@@ -934,26 +942,18 @@ export default function MemberScreen() {
       )}
 
       <View style={styles.body}>
-        {/* ── Go Elite / My Card buttons ── */}
-        <View style={styles.profileActionRow}>
-          <Pressable
-            style={({ pressed }) => [styles.profileActionBtn, { opacity: pressed ? 0.85 : 1, flex: 1 }]}
-            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/membership"); }}
-          >
-            <Text style={styles.profileActionBtnText}>
-              {user.isElite ? "E  Elite" : "Go Elite"}
-            </Text>
-          </Pressable>
-          {user.accountType !== "supporter" && (
+        {/* ── My Card button ── */}
+        {user.accountType !== "supporter" && (
+          <View style={styles.profileActionRow}>
             <Pressable
-              style={({ pressed }) => [styles.profileActionBtn, { opacity: pressed ? 0.8 : 1, flex: 1 }]}
+              style={({ pressed }) => [styles.profileActionBtn, { opacity: pressed ? 0.8 : 1 }]}
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setCardVisible(true); }}
             >
               <Feather name="share-2" size={13} color={Colors.primary} />
               <Text style={styles.profileActionBtnText}>My Card</Text>
             </Pressable>
-          )}
-        </View>
+          </View>
+        )}
 
         {/* ── My Tickets ── */}
         <View style={styles.section}>
@@ -1784,9 +1784,22 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       gap: 4,
     },
     eliteMemberBadgeText: { fontFamily: "Inter_700Bold", fontSize: 10, color: "#000", letterSpacing: 1 },
+    goElitePill: {
+      backgroundColor: "rgba(255,215,0,0.18)",
+      borderWidth: 1,
+      borderColor: "rgba(255,215,0,0.5)",
+      borderRadius: 20,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+    },
+    goElitePillText: {
+      fontFamily: "Inter_600SemiBold" as const,
+      fontSize: 11,
+      color: "#FFD700",
+      letterSpacing: 0.3,
+    },
     profileActionRow: {
       flexDirection: "row" as const,
-      gap: 8,
       marginHorizontal: 16,
       marginTop: 14,
       marginBottom: 2,
