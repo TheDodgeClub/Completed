@@ -31,7 +31,6 @@ import {
   getUserAttendance,
   getUserUpcomingEvents,
   getUserAchievements,
-  listUpcomingEvents,
   getMyTickets,
   updateProfile,
   updateAvatar,
@@ -94,18 +93,6 @@ function getLevelProgress(xp: number, level: number) {
   return { progress: Math.min(1, Math.max(0, progress)), nextThreshold: safNext, currentThreshold, isMax, xpToNext: isMax ? 0 : safNext - xp };
 }
 
-function getCountdown(dateStr: string): string | null {
-  const diff = new Date(dateStr).getTime() - Date.now();
-  if (diff <= 0 || diff > 60 * 86400000) return null;
-  const d = Math.floor(diff / 86400000);
-  const h = Math.floor((diff % 86400000) / 3600000);
-  const m = Math.floor((diff % 3600000) / 60000);
-  if (d >= 2) return `${d} days`;
-  if (d === 1) return "Tomorrow";
-  if (h >= 1) return `${h}h`;
-  if (m >= 1) return `${m} mins`;
-  return "Starting soon!";
-}
 
 function LevelBadge({ level }: { level: number }) {
   const Colors = useColors();
@@ -608,15 +595,6 @@ export default function MemberScreen() {
     enabled: isAuthenticated,
   });
 
-  const { data: clubEvents } = useQuery({
-    queryKey: ["upcoming-events"],
-    queryFn: listUpcomingEvents,
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const nextClubEvent = clubEvents?.[0] ?? null;
-  const nextClubCountdown = nextClubEvent ? getCountdown(nextClubEvent.date) : null;
-
   const { mutate: saveProfile } = useMutation({
     mutationFn: updateProfile,
     onSuccess: async () => {
@@ -941,31 +919,6 @@ export default function MemberScreen() {
         )}
       </View>
 
-      {/* ── Next Event Countdown ── */}
-      {nextClubEvent && nextClubCountdown && (
-        <Pressable
-          style={styles.countdownBar}
-          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push("/(tabs)/tickets"); }}
-        >
-          <Feather name="calendar" size={14} color={Colors.warning} />
-          <View style={{ flex: 1, marginLeft: 10 }}>
-            <Text style={styles.countdownBarTitle} numberOfLines={1}>{nextClubEvent.title}</Text>
-            <Text style={styles.countdownBarDate}>
-              {new Date(nextClubEvent.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
-            </Text>
-          </View>
-          <View style={styles.countdownChip}>
-            <Feather name="clock" size={11} color={Colors.warning} />
-            <Text style={styles.countdownChipText}>
-              {nextClubCountdown === "Tomorrow"
-                ? "Tomorrow's event"
-                : nextClubCountdown === "Starting soon!"
-                ? "Starting soon!"
-                : `${nextClubCountdown} till next event`}
-            </Text>
-          </View>
-        </Pressable>
-      )}
 
       {latestAnnouncement && (
         <View style={styles.announcementBanner}>
@@ -1527,31 +1480,6 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     xpFillSupporter: { height: "100%", backgroundColor: "#FFC107", borderRadius: 3 },
     xpHintText: { fontFamily: "Inter_400Regular", fontSize: 10, color: "rgba(255,255,255,0.45)", marginTop: 5 },
     xpStreakHint: { fontFamily: "Inter_600SemiBold", fontSize: 10, color: "#FF6B35", marginTop: 3 },
-    /* ── Countdown bar ── */
-    countdownBar: {
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: Colors.card,
-      borderBottomWidth: 1,
-      borderBottomColor: Colors.border,
-      paddingHorizontal: 20,
-      paddingVertical: 10,
-    },
-    countdownBarTitle: { fontFamily: "Inter_600SemiBold", fontSize: 13, color: Colors.text },
-    countdownBarDate: { fontFamily: "Inter_400Regular", fontSize: 11, color: Colors.textMuted, marginTop: 1 },
-    countdownChip: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 4,
-      backgroundColor: "rgba(245,158,11,0.15)",
-      borderRadius: 20,
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderWidth: 1,
-      borderColor: "rgba(245,158,11,0.4)",
-    },
-    countdownChipText: { fontFamily: "Inter_600SemiBold", fontSize: 11, color: Colors.warning },
-
     /* Stats */
     statsSection: {
       flexDirection: "row", backgroundColor: Colors.surface,
