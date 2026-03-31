@@ -369,66 +369,86 @@ function ScannerOverlay({ event, onClose, onResult }: {
   const [result, setResult] = useState<ResultState>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [manualId, setManualId] = useState("");
-  const [processing, setProcessing] = useState(false);
+
+  // Use refs for mutable state so camera effect is never restarted after mount
+  const processingRef = useRef(false);
   const lastScannedRef = useRef<string | null>(null);
   const resultTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const eventIdRef = useRef(event.id);
+  const onResultRef = useRef(onResult);
+  useEffect(() => { eventIdRef.current = event.id; }, [event.id]);
+  useEffect(() => { onResultRef.current = onResult; }, [onResult]);
 
-  async function doCheckIn(apiCall: () => Promise<CheckInResult>) {
-    if (processing) return;
-    setProcessing(true);
+  // Stable check-in function — reads from refs, never changes identity
+  const doCheckIn = useCallback(async (apiCall: () => Promise<CheckInResult>) => {
+    if (processingRef.current) return;
+    processingRef.current = true;
     try {
       const res = await apiCall();
       const r: ResultState = res.alreadyCheckedIn
         ? { type: "duplicate", member: res.member, xpGained: 0 }
         : { type: "success", member: res.member, xpGained: res.xpGained ?? 0 };
       setResult(r);
-      onResult(r);
+      onResultRef.current(r);
     } catch (err: any) {
       const r: ResultState = { type: "error", message: err.message ?? "Check-in failed" };
       setResult(r);
-      onResult(r);
+      onResultRef.current(r);
     } finally {
-      setProcessing(false);
+      processingRef.current = false;
       if (resultTimerRef.current) clearTimeout(resultTimerRef.current);
-      resultTimerRef.current = setTimeout(() => { setResult(null); lastScannedRef.current = null; }, 3000);
+      resultTimerRef.current = setTimeout(() => {
+        setResult(null);
+        lastScannedRef.current = null;
+      }, 3000);
     }
-  }
+  }, []);
 
   const processUserId = useCallback((userId: number) => {
-    doCheckIn(() => scanCheckIn(event.id, userId));
-  }, [event.id, processing, onResult]);
+    doCheckIn(() => scanCheckIn(eventIdRef.current, userId));
+  }, [doCheckIn]);
 
   const processTicketCode = useCallback((ticketCode: string) => {
-    doCheckIn(() => scanTicketCheckIn(event.id, ticketCode));
-  }, [event.id, processing, onResult]);
+    doCheckIn(() => scanTicketCheckIn(eventIdRef.current, ticketCode));
+  }, [doCheckIn]);
 
-  const handleQRValue = useCallback((text: string) => {
-    if (lastScannedRef.current === text) return;
-    lastScannedRef.current = text;
+  // Stable QR handler via ref — camera effect never needs to restart
+  const handleQRValueRef = useRef<(text: string) => void>(() => {});
+  useEffect(() => {
+    handleQRValueRef.current = (text: string) => {
+      if (lastScannedRef.current === text) return;
+      lastScannedRef.current = text;
 
-    // Member QR: dodgeclub:member:{userId}
-    const memberMatch = text.match(/^dodgeclub:member:(\d+)$/);
-    if (memberMatch) { processUserId(Number(memberMatch[1])); return; }
+      // Member QR: dodgeclub:member:{userId}
+      const memberMatch = text.match(/^dodgeclub:member:(\d+)$/);
+      if (memberMatch) { processUserId(Number(memberMatch[1])); return; }
 
-    // Ticket QR: 16-char hex code (8 random bytes)
-    const ticketMatch = text.match(/^[0-9A-F]{16}$/i);
-    if (ticketMatch) { processTicketCode(text.toUpperCase()); return; }
+      // Ticket QR: 16-char hex code (8 random bytes)
+      const ticketMatch = text.match(/^[0-9A-F]{16}$/i);
+      if (ticketMatch) { processTicketCode(text.toUpperCase()); return; }
 
-    const r: ResultState = { type: "error", message: "Not a Dodge Club QR code" };
-    setResult(r);
-    if (resultTimerRef.current) clearTimeout(resultTimerRef.current);
-    resultTimerRef.current = setTimeout(() => { setResult(null); lastScannedRef.current = null; }, 2500);
+      const r: ResultState = { type: "error", message: "Not a Dodge Club QR code" };
+      setResult(r);
+      if (resultTimerRef.current) clearTimeout(resultTimerRef.current);
+      resultTimerRef.current = setTimeout(() => { setResult(null); lastScannedRef.current = null; }, 2500);
+    };
   }, [processUserId, processTicketCode]);
 
+  // Camera starts once on mount, never restarts
   useEffect(() => {
-    const reader = new BrowserMultiFormatReader(undefined, { delayBetweenScanAttempts: 400 });
+    const reader = new BrowserMultiFormatReader(undefined, { delayBetweenScanAttempts: 300 });
     if (videoRef.current) {
       reader.decodeFromConstraints(
         { video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } } },
         videoRef.current,
         (res, err) => {
-          if (res) handleQRValue(res.getText());
-          if (err && !(err?.name === "NotFoundException" || err?.message?.includes("No MultiFormat") || err?.message?.includes("Barcode"))) {
+          if (res) handleQRValueRef.current(res.getText());
+          if (err && !(
+            err?.name === "NotFoundException" ||
+            err?.message?.includes("No MultiFormat") ||
+            err?.message?.includes("Barcode") ||
+            err?.message?.includes("No code found")
+          )) {
             setCameraError("Camera unavailable — use manual entry");
           }
         }
@@ -438,7 +458,7 @@ function ScannerOverlay({ event, onClose, onResult }: {
       BrowserMultiFormatReader.releaseAllStreams();
       if (resultTimerRef.current) clearTimeout(resultTimerRef.current);
     };
-  }, [handleQRValue]);
+  }, []); // empty — camera starts once and stays running
 
   function handleManualSubmit(e: React.FormEvent) {
     e.preventDefault();
