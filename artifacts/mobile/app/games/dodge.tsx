@@ -41,7 +41,7 @@ const OPP_SPEED_MAX = 88;
 /* ── Power ball constants ── */
 const POWER_BALL_R = 14;
 const POWER_BALL_SPEED = 68;
-const POWER_BALL_BASE_INTERVAL = 26000;
+const POWER_BALL_BASE_INTERVAL = 15000;
 const POWER_BALL_MIN_INTERVAL = 11000;
 const TRIPLE_SHOT_DURATION = 60000; // 1 minute ms
 const TRIPLE_DX = 90; // horizontal px/s spread for side balls
