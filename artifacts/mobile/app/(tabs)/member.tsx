@@ -744,46 +744,44 @@ export default function MemberScreen() {
         end={{ x: 1, y: 1 }}
         style={[styles.profileHero, { paddingTop: insets.top + 20 }]}
       >
-        <View style={styles.heroTopRow}>
-          {/* Avatar */}
-          <Pressable onPress={handlePickAvatar} disabled={uploadingAvatar} style={styles.avatarWrap}>
-            {uploadingAvatar ? (
-              <View style={styles.avatarCircle}>
-                <ActivityIndicator color="#fff" />
-              </View>
-            ) : avatarUri ? (
-              <Image source={{ uri: avatarUri }} style={styles.avatarCircle} />
-            ) : (
-              <View style={styles.avatarCircle}>
-                <Text style={styles.avatarInitial}>{user.name.charAt(0).toUpperCase()}</Text>
-              </View>
-            )}
-            <View style={styles.avatarEditBadge}>
-              <Feather name="camera" size={10} color="#fff" />
-            </View>
-            {user.isElite && (
-              <View style={styles.avatarEliteSticker}>
-                <Text style={styles.avatarEliteStickerText}>E</Text>
-              </View>
-            )}
-            <Text style={styles.avatarChangeLabel}>{uploadingAvatar ? "Uploading..." : "Change"}</Text>
+        {/* Edit / Logout row — pinned top right */}
+        <View style={styles.heroActionsTopRow}>
+          <View style={{ flex: 1 }} />
+          <Pressable
+            style={({ pressed }) => [styles.editBtn, { opacity: pressed ? 0.8 : 1 }]}
+            onPress={() => setEditVisible(true)}
+          >
+            <Feather name="edit-2" size={14} color="#fff" />
+            <Text style={styles.editBtnText}>Edit</Text>
           </Pressable>
-
-          <View style={styles.heroActions}>
-            <View style={styles.heroActionsTopRow}>
-              <Pressable
-                style={({ pressed }) => [styles.editBtn, { opacity: pressed ? 0.8 : 1 }]}
-                onPress={() => setEditVisible(true)}
-              >
-                <Feather name="edit-2" size={14} color="#fff" />
-                <Text style={styles.editBtnText}>Edit</Text>
-              </Pressable>
-              <Pressable onPress={handleLogout} style={styles.logoutBtn}>
-                <Feather name="log-out" size={18} color="rgba(255,255,255,0.7)" />
-              </Pressable>
-            </View>
-          </View>
+          <Pressable onPress={handleLogout} style={styles.logoutBtn}>
+            <Feather name="log-out" size={18} color="rgba(255,255,255,0.7)" />
+          </Pressable>
         </View>
+
+        {/* Avatar — sits just above the member name */}
+        <Pressable onPress={handlePickAvatar} disabled={uploadingAvatar} style={styles.avatarWrap}>
+          {uploadingAvatar ? (
+            <View style={styles.avatarCircle}>
+              <ActivityIndicator color="#fff" />
+            </View>
+          ) : avatarUri ? (
+            <Image source={{ uri: avatarUri }} style={styles.avatarCircle} />
+          ) : (
+            <View style={styles.avatarCircle}>
+              <Text style={styles.avatarInitial}>{user.name.charAt(0).toUpperCase()}</Text>
+            </View>
+          )}
+          <View style={styles.avatarEditBadge}>
+            <Feather name="camera" size={10} color="#fff" />
+          </View>
+          {user.isElite && (
+            <View style={styles.avatarEliteSticker}>
+              <Text style={styles.avatarEliteStickerText}>E</Text>
+            </View>
+          )}
+          <Text style={styles.avatarChangeLabel}>{uploadingAvatar ? "Uploading..." : "Change"}</Text>
+        </Pressable>
 
         {/* Name & Badges */}
         <Text style={styles.memberName}>{user.name}</Text>
@@ -1312,8 +1310,7 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
 
     /* Hero */
     profileHero: { paddingHorizontal: 24, paddingBottom: 28 },
-    heroTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 },
-    avatarWrap: { position: "relative" },
+    avatarWrap: { position: "relative", marginTop: 12, marginBottom: 10 },
     avatarCircle: {
       width: 88, height: 88, borderRadius: 44,
       backgroundColor: "rgba(255,255,255,0.2)",
@@ -1323,17 +1320,16 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
     },
     avatarInitial: { fontFamily: "Poppins_800ExtraBold", fontSize: 32, color: "#fff" },
     avatarEditBadge: {
-      position: "absolute", bottom: 2, right: 2,
-      width: 22, height: 22, borderRadius: 11,
+      position: "absolute", bottom: -2, right: -2,
+      width: 24, height: 24, borderRadius: 12,
       backgroundColor: Colors.primary,
       alignItems: "center", justifyContent: "center",
       borderWidth: 2, borderColor: Colors.background,
     },
     avatarChangeLabel: {
       fontFamily: "Inter_600SemiBold", fontSize: 10,
-      color: "rgba(255,255,255,0.7)", textAlign: "center", marginTop: 4,
+      color: "rgba(255,255,255,0.7)", textAlign: "center", marginTop: 8,
     },
-    heroActions: { flexDirection: "column", alignItems: "flex-end", gap: 6, marginTop: 4 },
     heroActionsTopRow: { flexDirection: "row", alignItems: "center", gap: 8 },
     themeToggleBtn: {
       width: 34, height: 34, borderRadius: 17,
