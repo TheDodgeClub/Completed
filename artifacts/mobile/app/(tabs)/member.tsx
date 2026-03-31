@@ -744,20 +744,16 @@ export default function MemberScreen() {
         end={{ x: 1, y: 1 }}
         style={[styles.profileHero, { paddingTop: insets.top + 20 }]}
       >
-        {/* Edit / Logout / My Card — pinned top right */}
-        <View style={{ alignItems: "flex-end", gap: 8 }}>
-          <View style={styles.heroActionsTopRow}>
-            <Pressable
-              style={({ pressed }) => [styles.editBtn, { opacity: pressed ? 0.8 : 1 }]}
-              onPress={() => setEditVisible(true)}
-            >
-              <Feather name="edit-2" size={14} color="#fff" />
-              <Text style={styles.editBtnText}>Edit</Text>
-            </Pressable>
-            <Pressable onPress={handleLogout} style={styles.logoutBtn}>
-              <Feather name="log-out" size={18} color="rgba(255,255,255,0.7)" />
-            </Pressable>
-          </View>
+        {/* Edit / My Card / Logout — single row, pinned top right */}
+        <View style={styles.heroActionsTopRow}>
+          <View style={{ flex: 1 }} />
+          <Pressable
+            style={({ pressed }) => [styles.editBtn, { opacity: pressed ? 0.8 : 1 }]}
+            onPress={() => setEditVisible(true)}
+          >
+            <Feather name="edit-2" size={14} color="#fff" />
+            <Text style={styles.editBtnText}>Edit</Text>
+          </Pressable>
           {user.accountType !== "supporter" && (
             <Pressable
               style={({ pressed }) => [styles.myCardHeroBtn, { opacity: pressed ? 0.8 : 1 }]}
@@ -767,6 +763,9 @@ export default function MemberScreen() {
               <Text style={styles.myCardHeroBtnText}>My Card</Text>
             </Pressable>
           )}
+          <Pressable onPress={handleLogout} style={styles.logoutBtn}>
+            <Feather name="log-out" size={18} color="rgba(255,255,255,0.7)" />
+          </Pressable>
         </View>
 
         {/* Avatar */}
