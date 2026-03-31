@@ -744,19 +744,29 @@ export default function MemberScreen() {
         end={{ x: 1, y: 1 }}
         style={[styles.profileHero, { paddingTop: insets.top + 20 }]}
       >
-        {/* Edit / Logout row — pinned top right */}
-        <View style={styles.heroActionsTopRow}>
-          <View style={{ flex: 1 }} />
-          <Pressable
-            style={({ pressed }) => [styles.editBtn, { opacity: pressed ? 0.8 : 1 }]}
-            onPress={() => setEditVisible(true)}
-          >
-            <Feather name="edit-2" size={14} color="#fff" />
-            <Text style={styles.editBtnText}>Edit</Text>
-          </Pressable>
-          <Pressable onPress={handleLogout} style={styles.logoutBtn}>
-            <Feather name="log-out" size={18} color="rgba(255,255,255,0.7)" />
-          </Pressable>
+        {/* Edit / Logout / My Card — pinned top right */}
+        <View style={{ alignItems: "flex-end", gap: 8 }}>
+          <View style={styles.heroActionsTopRow}>
+            <Pressable
+              style={({ pressed }) => [styles.editBtn, { opacity: pressed ? 0.8 : 1 }]}
+              onPress={() => setEditVisible(true)}
+            >
+              <Feather name="edit-2" size={14} color="#fff" />
+              <Text style={styles.editBtnText}>Edit</Text>
+            </Pressable>
+            <Pressable onPress={handleLogout} style={styles.logoutBtn}>
+              <Feather name="log-out" size={18} color="rgba(255,255,255,0.7)" />
+            </Pressable>
+          </View>
+          {user.accountType !== "supporter" && (
+            <Pressable
+              style={({ pressed }) => [styles.myCardHeroBtn, { opacity: pressed ? 0.8 : 1 }]}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setCardVisible(true); }}
+            >
+              <Feather name="share-2" size={12} color="#fff" />
+              <Text style={styles.myCardHeroBtnText}>My Card</Text>
+            </Pressable>
+          )}
         </View>
 
         {/* Avatar */}
@@ -942,18 +952,6 @@ export default function MemberScreen() {
       )}
 
       <View style={styles.body}>
-        {/* ── My Card button ── */}
-        {user.accountType !== "supporter" && (
-          <View style={styles.profileActionRow}>
-            <Pressable
-              style={({ pressed }) => [styles.profileActionBtn, { opacity: pressed ? 0.8 : 1 }]}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setCardVisible(true); }}
-            >
-              <Feather name="share-2" size={13} color={Colors.primary} />
-              <Text style={styles.profileActionBtnText}>My Card</Text>
-            </Pressable>
-          </View>
-        )}
 
         {/* ── My Tickets ── */}
         <View style={styles.section}>
@@ -1784,6 +1782,22 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       gap: 4,
     },
     eliteMemberBadgeText: { fontFamily: "Inter_700Bold", fontSize: 10, color: "#000", letterSpacing: 1 },
+    myCardHeroBtn: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 5,
+      backgroundColor: "rgba(255,255,255,0.12)",
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.22)",
+      borderRadius: 20,
+      paddingHorizontal: 11,
+      paddingVertical: 5,
+    },
+    myCardHeroBtnText: {
+      fontFamily: "Inter_600SemiBold" as const,
+      fontSize: 12,
+      color: "#fff",
+    },
     goElitePill: {
       backgroundColor: "rgba(255,215,0,0.18)",
       borderWidth: 1,
@@ -1797,29 +1811,6 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
       fontSize: 11,
       color: "#FFD700",
       letterSpacing: 0.3,
-    },
-    profileActionRow: {
-      flexDirection: "row" as const,
-      marginHorizontal: 16,
-      marginTop: 14,
-      marginBottom: 2,
-    },
-    profileActionBtn: {
-      flexDirection: "row" as const,
-      alignItems: "center" as const,
-      justifyContent: "center" as const,
-      gap: 5,
-      paddingVertical: 7,
-      paddingHorizontal: 12,
-      borderRadius: 8,
-      borderWidth: 1,
-      borderColor: Colors.primary,
-      backgroundColor: Colors.primary + "15",
-    },
-    profileActionBtnText: {
-      fontFamily: "Inter_600SemiBold" as const,
-      fontSize: 12,
-      color: Colors.primary,
     },
     membershipBtn: {
       flexDirection: "row" as const,
