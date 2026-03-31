@@ -759,11 +759,12 @@ export default function MemberScreen() {
           </Pressable>
         </View>
 
-        {/* Avatar — sits just above the member name */}
+        {/* Avatar */}
         <Pressable onPress={handlePickAvatar} disabled={uploadingAvatar} style={styles.avatarWrap}>
           {uploadingAvatar ? (
             <View style={styles.avatarCircle}>
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color="#fff" size="large" />
+              <Text style={styles.avatarUploadingText}>Uploading…</Text>
             </View>
           ) : avatarUri ? (
             <Image source={{ uri: avatarUri }} style={styles.avatarCircle} />
@@ -772,15 +773,16 @@ export default function MemberScreen() {
               <Text style={styles.avatarInitial}>{user.name.charAt(0).toUpperCase()}</Text>
             </View>
           )}
-          <View style={styles.avatarEditBadge}>
-            <Feather name="camera" size={10} color="#fff" />
-          </View>
+          {!uploadingAvatar && (
+            <View style={styles.avatarCameraOverlay}>
+              <Feather name="camera" size={15} color="#fff" />
+            </View>
+          )}
           {user.isElite && (
             <View style={styles.avatarEliteSticker}>
               <Text style={styles.avatarEliteStickerText}>E</Text>
             </View>
           )}
-          <Text style={styles.avatarChangeLabel}>{uploadingAvatar ? "Uploading..." : "Change"}</Text>
         </Pressable>
 
         {/* Name & Badges */}
@@ -1310,25 +1312,33 @@ function makeStyles(Colors: ReturnType<typeof useColors>) {
 
     /* Hero */
     profileHero: { paddingHorizontal: 24, paddingBottom: 28 },
-    avatarWrap: { position: "relative", marginTop: 12, marginBottom: 10 },
+    avatarWrap: {
+      position: "relative",
+      alignSelf: "flex-start",
+      marginTop: 16,
+      marginBottom: 14,
+    },
     avatarCircle: {
-      width: 88, height: 88, borderRadius: 44,
-      backgroundColor: "rgba(255,255,255,0.2)",
+      width: 96, height: 96, borderRadius: 48,
+      backgroundColor: "rgba(255,255,255,0.18)",
       alignItems: "center", justifyContent: "center",
-      borderWidth: 3, borderColor: "rgba(255,255,255,0.4)",
+      borderWidth: 3, borderColor: "rgba(255,255,255,0.5)",
       overflow: "hidden",
     },
-    avatarInitial: { fontFamily: "Poppins_800ExtraBold", fontSize: 32, color: "#fff" },
-    avatarEditBadge: {
-      position: "absolute", bottom: -2, right: -2,
-      width: 24, height: 24, borderRadius: 12,
-      backgroundColor: Colors.primary,
-      alignItems: "center", justifyContent: "center",
-      borderWidth: 2, borderColor: Colors.background,
+    avatarInitial: { fontFamily: "Poppins_800ExtraBold", fontSize: 36, color: "#fff" },
+    avatarCameraOverlay: {
+      position: "absolute",
+      bottom: 0, left: 0, right: 0,
+      height: 30,
+      backgroundColor: "rgba(0,0,0,0.45)",
+      alignItems: "center",
+      justifyContent: "center",
+      borderBottomLeftRadius: 48,
+      borderBottomRightRadius: 48,
     },
-    avatarChangeLabel: {
-      fontFamily: "Inter_600SemiBold", fontSize: 10,
-      color: "rgba(255,255,255,0.7)", textAlign: "center", marginTop: 8,
+    avatarUploadingText: {
+      fontFamily: "Inter_400Regular", fontSize: 10,
+      color: "rgba(255,255,255,0.8)", marginTop: 6,
     },
     heroActionsTopRow: { flexDirection: "row", alignItems: "center", gap: 8 },
     themeToggleBtn: {
