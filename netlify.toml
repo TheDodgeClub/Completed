@@ -1,0 +1,5 @@
+[[redirects]]
+  from = "/*"
+  to = "https://the-dodge-club.replit.app/:splat"
+  status = 301
+  force = true
